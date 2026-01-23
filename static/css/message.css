@@ -1,0 +1,121 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: rgb(0, 91, 171);
+    font-family: "Microsoft YaHei", sans-serif;
+}
+
+.header {
+    padding: 20px;
+    text-align: center;
+    background-color: orange;
+}
+
+.header a {
+    text-decoration: none;
+    color: white;
+}
+
+.header a:hover {
+    color: rgb(0, 91, 171);
+}
+
+.main {
+    width: 1200px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+}
+
+.title {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.todo {
+    width: 80%;
+    height: 150px;
+    margin: 10px;
+    border: 2px dashed rgba(255, 181, 73, .7);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 16px;
+    color: rgba(63, 62, 65, 0.9);
+    outline: none;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.submit {
+    padding: 8px 16px;
+    border: 2px solid rgba(73, 74, 75);
+    border-radius: 5px;
+    background-color: white;
+    transition: all 0.2s;
+}
+
+.submit:hover {
+    background-color: orange;
+    color: white;
+    cursor: pointer;
+}
+
+.message {
+    border: 1px solid rgb(200, 200, 200);
+    margin-top: 20px;
+    border-radius: 8px;
+    background-color: #fafafa;
+}
+
+.content {
+    padding: 20px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.date {
+    text-align: right;
+    padding: 10px;
+    font-size: 15px;
+    color: orange;
+    font-weight: bold;
+}
+
+form {
+    text-align: center;
+    padding: 10px;
+}
+
+.reply-box {
+    background-color: #f5f5f5;
+    padding: 10px;
+    margin: 10px 20px;
+    border-radius: 8px;
+}
+
+.reply {
+    background-color: #eef;
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.reply-content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    padding: 5px 0;
+}
+
+.reply-date {
+    font-size: 12px;
+    color: #555;
+}
+
+.reply-form {
+    padding: 10px;
+}

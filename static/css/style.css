@@ -1,0 +1,43 @@
+*{
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	color: white;
+}
+
+body{
+	background-image: url(../img/background.png);
+	background-size:100%;
+}
+
+.main {
+	width: 900px;
+	height: 100vh;
+	background-color: rgba(0, 91, 171, 0.9);
+	padding: 100px;
+	text-align: left;
+}
+
+.main img{
+	width: 150px;
+}
+
+.main h1 {
+	line-height: 3;
+}
+
+.main p {
+	line-height: 3;
+	color:orange;
+	font-weight:bold;
+}
+
+.main a {
+	text-decoration: none;
+	line-height: 5;
+	color: white;
+}
+
+.main a:hover {
+	color: orange;
+}

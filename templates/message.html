@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>匿语阁</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/message.css"/>
+</head>
+<body>
+    <div class="header">
+        <a href="/index">开始页</a>
+    </div>
+
+    <div class="main">
+        <h1 class="title">欢迎使用匿语阁！</h1>
+
+        <!-- 留言提交 -->
+        <form action="/upload" method="post">
+            <textarea class="todo" name="content" placeholder="请输入你的留言" required></textarea>
+            <br>
+            <button class="submit">提交</button>
+        </form>
+
+        <!-- 展示留言 -->
+        {% for msg in data %}
+        <div class="message">
+            <div class="content">{{ msg.content }}</div>
+            <div class="date">{{ msg.date }}</div>
+
+            {% if msg.replies %}
+            <div class="reply-box">
+                {% for r in msg.replies %}
+                <div class="reply">
+                    <div class="reply-content">{{ r.content }}</div>
+                    <div class="reply-date">{{ r.date }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 回复表单 -->
+            <form action="/reply" method="post" class="reply-form">
+                <input type="hidden" name="message_id" value="{{ msg.id }}">
+                <textarea class="todo" name="reply_content" placeholder="回复该留言..." required></textarea>
+                <br>
+                <button class="submit">回复</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
