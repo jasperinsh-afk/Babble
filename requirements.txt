@@ -1,4 +1,4 @@
-pymysql
-flask
-flask_sqlalchemy
+Flask
+Flask_SQLAlchemy
+PyMySQL
 gunicorn
