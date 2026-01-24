@@ -118,7 +118,8 @@ form {
 
 .reply-form {
     width: 1500px;          /* 表单更宽 */
-    padding: 4px 3px;     /* 减少上下空间 */
+    padding: 4px 5px;     /* 减少上下空间 */
     font-size: 14px;
+    margin-left: 5px;
 }
 
