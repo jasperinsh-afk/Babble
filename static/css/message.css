@@ -41,6 +41,20 @@ body {
     width: 80%;
     height: 150px;
     margin: 10px;
+    border: 2px dashed rgba(255, 181, 73, .7);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 16px;
+    color: rgba(63, 62, 65, 0.9);
+    outline: none;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.todo_new {
+    width: 80%;
+    height: 150px;
+    margin: 10px;
     border: 10px dashed rgb(48, 92, 222);
     border-radius: 10px;
     padding: 10px;
@@ -55,7 +69,7 @@ body {
     padding: 8px 16px;
     border: 2px solid rgba(73, 74, 75);
     border-radius: 5px;
-    background-color: yellow;
+    background-color: orange;
     transition: all 0.2s;
 }
 
