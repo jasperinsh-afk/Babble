@@ -117,10 +117,8 @@ form {
 }
 
 .reply-form {
-    width: 400px;          /* 表单更宽 */
+    width: 1000px;          /* 表单更宽 */
     padding: 4px 10px;     /* 减少上下空间 */
     font-size: 14px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
 }
 
