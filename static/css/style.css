@@ -41,3 +41,7 @@ body{
 .main a:hover {
 	color: orange;
 }
+
+.begin{
+	font-size: 25px;
+}
