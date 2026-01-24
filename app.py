@@ -1,104 +1,10 @@
-'''
-import flask
-import json
-import time
-
-app = flask.Flask(__name__, static_url_path="/", static_folder="static")
-
-
-@app.route("/")
-@app.route("/index")
-def home():
-    f = open("./static/index.html", "rb")
-    page = f.read()
-    f.close()
-    return page
-
-
-@app.route("/download")
-def download():
-    f = open("./static/download.html", "rb")
-    page = f.read()
-    f.close()
-    return page
-
-
-@app.route("/message")
-def message():
-    f = open("./static/data.json", "rb")
-    data = json.load(f)
-    f.close()
-
-    return flask.render_template("message.html", data=data)  # 将数据渲染到页面中
-
-
-@app.route("/upload", methods=["POST", "GET"])
-
-def upload():
-
-    # 获取客户端ip地址
-    ip = flask.request.remote_addr
-    # 获取消息
-    content = flask.request.form.get("content")
-    # 获取特定格式的时间
-    date = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-
-    # 将数据保存在字典中
-    dic = {
-        #"ip": ip,
-        "content": content,
-        "date": date
-    }
-
-    # 读取json文件
-    f = open("./static/data.json", "rb")
-    data = json.load(f) # 将数据转换成字典
-    data["messages"].append(dic)
-    f.close()
-
-    # 写入保存json文件
-    f = open("./static/data.json", "wb")
-    f.write(json.dumps(data).encode("utf-8"))  # 字典转成字符串
-    f.close()
-
-    return flask.redirect('/message')
-
-@app.route("/reply", methods=["POST"])
-def reply():
-    ip = flask.request.remote_addr
-    reply_content = flask.request.form.get("reply_content")
-    index = int(flask.request.form.get("index"))
-    date = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-
-    reply_dic = {
-        "ip": ip,
-        "content": reply_content,
-        "date": date
-    }
-
-    with open("./static/data.json", "rb") as f:
-        data = json.load(f)
-
-    # 若当前留言还没有 replies 字段则添加
-    if "replies" not in data["messages"][index]:
-        data["messages"][index]["replies"] = []
-
-    data["messages"][index]["replies"].append(reply_dic)
-
-    with open("./static/data.json", "wb") as f:
-        f.write(json.dumps(data, ensure_ascii=False).encode("utf-8"))
-
-    return flask.redirect('/message')
-
-app.run("192.168.3.60", 8080)
-'''
 from flask import Flask, render_template, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 import time
 import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'MolicaSecret'
 db = SQLAlchemy(app)
