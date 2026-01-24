@@ -10,8 +10,9 @@ body {
 }
 
 .header {
-    padding: 20px;
+    padding: 27px;
     text-align: center;
+    font-size: 25;
     background-color: orange;
 }
 
@@ -68,6 +69,7 @@ body {
 .submit {
     padding: 8px 16px;
     border-radius: 5px;
+    border: 2px solid rgba(255, 255, 255);
     background-color: orange;
     transition: all 0.2s;
 }
