@@ -44,4 +44,6 @@ body{
 
 .begin{
 	font-size: 25px;
+	color:orange;
+	font-weight:bold;
 }
