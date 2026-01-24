@@ -95,9 +95,10 @@ app.run("192.168.3.60", 8080)
 from flask import Flask, render_template, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 import time
+import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:#Jasper2012@localhost/molica_message'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('mysql+pymysql://root:FXYQAUycRSHhvuAnFKtOvgRgVbGNSNfj@containers.railway.app:3306/railway')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'MolicaSecret'
 db = SQLAlchemy(app)
