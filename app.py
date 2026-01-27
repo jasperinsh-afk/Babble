@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect
 from flask_sqlalchemy import SQLAlchemy
 import time
 import os
+from flask import jsonify
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
@@ -77,7 +78,7 @@ def api_messages():
             "date": m.date,
             "replies": [{"content": r.content, "date": r.date} for r in m.replies]
         })
-    return {"data": result}
+    return jsonify({"data": result})
 
 if __name__ == "__main__":
     app.run("192.168.3.60", 8080)
