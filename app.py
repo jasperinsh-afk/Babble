@@ -65,6 +65,19 @@ def reply():
     db.session.add(new_reply)
     db.session.commit()
     return redirect('/message')
+    
+@app.route("/api/messages")
+def api_messages():
+    msgs = Message.query.order_by(Message.id.desc()).all()
+    result = []
+    for m in msgs:
+        result.append({
+            "id": m.id,
+            "content": m.content,
+            "date": m.date,
+            "replies": [{"content": r.content, "date": r.date} for r in m.replies]
+        })
+    return {"data": result}
 
 if __name__ == "__main__":
     app.run("192.168.3.60", 8080)
