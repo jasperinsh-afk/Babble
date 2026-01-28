@@ -29,12 +29,14 @@ body{
 .main p {
 	line-height: 3;
 	color:orange;
+	font-size: 25px;
 	font-weight:bold;
 }
 
 .main a {
 	text-decoration: none;
 	line-height: 5;
+	font-size: 30px;
 	color: white;
 }
 
