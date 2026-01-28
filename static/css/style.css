@@ -44,8 +44,9 @@ body{
 	color: orange;
 }
 
-.begin{
-	font-size: 60px;
-	color: orange;
-	font-weight:bold;
+.main a.begin {
+    font-size: 60px;
+    color: orange;
+    font-weight: bold;
 }
+
