@@ -3,6 +3,11 @@ from flask_sqlalchemy import SQLAlchemy
 import time
 import os
 from flask import jsonify
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+def now_cn_str():
+    return datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
@@ -48,7 +53,7 @@ def message():
 def upload():
     ip = request.remote_addr
     content = request.form.get("content")
-    date = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    date = now_cn_str()
 
     new_msg = Message(ip=ip, content=content, date=date)
     db.session.add(new_msg)
@@ -60,7 +65,7 @@ def reply():
     ip = request.remote_addr
     reply_content = request.form.get("reply_content")
     message_id = request.form.get("message_id")
-    date = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    date = now_cn_str()
 
     new_reply = Reply(ip=ip, content=reply_content, date=date, message_id=message_id)
     db.session.add(new_reply)
