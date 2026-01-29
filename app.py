@@ -3,11 +3,14 @@ from flask_sqlalchemy import SQLAlchemy
 import time
 import os
 from flask import jsonify
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 def now_cn_str():
-    return datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")
+    # 最简解决方案：UTC时间+8小时
+    utc_now = datetime.utcnow()
+    beijing_now = utc_now + timedelta(hours=8)
+    return beijing_now.strftime("%Y-%m-%d %H:%M:%S")
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
@@ -15,7 +18,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'MolicaSecret'
 db = SQLAlchemy(app)
 
-# ---------------- 数据模型 ----------------
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip = db.Column(db.String(50))
@@ -30,11 +32,9 @@ class Reply(db.Model):
     date = db.Column(db.String(50))
     message_id = db.Column(db.Integer, db.ForeignKey('message.id'))
 
-# ---------------- 初始化 ----------------
 with app.app_context():
     db.create_all()
 
-# ---------------- 路由部分 ----------------
 @app.route("/")
 @app.route("/index")
 def home():
@@ -71,7 +71,7 @@ def reply():
     db.session.add(new_reply)
     db.session.commit()
     return redirect('/message')
-    
+
 @app.route("/api/messages")
 def api_messages():
     msgs = Message.query.order_by(Message.id.desc()).all()
