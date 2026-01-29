@@ -4,13 +4,32 @@ import time
 import os
 from flask import jsonify
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+import sys
 
 def now_cn_str():
-    # 最简解决方案：UTC时间+8小时
-    utc_now = datetime.utcnow()
-    beijing_now = utc_now + timedelta(hours=8)
-    return beijing_now.strftime("%Y-%m-%d %H:%M:%S")
+    """
+    强制使用时间戳计算北京时间，避免任何时区问题
+    """
+    # 获取当前UTC时间戳
+    utc_timestamp = time.time()
+    
+    # 计算北京时间戳（UTC+8）
+    beijing_timestamp = utc_timestamp + 8 * 3600
+    
+    # 从时间戳创建datetime对象
+    # 使用fromtimestamp的UTC版本，避免本地时区干扰
+    beijing_dt = datetime.utcfromtimestamp(beijing_timestamp)
+    
+    return beijing_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+# 调试：显示各种时间
+print("=== 服务器时间调试信息 ===")
+print(f"当前时间戳: {time.time()}")
+print(f"本地时间: {datetime.now()}")
+print(f"UTC时间: {datetime.utcnow()}")
+print(f"计算的北京时间: {now_cn_str()}")
+print(f"time.tzname: {time.tzname}")
+print("=========================")
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
@@ -54,6 +73,8 @@ def upload():
     ip = request.remote_addr
     content = request.form.get("content")
     date = now_cn_str()
+    
+    print(f"上传消息 - 时间: {date}")
 
     new_msg = Message(ip=ip, content=content, date=date)
     db.session.add(new_msg)
@@ -66,6 +87,8 @@ def reply():
     reply_content = request.form.get("reply_content")
     message_id = request.form.get("message_id")
     date = now_cn_str()
+    
+    print(f"回复消息 - 时间: {date}")
 
     new_reply = Reply(ip=ip, content=reply_content, date=date, message_id=message_id)
     db.session.add(new_reply)
@@ -86,4 +109,4 @@ def api_messages():
     return jsonify({"data": result})
 
 if __name__ == "__main__":
-    app.run("192.168.3.60", 8080)
+    app.run("192.168.3.60", 8080, debug=True)
