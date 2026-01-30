@@ -50,7 +50,7 @@
             <div class="message" data-id="${msg.id}">
                 <div class="content">${msg.content}</div>
                 <div class="date">${msg.date}</div>
-
+            
                 ${msg.replies.length ? `<div class="reply-box">`+
                     msg.replies.map(r=>`
                         <div class="reply">
@@ -59,14 +59,14 @@
                         </div>`).join("")
                     +`</div>` : ""
                 }
-
+            
                 <form class="reply-form" data-id="${msg.id}">
                     <input type="hidden" name="message_id" value="${msg.id}">
-                    <textarea name="reply_content" placeholder="回复该留言" required></textarea>
+                    <textarea class="todo" name="reply_content" placeholder="回复该留言" required></textarea>
                     <br>
                     <button class="submit">回复</button>
                 </form>
-            </div>`;
+            </div>`;   
         });
         container.innerHTML = html;
 
