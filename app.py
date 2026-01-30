@@ -87,13 +87,20 @@ def reply():
     reply_content = request.form.get("reply_content")
     message_id = request.form.get("message_id")
     date = now_cn_str()
-    
+
     print(f"回复消息 - 时间: {date}")
 
-    new_reply = Reply(ip=ip, content=reply_content, date=date, message_id=message_id)
+    # 确保 message_id 是整数
+    try:
+        message_id_int = int(message_id)
+    except (ValueError, TypeError):
+        return jsonify({"status": "error", "message": "无效的 message_id"}), 400
+
+    new_reply = Reply(ip=ip, content=reply_content, date=date, message_id=message_id_int)
     db.session.add(new_reply)
     db.session.commit()
-    return redirect('/message')
+    return jsonify({"status": "ok", "message": "回复已保存"})
+
 
 @app.route("/api/messages")
 def api_messages():
