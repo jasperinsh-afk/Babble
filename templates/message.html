@@ -11,8 +11,7 @@
     </div>
 
     <div class="main">
-
-        <!-- 留言提交表单（不被刷新覆盖） -->
+        <!-- 留言提交表单 -->
         <form action="/upload" method="post">
             <textarea class="todo_new" name="content" placeholder="发起一个新话题" required></textarea>
             <br>
@@ -23,86 +22,83 @@
         <div id="messages"></div>
     </div>
 
+    <!-- ✅ 脚本标签修正，不能重复嵌套 -->
     <script>
-    <script>
-let lastData = [];
+    let lastData = [];
 
-async function loadMessages(){
-    const res = await fetch('/api/messages');
-    const data = await res.json();
-    const msgs = data.data;
-    const container = document.getElementById('messages');
+    async function loadMessages(){
+        const res = await fetch('/api/messages', {cache: "no-store"});
+        const data = await res.json();
+        const msgs = data.data;
+        const container = document.getElementById('messages');
 
-    // 保留用户未提交输入
-    const currentReplies = {};
-    document.querySelectorAll('.reply-form textarea').forEach(t=>{
-        const id = t.closest('.reply-form').querySelector('input[name="message_id"]').value;
-        const val = t.value.trim();
-        if (val) currentReplies[id] = val;
-    });
+        // 保留用户未提交输入
+        const currentReplies = {};
+        document.querySelectorAll('.reply-form textarea').forEach(t=>{
+            const id = t.closest('.reply-form').querySelector('input[name="message_id"]').value;
+            const val = t.value.trim();
+            if (val) currentReplies[id] = val;
+        });
 
-    if (JSON.stringify(msgs) === JSON.stringify(lastData)) return;
-    lastData = msgs;
+        // 💡 如果第一次加载，lastData为空，不阻止刷新
+        if (lastData.length && JSON.stringify(msgs) === JSON.stringify(lastData)) return;
+        lastData = msgs;
 
-    let html = "";
-    msgs.forEach(msg=>{
-        html += `
-        <div class="message" data-id="${msg.id}">
-            <div class="content">${msg.content}</div>
-            <div class="date">${msg.date}</div>
+        let html = "";
+        msgs.forEach(msg=>{
+            html += `
+            <div class="message" data-id="${msg.id}">
+                <div class="content">${msg.content}</div>
+                <div class="date">${msg.date}</div>
 
-            ${msg.replies.length ? `<div class="reply-box">`+
-                msg.replies.map(r=>`
-                    <div class="reply">
-                        <div class="reply-content">${r.content}</div>
-                        <div class="reply-date">${r.date}</div>
-                    </div>`).join("")
-                +`</div>` : ""
+                ${msg.replies.length ? `<div class="reply-box">`+
+                    msg.replies.map(r=>`
+                        <div class="reply">
+                            <div class="reply-content">${r.content}</div>
+                            <div class="reply-date">${r.date}</div>
+                        </div>`).join("")
+                    +`</div>` : ""
+                }
+
+                <form class="reply-form" data-id="${msg.id}">
+                    <input type="hidden" name="message_id" value="${msg.id}">
+                    <textarea name="reply_content" placeholder="回复该留言" required></textarea>
+                    <br>
+                    <button class="submit">回复</button>
+                </form>
+            </div>`;
+        });
+        container.innerHTML = html;
+
+        // 恢复用户输入
+        Object.keys(currentReplies).forEach(id=>{
+            const textarea = container.querySelector(`.reply-form input[value="${id}"]`)?.parentElement.querySelector('textarea');
+            if (textarea) textarea.value = currentReplies[id];
+        });
+
+        // 绑定AJAX提交事件
+        document.querySelectorAll('.reply-form').forEach(form=>{
+            form.onsubmit = async (e)=>{
+                e.preventDefault();
+                const formData = new FormData(form);
+                const res = await fetch('/reply', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+                if(result.status === "ok"){
+                    console.log("回复已提交");
+                    setTimeout(loadMessages, 500);
+                } else {
+                    alert(result.message || "提交失败");
+                }
             }
+        });
+    }
 
-            <form class="reply-form" data-id="${msg.id}">
-                <input type="hidden" name="message_id" value="${msg.id}">
-                <textarea name="reply_content" placeholder="回复该留言" required></textarea>
-                <br>
-                <button type="submit">回复</button>
-            </form>
-        </div>`;
-    });
-    container.innerHTML = html;
-
-    // 恢复用户输入
-    Object.keys(currentReplies).forEach(id=>{
-        const textarea = container.querySelector(`.reply-form input[value="${id}"]`)?.parentElement.querySelector('textarea');
-        if (textarea) textarea.value = currentReplies[id];
-    });
-
-    // 🔥 重新绑定 form 的提交事件（异步发给后端）
-    document.querySelectorAll('.reply-form').forEach(form=>{
-        form.onsubmit = async (e)=>{
-            e.preventDefault(); // 阻止跳转
-            const formData = new FormData(form);
-            const res = await fetch('/reply', {
-                method: 'POST',
-                body: formData
-            });
-
-            if(res.ok){
-                console.log("回复已提交");
-                // 刷新一次留言显示
-                setTimeout(loadMessages, 500);
-            }else{
-                alert("提交失败！");
-            }
-        }
-    });
-}
-
-// 初始化加载
-loadMessages();
-setInterval(loadMessages, 5000);
-</script>
-
-
+    // 初始化加载
+    loadMessages();
+    setInterval(loadMessages, 5000);
     </script>
 </body>
 </html>
