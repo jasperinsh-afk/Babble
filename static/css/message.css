@@ -12,18 +12,18 @@ body {
 .header {
     padding: 27px;
     text-align: center;
-    background-color: orange;
+    background-color: #cc0000;
 }
 
 .header a {
     text-decoration: none;
     font-size: 40px;
     font-weight:bold;
-    color: white;
+    color: #ffde59;
 }
 
 .header a:hover {
-    color: rgb(0, 91, 171);
+    color: #ffffff;
 }
 
 .main {
@@ -69,9 +69,7 @@ body {
 
 .submit {
     padding: 8px 16px;
-    border-radius: 5px;
-    border: 2px solid rgba(255, 255, 255);
-    background-color: orange;
+    background-color: #ffde59;
     transition: all 0.2s;
     font-size: 25px;
 }
