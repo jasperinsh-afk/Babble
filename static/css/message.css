@@ -5,7 +5,7 @@
 }
 
 body {
-    background-color: #cc0000;
+    background-color: #ffde59;
     font-family: "Microsoft YaHei", sans-serif;
 }
 
@@ -43,7 +43,7 @@ body {
     width: 80%;
     height: 150px;
     margin: 10px;
-    border: 2px dashed rgba(255, 181, 73, .7);
+    border: 2px dashed #ffde59;
     border-radius: 10px;
     padding: 10px;
     font-size: 20px;
@@ -57,7 +57,7 @@ body {
     width: 80%;
     height: 150px;
     margin: 10px;
-    border: 7px dashed rgb(48, 92, 222);
+    border: 7px dashed #ffde59;
     border-radius: 10px;
     padding: 10px;
     font-size: 16px;
