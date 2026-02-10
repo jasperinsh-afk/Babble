@@ -13,7 +13,7 @@ body{
 .main {
 	width: 500px;
 	height: 900px;
-	background-color: rgba(204, 0, 0, 0.5);
+	background-color: rgba(204, 0, 0);
 	padding: 100px;
 	text-align: left;
 }
@@ -28,7 +28,7 @@ body{
 
 .main p {
 	line-height: 2;
-	color:orange;
+	color:#ffde59;
 	font-size: 25px;
 	font-weight:bold;
 }
@@ -41,12 +41,12 @@ body{
 }
 
 .main a:hover {
-	color: orange;
+	color: #ffde59;
 }
 
 .main a.begin {
     font-size: 60px;
-    color: orange;
+    color: #ffde59;
     font-weight: bold;
 }
 
