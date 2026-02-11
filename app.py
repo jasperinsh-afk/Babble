@@ -83,6 +83,25 @@ def upload():
 
     return redirect('/message')
 
+@app.route("/reply", methods=["POST"])  # 添加这行
+def reply():  # 添加这行
+    ip = request.remote_addr
+    reply_content = request.form.get("reply_content")
+    message_id = request.form.get("message_id")
+    date = now_cn_str()
+
+    print(f"回复消息 - 时间: {date}")
+
+    try:
+        message_id_int = int(message_id)
+    except (ValueError, TypeError):
+        return jsonify({"status": "error", "message": "无效的 message_id"}), 400
+
+    new_reply = Reply(ip=ip, content=reply_content, date=date, message_id=message_id_int)
+    db.session.add(new_reply)
+    db.session.commit()
+    return jsonify({"status": "ok", "message": "回复已保存"})
+
 @app.route("/api/messages")
 def api_messages():
     print(f"【API调试】/api/messages 被请求，正在查询数据库...")
@@ -98,19 +117,7 @@ def api_messages():
         })
     return jsonify({"data": result})
 
-
-@app.route("/api/messages")
-def api_messages():
-    msgs = Message.query.order_by(Message.id.desc()).all()
-    result = []
-    for m in msgs:
-        result.append({
-            "id": m.id,
-            "content": m.content,
-            "date": m.date,
-            "replies": [{"content": r.content, "date": r.date} for r in m.replies]
-        })
-    return jsonify({"data": result})
+# 注意：这里删除了第二个重复的 api_messages 函数！！！
 
 if __name__ == "__main__":
     app.run("192.168.3.60", 8080, debug=True)
