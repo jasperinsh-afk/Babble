@@ -7,22 +7,14 @@ from datetime import datetime, timedelta
 import sys
 
 def now_cn_str():
-    """
-    强制使用时间戳计算北京时间，避免任何时区问题
-    """
-    # 获取当前UTC时间戳
     utc_timestamp = time.time()
     
-    # 计算北京时间戳（UTC+8）
     beijing_timestamp = utc_timestamp + 8 * 3600
     
-    # 从时间戳创建datetime对象
-    # 使用fromtimestamp的UTC版本，避免本地时区干扰
     beijing_dt = datetime.utcfromtimestamp(beijing_timestamp)
     
     return beijing_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-# 调试：显示各种时间
 print("=== 服务器时间调试信息 ===")
 print(f"当前时间戳: {time.time()}")
 print(f"本地时间: {datetime.now()}")
@@ -74,14 +66,12 @@ def upload():
     content = request.form.get("content")
     date = now_cn_str()
 
-    # 1. 内容有效性检查
     if not content or not content.strip():
         print(f"【上传调试】内容为空，忽略提交。")
         return redirect('/message')
 
     print(f"【上传调试】接收到数据 -> IP: {ip}, 时间: {date}, 内容: {content[:100]}...")
 
-    # 2. 尝试数据库操作
     try:
         new_msg = Message(ip=ip, content=content.strip(), date=date)
         db.session.add(new_msg)
@@ -90,14 +80,11 @@ def upload():
     except Exception as e:
         db.session.rollback()
         print(f"【上传调试】严重错误：数据写入数据库失败！原因: {e}")
-        # 这里可以记录更详细的日志
 
-    # 3. 重定向到留言板页面
     return redirect('/message')
 
 @app.route("/api/messages")
 def api_messages():
-    # 添加查询日志，确认是否执行了查询
     print(f"【API调试】/api/messages 被请求，正在查询数据库...")
     msgs = Message.query.order_by(Message.id.desc()).all()
     print(f"【API调试】查询完成，共找到 {len(msgs)} 条消息。")
