@@ -73,33 +73,43 @@ def upload():
     ip = request.remote_addr
     content = request.form.get("content")
     date = now_cn_str()
-    
-    print(f"上传消息 - 时间: {date}")
 
-    new_msg = Message(ip=ip, content=content, date=date)
-    db.session.add(new_msg)
-    db.session.commit()
+    # 1. 内容有效性检查
+    if not content or not content.strip():
+        print(f"【上传调试】内容为空，忽略提交。")
+        return redirect('/message')
+
+    print(f"【上传调试】接收到数据 -> IP: {ip}, 时间: {date}, 内容: {content[:100]}...")
+
+    # 2. 尝试数据库操作
+    try:
+        new_msg = Message(ip=ip, content=content.strip(), date=date)
+        db.session.add(new_msg)
+        db.session.commit()
+        print(f"【上传调试】成功写入数据库，消息ID: {new_msg.id}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"【上传调试】严重错误：数据写入数据库失败！原因: {e}")
+        # 这里可以记录更详细的日志
+
+    # 3. 重定向到留言板页面
     return redirect('/message')
 
-@app.route("/reply", methods=["POST"])
-def reply():
-    ip = request.remote_addr
-    reply_content = request.form.get("reply_content")
-    message_id = request.form.get("message_id")
-    date = now_cn_str()
-
-    print(f"回复消息 - 时间: {date}")
-
-    # 确保 message_id 是整数
-    try:
-        message_id_int = int(message_id)
-    except (ValueError, TypeError):
-        return jsonify({"status": "error", "message": "无效的 message_id"}), 400
-
-    new_reply = Reply(ip=ip, content=reply_content, date=date, message_id=message_id_int)
-    db.session.add(new_reply)
-    db.session.commit()
-    return jsonify({"status": "ok", "message": "回复已保存"})
+@app.route("/api/messages")
+def api_messages():
+    # 添加查询日志，确认是否执行了查询
+    print(f"【API调试】/api/messages 被请求，正在查询数据库...")
+    msgs = Message.query.order_by(Message.id.desc()).all()
+    print(f"【API调试】查询完成，共找到 {len(msgs)} 条消息。")
+    result = []
+    for m in msgs:
+        result.append({
+            "id": m.id,
+            "content": m.content,
+            "date": m.date,
+            "replies": [{"content": r.content, "date": r.date} for r in m.replies]
+        })
+    return jsonify({"data": result})
 
 
 @app.route("/api/messages")
