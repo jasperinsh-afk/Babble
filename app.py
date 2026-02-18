@@ -5,6 +5,7 @@ import os
 from flask import jsonify
 from datetime import datetime, timedelta
 import sys
+from werkzeug.utils import secure_filename
 
 def now_cn_str():
     utc_timestamp = time.time()
@@ -60,11 +61,33 @@ def message():
     msgs = Message.query.order_by(Message.id.desc()).all()
     return render_template("message.html", data=msgs)
 
+# 允许上传的图片类型
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 @app.route("/upload", methods=["POST"])
 def upload():
     ip = request.remote_addr
-    content = request.form.get("content")
+    content = request.form.get("content", "")
     date = now_cn_str()
+
+    # 处理图片上传
+    file = request.files.get("image")
+    image_url = None
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        unique_name = f"{int(time.time())}_{filename}"
+        save_path = os.path.join(app.root_path, 'static', 'uploads', unique_name)
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        file.save(save_path)
+        image_url = f"/static/uploads/{unique_name}"
+
+    # 如果有图片，把图片链接加到内容前面
+    if image_url:
+        content = f"[图片]({image_url})\n{content.strip()}"
 
     if not content or not content.strip():
         print(f"【上传调试】内容为空，忽略提交。")
@@ -83,8 +106,8 @@ def upload():
 
     return redirect('/message')
 
-@app.route("/reply", methods=["POST"])  # 添加这行
-def reply():  # 添加这行
+@app.route("/reply", methods=["POST"])
+def reply():
     ip = request.remote_addr
     reply_content = request.form.get("reply_content")
     message_id = request.form.get("message_id")
@@ -116,8 +139,6 @@ def api_messages():
             "replies": [{"content": r.content, "date": r.date} for r in m.replies]
         })
     return jsonify({"data": result})
-
-# 注意：这里删除了第二个重复的 api_messages 函数！！！
 
 if __name__ == "__main__":
     app.run("192.168.3.60", 8080, debug=True)
