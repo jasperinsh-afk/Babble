@@ -83,8 +83,8 @@ def upload():
         save_path = os.path.join(app.root_path, 'static', 'uploads', unique_name)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         file.save(save_path)
-        # 使用 url_for 生成正确的静态文件路径
-        image_url = url_for('static', filename=f'uploads/{unique_name}')
+        # 使用 url_for 生成正确的静态文件路径，并确保有斜杠开头
+        image_url = url_for('static', filename=f'uploads/{unique_name}', _external=True)
 
     # 如果有图片，把图片链接加到内容前面
     if image_url:
