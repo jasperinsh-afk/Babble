@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 import time
 import os
@@ -7,15 +7,13 @@ from datetime import datetime, timedelta
 import sys
 from werkzeug.utils import secure_filename
 
+# 自动创建图片保存目录
 os.makedirs("static/uploads", exist_ok=True)
 
 def now_cn_str():
     utc_timestamp = time.time()
-    
     beijing_timestamp = utc_timestamp + 8 * 3600
-    
     beijing_dt = datetime.utcfromtimestamp(beijing_timestamp)
-    
     return beijing_dt.strftime("%Y-%m-%d %H:%M:%S")
 
 print("=== 服务器时间调试信息 ===")
@@ -85,7 +83,8 @@ def upload():
         save_path = os.path.join(app.root_path, 'static', 'uploads', unique_name)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         file.save(save_path)
-        image_url = f"/static/uploads/{unique_name}"
+        # 使用 url_for 生成正确的静态文件路径
+        image_url = url_for('static', filename=f'uploads/{unique_name}')
 
     # 如果有图片，把图片链接加到内容前面
     if image_url:
