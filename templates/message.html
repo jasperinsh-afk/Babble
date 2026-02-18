@@ -54,19 +54,22 @@
 
         let html = "";
         msgs.forEach(msg=>{
-            // 解析内容中的图片标记 [图片](url) - 修正后的正则
+            // 解析内容中的图片标记 [图片](url)
             let contentHtml = "";
             const imgRegex = /\[图片]\(([^)]+)\)/g;
             let lastIndex = 0;
             let match;
-            while ((match = imgRegex.exec(msg.content))!== null) {
+            while ((match = imgRegex.exec(msg.content)) !== null) {
                 if (match.index > lastIndex) {
                     const text = msg.content.substring(lastIndex, match.index);
                     contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
                 }
                 // 确保URL以斜杠开头
-                const imageUrl = match[1].startsWith('/') ? match[1] : '/' + match[1];
-                contentHtml += `<img src="${escapeHtml(imageUrl)}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
+                let imageUrl = match[1];
+                if (!imageUrl.startsWith('/')) {
+                    imageUrl = '/' + imageUrl;
+                }
+                contentHtml += ``;
                 lastIndex = imgRegex.lastIndex;
             }
             if (lastIndex < msg.content.length) {
@@ -78,26 +81,23 @@
             <div class="message" data-id="${msg.id}">
                 <div class="content">${contentHtml}</div>
                 <div class="date">${msg.date}</div>
-                
-                ${msg.replies.length 
-                    ? `<div class="reply-box">
-                        ${msg.replies.map(r => `
-                            <div class="reply">
-                                <div class="reply-content">${r.content}</div>
-                                <div class="reply-date">${r.date}</div>
-                            </div>
-                        `).join('')}
-                      </div>`
-                    : ''}
-                
+            
+                ${msg.replies.length ? `<div class="reply-box">`+
+                    msg.replies.map(r=>`
+                        <div class="reply">
+                            <div class="reply-content">${r.content}</div>
+                            <div class="reply-date">${r.date}</div>
+                        </div>`).join("")
+                    +`</div>` : ""
+                }
+            
                 <form class="reply-form" data-id="${msg.id}">
                     <input type="hidden" name="message_id" value="${msg.id}">
                     <textarea class="todo" name="reply_content" placeholder="回复该留言" required></textarea>
                     <br>
                     <button class="submit">回复</button>
                 </form>
-            </div>
-            `;
+            </div>`;
         });
         container.innerHTML = html;
 
