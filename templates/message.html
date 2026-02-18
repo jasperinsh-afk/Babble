@@ -54,9 +54,9 @@
 
         let html = "";
         msgs.forEach(msg=>{
-            // 解析内容中的图片标记 [图片](url)
+            // 解析内容中的图片标记 [图片](url) - 修正后的正则
             let contentHtml = "";
-            const imgRegex = /\$\$图片\$\$([^)]+)$/g;
+            const imgRegex = /\[图片]\(([^)]+)\)/g;
             let lastIndex = 0;
             let match;
             while ((match = imgRegex.exec(msg.content))!== null) {
@@ -64,7 +64,9 @@
                     const text = msg.content.substring(lastIndex, match.index);
                     contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
                 }
-                contentHtml += `<img src="${escapeHtml(match[1])}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
+                // 确保URL以斜杠开头
+                const imageUrl = match[1].startsWith('/') ? match[1] : '/' + match[1];
+                contentHtml += `<img src="${escapeHtml(imageUrl)}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
                 lastIndex = imgRegex.lastIndex;
             }
             if (lastIndex < msg.content.length) {
