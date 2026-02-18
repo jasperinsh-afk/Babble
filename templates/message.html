@@ -13,8 +13,11 @@
     <div class="main">
         <h1 class="title">祝贺宏文FTC19606队获得全国第一</h1>
         <!-- 留言提交表单 -->
-        <form action="/upload" method="post">
+        <form action="/upload" method="post" enctype="multipart/form-data">
             <textarea class="todo_new" name="content" placeholder="发起一个新话题" required></textarea>
+            <br>
+            <input type="file" name="image" accept="image/*" id="imageInput">
+            <label for="imageInput" style="font-size: 20px; color: #cc0000; cursor: pointer;">📷 选择图片</label>
             <br>
             <button class="submit">提交</button>
         </form>
@@ -23,8 +26,13 @@
         <div id="messages"></div>
     </div>
 
-    <!-- ✅ 脚本标签修正，不能重复嵌套 -->
     <script>
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     let lastData = [];
 
     async function loadMessages(){
@@ -41,15 +49,32 @@
             if (val) currentReplies[id] = val;
         });
 
-        // 💡 如果第一次加载，lastData为空，不阻止刷新
         if (lastData.length && JSON.stringify(msgs) === JSON.stringify(lastData)) return;
         lastData = msgs;
 
         let html = "";
         msgs.forEach(msg=>{
+            // 解析内容中的图片标记 [图片](url)
+            let contentHtml = "";
+            const imgRegex = /$$图片$$$([^)]+)$/g;
+            let lastIndex = 0;
+            let match;
+            while ((match = imgRegex.exec(msg.content)) !== null) {
+                if (match.index > lastIndex) {
+                    const text = msg.content.substring(lastIndex, match.index);
+                    contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
+                }
+                contentHtml += `<img src="${escapeHtml(match[1])}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
+                lastIndex = imgRegex.lastIndex;
+            }
+            if (lastIndex < msg.content.length) {
+                const text = msg.content.substring(lastIndex);
+                contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
+            }
+
             html += `
             <div class="message" data-id="${msg.id}">
-                <div class="content">${msg.content}</div>
+                <div class="content">${contentHtml}</div>
                 <div class="date">${msg.date}</div>
             
                 ${msg.replies.length ? `<div class="reply-box">`+
@@ -97,7 +122,6 @@
         });
     }
 
-    // 初始化加载
     loadMessages();
     setInterval(loadMessages, 5000);
     </script>
