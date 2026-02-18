@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 import sys
 from werkzeug.utils import secure_filename
 
+os.makedirs("static/uploads", exist_ok=True)
+
 def now_cn_str():
     utc_timestamp = time.time()
     
