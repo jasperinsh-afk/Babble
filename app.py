@@ -1,8 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import time
 import os
-from flask import jsonify
 from datetime import datetime, timedelta
 import sys
 from werkzeug.utils import secure_filename
@@ -35,14 +34,14 @@ class Message(db.Model):
     ip = db.Column(db.String(50))
     content = db.Column(db.Text)
     date = db.Column(db.String(50))
-    replies = db.relationship('Reply', backref='message', lazy='dynamic', cascade="all,delete")
+    replies = db.relationship('Reply', backref='message', lazy='dynamic', cascade="all, delete-orphan")
 
 class Reply(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip = db.Column(db.String(50))
     content = db.Column(db.Text)
     date = db.Column(db.String(50))
-    message_id = db.Column(db.Integer, db.ForeignKey('message.id'))
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
 
 with app.app_context():
     db.create_all()
@@ -83,21 +82,26 @@ def upload():
         save_path = os.path.join(app.root_path, 'static', 'uploads', unique_name)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         file.save(save_path)
-        # 使用 url_for 生成正确的静态文件路径，并确保有斜杠开头
-        image_url = url_for('static', filename=f'uploads/{unique_name}', _external=True)
+        # 使用 url_for 生成正确的静态文件路径，确保有斜杠开头
+        image_url = url_for('static', filename=f'uploads/{unique_name}', _external=False)
+        # 确保 image_url 以斜杠开头
+        if not image_url.startswith('/'):
+            image_url = '/' + image_url
 
     # 如果有图片，把图片链接加到内容前面
     if image_url:
         content = f"[图片]({image_url})\n{content.strip()}"
+    else:
+        content = content.strip()
 
-    if not content or not content.strip():
+    if not content:
         print(f"【上传调试】内容为空，忽略提交。")
         return redirect('/message')
 
     print(f"【上传调试】接收到数据 -> IP: {ip}, 时间: {date}, 内容: {content[:100]}...")
 
     try:
-        new_msg = Message(ip=ip, content=content.strip(), date=date)
+        new_msg = Message(ip=ip, content=content, date=date)
         db.session.add(new_msg)
         db.session.commit()
         print(f"【上传调试】成功写入数据库，消息ID: {new_msg.id}")
@@ -142,4 +146,4 @@ def api_messages():
     return jsonify({"data": result})
 
 if __name__ == "__main__":
-    app.run("192.168.3.60", 8080, debug=True)
+    app.run(host="192.168.3.60", port=8080, debug=True)
