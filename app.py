@@ -35,7 +35,7 @@ class Message(db.Model):
     ip = db.Column(db.String(50))
     content = db.Column(db.Text)
     date = db.Column(db.String(50))
-    replies = db.relationship('Reply', backref='message', cascade="all,delete")
+    replies = db.relationship('Reply', backref='message', lazy='dynamic', cascade="all,delete")
 
 class Reply(db.Model):
     id = db.Column(db.Integer, primary_key=True)
