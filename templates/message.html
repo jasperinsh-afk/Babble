@@ -69,7 +69,7 @@
                 if (!imageUrl.startsWith('/')) {
                     imageUrl = '/' + imageUrl;
                 }
-                contentHtml += ``;
+                contentHtml += `<img src="${escapeHtml(imageUrl)}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
                 lastIndex = imgRegex.lastIndex;
             }
             if (lastIndex < msg.content.length) {
