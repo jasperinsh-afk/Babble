@@ -100,6 +100,14 @@ body {
     white-space: pre-wrap;
 }
 
+/* 新增：图片在内容中的样式 */
+.content img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 10px 0;
+    display: block;
+}
+
 .date {
     text-align: right;
     padding: 10px;
@@ -142,4 +150,3 @@ form {
 .reply-form {
     padding: 5px;
 }
-
