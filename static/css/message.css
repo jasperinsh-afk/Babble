@@ -68,12 +68,12 @@ body {
 }
 
 .submit {
-    padding: 8px 16px;
+    padding: 13px 21px;
     background-color: #cc0000;
     border: 2px solid rgba(255, 255, 255);
     border-radius: 5px;
     transition: all 0.2s;
-    font-size: 25px;
+    font-size: 30px;
     color: #ffde59;
     font-weight:bold;
 }
@@ -95,23 +95,23 @@ body {
 
 .content {
     padding: 20px;
-    font-size: 30px;
+    font-size: 40px;
     word-wrap: break-word;
     white-space: pre-wrap;
 }
 
 /* 新增：图片在内容中的样式 */
 .content img {
-    max-width: 100%;
+    max-width: 60%;
     border-radius: 8px;
-    margin: 10px 0;
+    margin: 7px 0;
     display: block;
 }
 
 .date {
     text-align: right;
     padding: 10px;
-    font-size: 15px;
+    font-size: 20px;
     color: #cc0000;
     font-weight: bold;
 }
@@ -138,12 +138,12 @@ form {
 .reply-content {
     white-space: pre-wrap;
     word-wrap: break-word;
-    font-size: 30px;
+    font-size: 40px;
     padding: 5px 0;
 }
 
 .reply-date {
-    font-size: 12px;
+    font-size: 17px;
     color: #555;
 }
 
