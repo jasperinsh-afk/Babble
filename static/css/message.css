@@ -44,10 +44,10 @@ body {
     width: 80%;
     height: 150px;
     margin: 10px;
-    border: 2px dashed #ffde59;
+    border: 5px dashed #cc0000;
     border-radius: 10px;
     padding: 10px;
-    font-size: 20px;
+    font-size: 30px;
     color: rgba(63, 62, 65, 0.9);
     outline: none;
     resize: vertical;
@@ -58,10 +58,10 @@ body {
     width: 80%;
     height: 150px;
     margin: 10px;
-    border: 7px dashed #ffde59;
+    border: 7px dashed #cc0000;
     border-radius: 10px;
     padding: 10px;
-    font-size: 16px;
+    font-size: 25px;
     color: rgba(63, 62, 65, 0.9);
     outline: none;
     resize: vertical;
