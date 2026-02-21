@@ -1,47 +1,91 @@
-*{
-	margin: 0;
-	padding: 0;
-	box-sizing: border-box;
-	color: white;
+/* 重置样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    color: white;
 }
 
-body{
-	background-image: url(../img/background.png);
-	background-size:100%;
+/* 全屏背景图 */
+body {
+    background-image: url(../img/background.png);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* 添加淡入动画到 body */
+    animation: fadeInBody 1.5s ease-in-out forwards;
 }
 
+/* Body 淡入动画定义 */
+@keyframes fadeInBody {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* 主容器：半透明红色背景、居中 */
 .main {
-	width: 500px;
-	height: 1000px;
-	background-color: rgba(204, 0, 0);
-	padding: 100px;
-	text-align: left;
+    width: 500px;
+    max-width: 90vw;
+    background-color: rgba(204, 0, 0, 0.8);
+    padding: 60px 40px;
+    text-align: center;
+    border-radius: 10px;
+
+    /* 延迟出现，让背景先淡入 */
+    opacity: 0;
+    animation: fadeInMain 1s ease-in-out 0.5s forwards;
 }
 
-.main img{
-	width: 150px;
+/* Main 淡入动画定义 */
+@keyframes fadeInMain {
+    0% {
+        opacity: 0;
+        transform: translateY(20px); /* 从下方轻微移入 */
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.main img {
+    width: 150px;
+    margin-bottom: 20px;
 }
 
 .main h1 {
-	font-size: 40px;
+    font-size: 40px;
+    margin-bottom: 15px;
 }
 
 .main p {
-	line-height: 2;
-	color:#ffde59;
-	font-size: 25px;
-	font-weight:bold;
+    line-height: 2;
+    color: #ffde59;
+    font-size: 25px;
+    font-weight: bold;
+    margin-bottom: 10px;
 }
 
 .main a {
-	text-decoration: none;
-	line-height: 1.7;
-	font-size: 30px;
-	color: white;
+    text-decoration: none;
+    line-height: 1.7;
+    font-size: 30px;
+    color: white;
+    display: block;
+    margin: 8px 0;
 }
 
 .main a:hover {
-	color: #ffde59;
+    color: #ffde59;
 }
 
 .main a.begin {
@@ -49,4 +93,3 @@ body{
     color: #ffde59;
     font-weight: bold;
 }
-
