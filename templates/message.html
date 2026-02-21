@@ -4,8 +4,16 @@
     <meta charset="utf-8" />
     <title>匿语阁 | BABBLE</title>
     <link rel="stylesheet" type="text/css" href="/static/css/message.css"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
+
+    <!-- 发送成功提示条 -->
+    <div class="success-toast" id="successToast">
+        ✅ 发送成功！
+        <button class="close-btn" onclick="hideSuccess()">×</button>
+    </div>
+
     <div class="header">
         <a href="/index">返回首页</a>
     </div>
@@ -38,13 +46,26 @@
 
     let lastData = [];
 
+    // 显示成功提示
+    function showSuccess() {
+        const toast = document.getElementById('successToast');
+        toast.classList.add('show');
+        // 5秒后自动隐藏
+        setTimeout(hideSuccess, 5000);
+    }
+
+    // 隐藏成功提示
+    function hideSuccess() {
+        const toast = document.getElementById('successToast');
+        toast.classList.remove('show');
+    }
+
     async function loadMessages() {
         const res = await fetch('/api/messages', { cache: "no-store" });
         const data = await res.json();
         const msgs = data.data;
         const container = document.getElementById('messages');
 
-        // 保留用户未提交输入
         const currentReplies = {};
         document.querySelectorAll('.reply-form textarea').forEach(t => {
             const id = t.closest('.reply-form').querySelector('input[name="message_id"]').value;
@@ -57,7 +78,6 @@
 
         let html = "";
         msgs.forEach(msg => {
-            // 解析内容中的图片标记 [图片](url)
             let contentHtml = "";
             const imgRegex = /\[图片]\(([^)]+)\)/g;
             let lastIndex = 0;
@@ -67,7 +87,6 @@
                     const text = msg.content.substring(lastIndex, match.index);
                     contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
                 }
-                // 确保URL以斜杠开头
                 let imageUrl = match[1];
                 if (!imageUrl.startsWith('/')) {
                     imageUrl = '/' + imageUrl;
@@ -104,7 +123,6 @@
         });
         container.innerHTML = html;
 
-        // 恢复用户输入
         Object.keys(currentReplies).forEach(id => {
             const form = container.querySelector(`.reply-form input[value="${id}"]`);
             if (form) {
@@ -113,7 +131,6 @@
             }
         });
 
-        // 绑定AJAX提交事件
         document.querySelectorAll('.reply-form').forEach(form => {
             form.onsubmit = async (e) => {
                 e.preventDefault();
@@ -125,6 +142,7 @@
                 const result = await res.json();
                 if (result.status === "ok") {
                     console.log("回复已提交");
+                    showSuccess(); // ← 回复成功提示
                     setTimeout(loadMessages, 500);
                 } else {
                     alert(result.message || "提交失败");
