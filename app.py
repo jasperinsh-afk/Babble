@@ -1,13 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import inspect  # 新增：用于检查数据库结构
+from sqlalchemy import inspect
 import time
 import os
-from datetime import datetime, timedelta
-import sys
+from datetime import datetime
 from werkzeug.utils import secure_filename
 
-# 自动创建图片保存目录
+# =========================
+# 基础配置
+# =========================
+
 os.makedirs("static/uploads", exist_ok=True)
 
 def now_cn_str():
@@ -21,214 +23,223 @@ print(f"当前时间戳: {time.time()}")
 print(f"本地时间: {datetime.now()}")
 print(f"UTC时间: {datetime.utcnow()}")
 print(f"计算的北京时间: {now_cn_str()}")
-print(f"time.tzname: {time.tzname}")
 print("=========================")
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'MolicaSecret'
+
 db = SQLAlchemy(app)
+
+# =========================
+# 数据模型
+# =========================
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip = db.Column(db.String(50))
     content = db.Column(db.Text)
     date = db.Column(db.String(50))
-    is_premium = db.Column(db.String(1), default='0')  # 新增字段：是否为炫彩帖子
-    replies = db.relationship('Reply', backref='message', lazy='dynamic', cascade="all, delete-orphan")
+    is_premium = db.Column(db.String(1), default='0')
+    replies = db.relationship(
+        'Reply',
+        backref='message',
+        lazy='dynamic',
+        cascade="all, delete-orphan"
+    )
 
 class Reply(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip = db.Column(db.String(50))
     content = db.Column(db.Text)
     date = db.Column(db.String(50))
-    is_premium = db.Column(db.String(1), default='0')  # 新增字段：是否为炫彩回复
-    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
+    is_premium = db.Column(db.String(1), default='0')
+    message_id = db.Column(
+        db.Integer,
+        db.ForeignKey('message.id'),
+        nullable=False
+    )
+
+# =========================
+# 🚑 兜底方案：强制重建 message.is_premium
+# =========================
+
+def force_rebuild_message_is_premium():
+    print("🔥 启动兜底修复：重建 message.is_premium")
+
+    try:
+        inspector = inspect(db.engine)
+        if 'message' not in inspector.get_table_names():
+            print("⚠️ message 表不存在，跳过兜底")
+            return
+
+        columns = [c['name'] for c in inspector.get_columns('message')]
+
+        if 'is_premium' in columns:
+            print("🗑️ 删除 message.is_premium ...")
+            db.session.execute(
+                "ALTER TABLE message DROP COLUMN is_premium"
+            )
+            db.session.commit()
+            print("✅ 已删除 message.is_premium")
+
+        print("🔧 重建 message.is_premium（默认 0）...")
+        db.session.execute(
+            "ALTER TABLE message "
+            "ADD COLUMN is_premium VARCHAR(1) NOT NULL DEFAULT '0'"
+        )
+        db.session.commit()
+        print("✅ message.is_premium 重建完成")
+
+    except Exception as e:
+        print("❌ 兜底修复失败：", e)
+        db.session.rollback()
+
+# =========================
+# 正常补列逻辑（安全）
+# =========================
 
 def check_and_add_columns():
-    """检查并添加缺失的数据库列（不删除现有数据）"""
-    print("🔍 正在检查数据库表结构...")
-    
+    print("🔍 正在检查数据库结构...")
     inspector = inspect(db.engine)
-    
-    # 检查 message 表
-    if 'message' in inspector.get_table_names():
-        existing_columns = [col['name'] for col in inspector.get_columns('message')]
-        
-        if 'is_premium' not in existing_columns:
-            try:
-                print("🔄 检测到 message 表缺少 is_premium 列，正在添加...")
-                db.session.execute('ALTER TABLE message ADD COLUMN is_premium VARCHAR(1) DEFAULT "0"')
-                db.session.commit()
-                print("✅ 已成功为 message 表添加 is_premium 列")
-            except Exception as e:
-                print(f"⚠️ 添加 message.is_premium 列失败: {e}")
-                db.session.rollback()
-        else:
-            print("✅ message 表结构完整")
-    
-    # 检查 reply 表
+
     if 'reply' in inspector.get_table_names():
-        existing_columns = [col['name'] for col in inspector.get_columns('reply')]
-        
-        if 'is_premium' not in existing_columns:
+        columns = [c['name'] for c in inspector.get_columns('reply')]
+        if 'is_premium' not in columns:
             try:
-                print("🔄 检测到 reply 表缺少 is_premium 列，正在添加...")
-                db.session.execute('ALTER TABLE reply ADD COLUMN is_premium VARCHAR(1) DEFAULT "0"')
+                print("➕ 添加 reply.is_premium")
+                db.session.execute(
+                    "ALTER TABLE reply ADD COLUMN is_premium VARCHAR(1) DEFAULT '0'"
+                )
                 db.session.commit()
-                print("✅ 已成功为 reply 表添加 is_premium 列")
             except Exception as e:
-                print(f"⚠️ 添加 reply.is_premium 列失败: {e}")
+                print("⚠️ 添加 reply.is_premium 失败:", e)
                 db.session.rollback()
-        else:
-            print("✅ reply 表结构完整")
-    
-    print("📊 数据库表结构检查完成")
+
+    print("✅ 数据库结构检查完成")
+
+# =========================
+# 启动时执行
+# =========================
 
 with app.app_context():
-    # 创建表（如果不存在）
     db.create_all()
-    
-    # 检查并添加缺失的列
+    force_rebuild_message_is_premium()  # 🚑 只需成功跑一次
     check_and_add_columns()
+
+# =========================
+# 路由
+# =========================
 
 @app.route("/")
 @app.route("/index")
 def home():
     return render_template("index.html")
 
-@app.route("/download")
-def download():
-    return render_template("download.html")
-
 @app.route("/message")
 def message():
     msgs = Message.query.order_by(Message.id.desc()).all()
     return render_template("message.html", data=msgs)
 
-# 允许上传的图片类型
+# =========================
+# 上传
+# =========================
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route("/upload", methods=["POST"])
 def upload():
     ip = request.remote_addr
-    content = request.form.get("content", "")
-    is_premium = request.form.get("is_premium", "0")  # 新增：获取炫彩标记
+    content = request.form.get("content", "").strip()
+    is_premium = request.form.get("is_premium", "0")
     date = now_cn_str()
 
-    # 处理图片上传
     file = request.files.get("image")
     image_url = None
+
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        unique_name = f"{int(time.time())}_{filename}"
-        save_path = os.path.join(app.root_path, 'static', 'uploads', unique_name)
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        file.save(save_path)
-        # 使用 url_for 生成正确的静态文件路径，确保有斜杠开头
-        image_url = url_for('static', filename=f'uploads/{unique_name}', _external=False)
-        # 确保 image_url 以斜杠开头
-        if not image_url.startswith('/'):
-            image_url = '/' + image_url
+        unique = f"{int(time.time())}_{filename}"
+        path = os.path.join(app.root_path, "static/uploads", unique)
+        file.save(path)
+        image_url = url_for("static", filename=f"uploads/{unique}")
 
-    # 如果有图片，把图片链接加到内容前面
     if image_url:
-        content = f"[图片]({image_url})\n{content.strip()}"
-    else:
-        content = content.strip()
+        content = f"[图片]({image_url})\n{content}"
 
     if not content:
-        print(f"【上传调试】内容为空，忽略提交。")
-        return redirect('/message')
+        return redirect("/message")
 
-    print(f"【上传调试】接收到数据 -> IP: {ip}, 时间: {date}, 炫彩: {is_premium}, 内容: {content[:100]}...")
+    msg = Message(
+        ip=ip,
+        content=content,
+        date=date,
+        is_premium=is_premium
+    )
+    db.session.add(msg)
+    db.session.commit()
 
-    try:
-        new_msg = Message(ip=ip, content=content, date=date, is_premium=is_premium)  # 保存炫彩标记
-        db.session.add(new_msg)
-        db.session.commit()
-        print(f"【上传调试】成功写入数据库，消息ID: {new_msg.id}, 炫彩: {is_premium}")
-    except Exception as e:
-        db.session.rollback()
-        print(f"【上传调试】严重错误：数据写入数据库失败！原因: {e}")
+    return redirect("/message")
 
-    return redirect('/message')
+# =========================
+# 回复
+# =========================
 
 @app.route("/reply", methods=["POST"])
 def reply():
     ip = request.remote_addr
-    reply_content = request.form.get("reply_content")
-    message_id = request.form.get("message_id")
-    is_premium = request.form.get("is_premium", "0")  # 新增：获取炫彩标记
+    content = request.form.get("reply_content", "")
+    message_id = int(request.form.get("message_id"))
+    is_premium = request.form.get("is_premium", "0")
     date = now_cn_str()
 
-    print(f"回复消息 - 时间: {date}, 炫彩: {is_premium}")
-
-    try:
-        message_id_int = int(message_id)
-    except (ValueError, TypeError):
-        return jsonify({"status": "error", "message": "无效的 message_id"}), 400
-
-    new_reply = Reply(ip=ip, content=reply_content, date=date, 
-                     message_id=message_id_int, is_premium=is_premium)  # 保存炫彩标记
-    db.session.add(new_reply)
+    r = Reply(
+        ip=ip,
+        content=content,
+        date=date,
+        message_id=message_id,
+        is_premium=is_premium
+    )
+    db.session.add(r)
     db.session.commit()
-    return jsonify({"status": "ok", "message": "回复已保存"})
+
+    return jsonify({"status": "ok"})
+
+# =========================
+# API
+# =========================
 
 @app.route("/api/messages")
 def api_messages():
-    print(f"【API调试】/api/messages 被请求，正在查询数据库...")
     msgs = Message.query.order_by(Message.id.desc()).all()
-    print(f"【API调试】查询完成，共找到 {len(msgs)} 条消息。")
-    result = []
+    data = []
+
     for m in msgs:
-        # 安全地获取 is_premium 字段
-        is_premium_value = '0'
-        try:
-            is_premium_value = m.is_premium if hasattr(m, 'is_premium') else '0'
-        except:
-            is_premium_value = '0'
-        
-        msg_data = {
+        item = {
             "id": m.id,
             "content": m.content,
             "date": m.date,
-            "is_premium": is_premium_value,
+            "is_premium": m.is_premium,
             "replies": []
         }
-        
-        try:
-            for r in m.replies:
-                # 安全地获取回复的 is_premium 字段
-                reply_is_premium = '0'
-                try:
-                    reply_is_premium = r.is_premium if hasattr(r, 'is_premium') else '0'
-                except:
-                    reply_is_premium = '0'
-                
-                msg_data["replies"].append({
-                    "content": r.content,
-                    "date": r.date,
-                    "is_premium": reply_is_premium
-                })
-        except Exception as e:
-            print(f"⚠️ 获取回复信息出错: {e}")
-            # 如果出错，只添加内容而不包含 is_premium
-            for r in m.replies:
-                msg_data["replies"].append({
-                    "content": r.content,
-                    "date": r.date,
-                    "is_premium": '0'  # 默认为非炫彩
-                })
-        
-        result.append(msg_data)
-    return jsonify({"data": result})
-    
+        for r in m.replies:
+            item["replies"].append({
+                "content": r.content,
+                "date": r.date,
+                "is_premium": r.is_premium
+            })
+        data.append(item)
+
+    return jsonify({"data": data})
+
+# =========================
+# 启动
+# =========================
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))  # 获取环境变量 PORT，如果没有则用 8080
-    app.run(host="0.0.0.0", port=port, debug=True) # host 必须是 0.0.0.0
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=True)
