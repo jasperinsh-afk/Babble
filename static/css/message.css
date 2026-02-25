@@ -43,6 +43,107 @@ body {
     line-height: 1;
 }
 
+/* 会员验证模态框 */
+.member-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-content h3 {
+    color: #cc0000;
+    font-size: 28px;
+    margin-bottom: 10px;
+}
+
+.modal-content p {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 12px;
+    font-size: 20px;
+    text-align: center;
+    border: 3px solid #cc0000;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    outline: none;
+    text-transform: uppercase;
+}
+
+.modal-content input:focus {
+    border-color: #ff0000;
+    box-shadow: 0 0 10px rgba(204, 0, 0, 0.3);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.modal-btn {
+    padding: 12px 24px;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-btn.confirm {
+    background-color: #cc0000;
+    color: white;
+}
+
+.modal-btn.confirm:hover {
+    background-color: #ff0000;
+    transform: translateY(-2px);
+}
+
+.modal-btn.cancel {
+    background-color: #ddd;
+    color: #333;
+}
+
+.modal-btn.cancel:hover {
+    background-color: #ccc;
+}
+
+.hint {
+    margin-top: 15px;
+    font-size: 16px;
+    color: #888;
+    font-style: italic;
+}
+
 .header {
     padding: 20px;
     text-align: center;
@@ -91,6 +192,36 @@ body {
     display: block;
 }
 
+/* 炫彩边框 */
+.todo.premium-border {
+    border: 4px solid transparent;
+    background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff);
+    background-size: 400% 400%;
+    background-clip: padding-box, border-box;
+    animation: rainbow-border 3s linear infinite;
+    position: relative;
+}
+
+.todo.premium-border::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff);
+    background-size: 400% 400%;
+    border-radius: 12px;
+    z-index: -1;
+    animation: rainbow-border 3s linear infinite;
+}
+
+@keyframes rainbow-border {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
 .todo_new {
     width: 90%;
     max-width: 800px;
@@ -107,6 +238,39 @@ body {
     display: block;
 }
 
+.todo_new.premium-border {
+    border: 5px solid transparent;
+    background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff);
+    background-size: 400% 400%;
+    background-clip: padding-box, border-box;
+    animation: rainbow-border 3s linear infinite;
+    position: relative;
+}
+
+.todo_new.premium-border::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff);
+    background-size: 400% 400%;
+    border-radius: 13px;
+    z-index: -1;
+    animation: rainbow-border 3s linear infinite;
+}
+
+/* 按钮组 */
+.button-group {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+    margin: 20px auto;
+    max-width: 800px;
+}
+
 .submit {
     position: relative;
     overflow: hidden;
@@ -120,7 +284,8 @@ body {
     font-weight: bold;
     cursor: pointer;
     display: block;
-    margin: 10px auto;
+    flex: 1;
+    max-width: 200px;
 }
 
 .submit:hover {
@@ -129,8 +294,44 @@ body {
     font-weight: bold;
 }
 
+/* 会员按钮 */
+.member-btn {
+    position: relative;
+    overflow: hidden;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #ffde59, #ff9900, #ffde59);
+    border: 2px solid #cc0000;
+    border-radius: 5px;
+    transition: all 0.3s;
+    font-size: 20px;
+    color: #cc0000;
+    font-weight: bold;
+    cursor: pointer;
+    display: block;
+    flex: 1;
+    max-width: 200px;
+    text-align: center;
+}
+
+.member-btn:hover {
+    background: linear-gradient(135deg, #ff9900, #ff6600, #ff9900);
+    color: white;
+    border-color: #ff0000;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(204, 0, 0, 0.3);
+}
+
+.member-tag {
+    font-size: 14px;
+    display: block;
+    margin-top: 5px;
+    color: #990000;
+    font-weight: normal;
+}
+
 /* 按钮波纹效果 */
-.submit .ripple {
+.submit .ripple,
+.member-btn .ripple {
     position: absolute;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.5);
@@ -144,6 +345,43 @@ body {
         transform: scale(4);
         opacity: 0;
     }
+}
+
+/* 炫彩背景消息 */
+.message.premium-bg {
+    background: linear-gradient(135deg, 
+        rgba(255, 0, 0, 0.1), 
+        rgba(255, 153, 0, 0.1), 
+        rgba(255, 255, 0, 0.1), 
+        rgba(0, 255, 0, 0.1), 
+        rgba(0, 153, 255, 0.1), 
+        rgba(102, 0, 255, 0.1), 
+        rgba(255, 0, 255, 0.1));
+    background-size: 400% 400%;
+    animation: rainbow-bg 10s ease infinite;
+    border: 2px solid transparent;
+    border-image: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff) 1;
+}
+
+.reply.premium-bg {
+    background: linear-gradient(135deg, 
+        rgba(255, 0, 0, 0.15), 
+        rgba(255, 153, 0, 0.15), 
+        rgba(255, 255, 0, 0.15), 
+        rgba(0, 255, 0, 0.15), 
+        rgba(0, 153, 255, 0.15), 
+        rgba(102, 0, 255, 0.15), 
+        rgba(255, 0, 255, 0.15));
+    background-size: 400% 400%;
+    animation: rainbow-bg 8s ease infinite;
+    border-left: 4px solid transparent;
+    border-image: linear-gradient(to bottom, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff) 1;
+}
+
+@keyframes rainbow-bg {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 .message {
@@ -263,6 +501,25 @@ form {
         padding: 12px 20px;
     }
 
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+
+    .modal-content h3 {
+        font-size: 24px;
+    }
+
+    .modal-content input {
+        font-size: 18px;
+        padding: 10px;
+    }
+
+    .modal-btn {
+        padding: 10px 20px;
+        font-size: 16px;
+    }
+
     .header a {
         font-size: 28px;
     }
@@ -283,9 +540,20 @@ form {
         font-size: 18px;
     }
 
-    .submit {
-        font-size: 20px;
+    .button-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .submit, .member-btn {
+        max-width: 100%;
+        width: 100%;
+        font-size: 18px;
         padding: 10px 16px;
+    }
+
+    .member-btn {
+        font-size: 16px;
     }
 
     .content {
