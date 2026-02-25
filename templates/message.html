@@ -18,7 +18,7 @@
     <div class="member-modal" id="memberModal">
         <div class="modal-content">
             <h3>会员验证</h3>
-            <p>请输入4位会员号开启炫彩背景</p>
+            <p>请输入4位会员号</p>
             <input type="text" id="memberCode" placeholder="输入会员号" maxlength="4">
             <div class="modal-buttons">
                 <button class="modal-btn confirm" onclick="verifyMember()">验证</button>
@@ -44,8 +44,8 @@
             </div>
             <p></p>
             <div class="button-group">
-                <button type="submit" class="submit">提交</button>
-                <button type="button" class="member-btn" onclick="openModal('new')">炫彩背景<br><span class="member-tag">会员专享</span></button>
+                <button type="submit" class="submit">普通提交</button>
+                <button type="button" class="member-btn" onclick="openModal('new')">炫彩提交<br><span class="member-tag">会员专享</span></button>
             </div>
             <input type="hidden" name="is_premium" id="newIsPremium" value="0">
         </form>
@@ -198,8 +198,8 @@
                             <textarea class="todo" name="reply_content" placeholder="回复该留言" required></textarea>
                             <br>
                             <div class="button-group">
-                                <button type="submit" class="submit">回复</button>
-                                <button type="button" class="member-btn" onclick="openModal('${msg.id}')">🎨 炫彩背景<br><span class="member-tag">会员专享</span></button>
+                                <button type="submit" class="submit">普通回复</button>
+                                <button type="button" class="member-btn" onclick="openModal('${msg.id}')">炫彩回复<br><span class="member-tag">会员专享</span></button>
                             </div>
                         </form>
                     </div>`;
