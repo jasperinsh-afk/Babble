@@ -55,6 +55,13 @@
     </div>
 
     <script>
+    function isMemberVerified() {
+        return localStorage.getItem('member_verified') === '1';
+    }
+
+    function setMemberVerified() {
+        localStorage.setItem('member_verified', '1');
+    }
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -68,6 +75,14 @@
     // 会员验证相关函数
     function openModal(formType) {
         currentFormType = formType;
+    
+        // ✅ 如果已经是会员，不再弹窗
+        if (isMemberVerified()) {
+            applyPremium(formType);
+            return;
+        }
+    
+        // 否则才要求输入会员号
         document.getElementById('memberModal').style.display = 'flex';
         document.getElementById('memberCode').focus();
     }
@@ -76,32 +91,39 @@
         document.getElementById('memberModal').style.display = 'none';
         document.getElementById('memberCode').value = '';
     }
-
+    function applyPremium(formType) {
+        if (formType === 'new') {
+            document.getElementById('newIsPremium').value = '1';
+            document.querySelector('.todo_new').classList.add('premium-border');
+        } else {
+            const form = document.querySelector(`.reply-form[data-id="${formType}"]`);
+            if (form) {
+                form.querySelector('textarea').classList.add('premium-border');
+                localStorage.setItem(`premium_${formType}`, '1');
+            }
+        }
+    }
     function verifyMember() {
         const inputCode = document.getElementById('memberCode').value.trim().toUpperCase();
-        
+    
         if (inputCode === MEMBER_CODE) {
-            if (currentFormType === 'new') {
-                // 新帖的炫彩背景
-                document.getElementById('newIsPremium').value = '1';
-                document.querySelector('.todo_new').classList.add('premium-border');
-                alert('✅ 会员验证成功！您的帖子将显示炫彩背景');
-            } else {
-                // 回复的炫彩背景
-                const form = document.querySelector(`.reply-form[data-id="${currentFormType}"]`);
-                if (form) {
-                    form.querySelector('textarea').classList.add('premium-border');
-                    // 存储验证状态到本地
-                    localStorage.setItem(`premium_${currentFormType}`, '1');
-                }
-            }
+    
+            // ✅ 1. 记录“已验证会员”
+            localStorage.setItem('member_verified', '1');
+    
+            // ✅ 2. 对当前操作直接应用炫彩
+            applyPremium(currentFormType);
+    
             closeModal();
+            alert('✅ 会员验证成功！');
+    
         } else {
             alert('❌ 会员号错误，请重新输入');
             document.getElementById('memberCode').value = '';
             document.getElementById('memberCode').focus();
         }
     }
+
 
     // 检查回复的会员状态
     function checkReplyPremium(messageId) {
