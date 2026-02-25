@@ -24,6 +24,7 @@
                 <button class="modal-btn confirm" onclick="verifyMember()">验证</button>
                 <button class="modal-btn cancel" onclick="closeModal()">取消</button>
             </div>
+            <p class="hint">默认会员号: PZ01</p>
         </div>
     </div>
 
@@ -123,119 +124,144 @@
     }
 
     async function loadMessages() {
-        const res = await fetch('/api/messages', { cache: "no-store" });
-        const data = await res.json();
-        const msgs = data.data;
-        const container = document.getElementById('messages');
-
-        const currentReplies = {};
-        document.querySelectorAll('.reply-form textarea').forEach(t => {
-            const id = t.closest('.reply-form').querySelector('input[name="message_id"]').value;
-            const val = t.value.trim();
-            if (val) currentReplies[id] = val;
-        });
-
-        if (lastData.length && JSON.stringify(msgs) === JSON.stringify(lastData)) return;
-        lastData = msgs;
-
-        let html = "";
-        msgs.forEach(msg => {
-            let contentHtml = "";
-            const imgRegex = /\[图片]\(([^)]+)\)/g;
-            let lastIndex = 0;
-            let match;
-            while ((match = imgRegex.exec(msg.content)) !== null) {
-                if (match.index > lastIndex) {
-                    const text = msg.content.substring(lastIndex, match.index);
-                    contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
-                }
-                let imageUrl = match[1];
-                if (!imageUrl.startsWith('/')) {
-                    imageUrl = '/' + imageUrl;
-                }
-                contentHtml += `<img src="${escapeHtml(imageUrl)}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
-                lastIndex = imgRegex.lastIndex;
+        try {
+            const res = await fetch('/api/messages', { cache: "no-store" });
+            if (!res.ok) {
+                throw new Error(`HTTP错误: ${res.status}`);
             }
-            if (lastIndex < msg.content.length) {
-                const text = msg.content.substring(lastIndex);
-                contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
-            }
+            const data = await res.json();
+            const msgs = data.data;
+            const container = document.getElementById('messages');
 
-            // 检查消息是否有炫彩背景
-            const isPremiumMsg = msg.is_premium === '1' || msg.is_premium === 1;
+            const currentReplies = {};
+            document.querySelectorAll('.reply-form textarea').forEach(t => {
+                const id = t.closest('.reply-form').querySelector('input[name="message_id"]').value;
+                const val = t.value.trim();
+                if (val) currentReplies[id] = val;
+            });
+
+            // 重要修改：直接显示所有数据，不进行过滤
+            if (lastData.length && JSON.stringify(msgs) === JSON.stringify(lastData)) return;
+            lastData = msgs;
+
+            let html = "";
             
-            html += `
-            <div class="message ${isPremiumMsg ? 'premium-bg' : ''}" data-id="${msg.id}">
-                <div class="content">${contentHtml}</div>
-                <div class="date">${msg.date}</div>
-            
-                ${msg.replies.length ? `<div class="reply-box">` +
-                    msg.replies.map(r => {
-                        const isPremiumReply = r.is_premium === '1' || r.is_premium === 1;
-                        return `
-                        <div class="reply ${isPremiumReply ? 'premium-bg' : ''}">
-                            <div class="reply-content">${r.content}</div>
-                            <div class="reply-date">${r.date}</div>
-                        </div>`;
-                    }).join("")
-                    + `</div>` : ""
+            // 检查是否有数据
+            if (msgs.length === 0) {
+                html = `<div class="no-messages">还没有留言，快来发布第一条吧！</div>`;
+            } else {
+                msgs.forEach(msg => {
+                    let contentHtml = "";
+                    const imgRegex = /\[图片]\(([^)]+)\)/g;
+                    let lastIndex = 0;
+                    let match;
+                    while ((match = imgRegex.exec(msg.content)) !== null) {
+                        if (match.index > lastIndex) {
+                            const text = msg.content.substring(lastIndex, match.index);
+                            contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
+                        }
+                        let imageUrl = match[1];
+                        if (!imageUrl.startsWith('/')) {
+                            imageUrl = '/' + imageUrl;
+                        }
+                        contentHtml += `<img src="${escapeHtml(imageUrl)}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
+                        lastIndex = imgRegex.lastIndex;
+                    }
+                    if (lastIndex < msg.content.length) {
+                        const text = msg.content.substring(lastIndex);
+                        contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
+                    }
+
+                    // 重要修改：无论是否会员，都显示所有内容
+                    // 检查消息是否有炫彩背景
+                    const isPremiumMsg = msg.is_premium === '1' || msg.is_premium === 1;
+                    
+                    html += `
+                    <div class="message ${isPremiumMsg ? 'premium-bg' : ''}" data-id="${msg.id}">
+                        <div class="content">${contentHtml}</div>
+                        <div class="date">${msg.date}</div>
+                    
+                        ${msg.replies.length ? `<div class="reply-box">` +
+                            msg.replies.map(r => {
+                                const isPremiumReply = r.is_premium === '1' || r.is_premium === 1;
+                                return `
+                                <div class="reply ${isPremiumReply ? 'premium-bg' : ''}">
+                                    <div class="reply-content">${r.content}</div>
+                                    <div class="reply-date">${r.date}</div>
+                                </div>`;
+                            }).join("")
+                            + `</div>` : ""
+                    }
+                    
+                        <form class="reply-form" data-id="${msg.id}">
+                            <input type="hidden" name="message_id" value="${msg.id}">
+                            <input type="hidden" name="is_premium" id="replyIsPremium_${msg.id}" value="0">
+                            <textarea class="todo" name="reply_content" placeholder="回复该留言" required></textarea>
+                            <br>
+                            <div class="button-group">
+                                <button type="submit" class="submit">回复</button>
+                                <button type="button" class="member-btn" onclick="openModal('${msg.id}')">🎨 炫彩背景<br><span class="member-tag">会员专享</span></button>
+                            </div>
+                        </form>
+                    </div>`;
+                });
             }
             
-                <form class="reply-form" data-id="${msg.id}">
-                    <input type="hidden" name="message_id" value="${msg.id}">
-                    <input type="hidden" name="is_premium" id="replyIsPremium_${msg.id}" value="0">
-                    <textarea class="todo" name="reply_content" placeholder="回复该留言" required></textarea>
-                    <br>
-                    <div class="button-group">
-                        <button type="submit" class="submit">回复</button>
-                        <button type="button" class="member-btn" onclick="openModal('${msg.id}')">🎨 炫彩背景<br><span class="member-tag">会员专享</span></button>
-                    </div>
-                </form>
-            </div>`;
-        });
-        container.innerHTML = html;
+            container.innerHTML = html;
 
-        // 恢复文本内容和会员状态
-        Object.keys(currentReplies).forEach(id => {
-            const form = container.querySelector(`.reply-form input[value="${id}"]`);
-            if (form) {
-                const textarea = form.closest('.reply-form')?.querySelector('textarea');
-                if (textarea) {
-                    textarea.value = currentReplies[id];
-                    // 恢复会员状态
-                    if (checkReplyPremium(id)) {
-                        textarea.classList.add('premium-border');
-                        document.getElementById(`replyIsPremium_${id}`).value = '1';
+            // 恢复文本内容和会员状态
+            Object.keys(currentReplies).forEach(id => {
+                const form = container.querySelector(`.reply-form input[value="${id}"]`);
+                if (form) {
+                    const textarea = form.closest('.reply-form')?.querySelector('textarea');
+                    if (textarea) {
+                        textarea.value = currentReplies[id];
+                        // 恢复会员状态
+                        if (checkReplyPremium(id)) {
+                            textarea.classList.add('premium-border');
+                            document.getElementById(`replyIsPremium_${id}`).value = '1';
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        document.querySelectorAll('.reply-form').forEach(form => {
-            form.onsubmit = async (e) => {
-                e.preventDefault();
-                const messageId = form.querySelector('input[name="message_id"]').value;
-                const isPremium = checkReplyPremium(messageId) ? '1' : '0';
-                
-                const formData = new FormData(form);
-                formData.append('is_premium', isPremium);
-                
-                const res = await fetch('/reply', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await res.json();
-                if (result.status === "ok") {
-                    console.log("回复已提交");
-                    showSuccess();
-                    // 清除本地存储
-                    localStorage.removeItem(`premium_${messageId}`);
-                    setTimeout(loadMessages, 500);
-                } else {
-                    alert(result.message || "提交失败");
-                }
-            };
-        });
+            document.querySelectorAll('.reply-form').forEach(form => {
+                form.onsubmit = async (e) => {
+                    e.preventDefault();
+                    const messageId = form.querySelector('input[name="message_id"]').value;
+                    const isPremium = checkReplyPremium(messageId) ? '1' : '0';
+                    
+                    const formData = new FormData(form);
+                    formData.append('is_premium', isPremium);
+                    
+                    const res = await fetch('/reply', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await res.json();
+                    if (result.status === "ok") {
+                        console.log("回复已提交");
+                        showSuccess();
+                        // 清除本地存储
+                        localStorage.removeItem(`premium_${messageId}`);
+                        setTimeout(loadMessages, 500);
+                    } else {
+                        alert(result.message || "提交失败");
+                    }
+                };
+            });
+        } catch (error) {
+            console.error("加载消息失败:", error);
+            // 显示友好的错误信息
+            const container = document.getElementById('messages');
+            container.innerHTML = `
+                <div class="error-message">
+                    <h3>😔 加载失败</h3>
+                    <p>无法连接到服务器，请检查网络连接或稍后重试</p>
+                    <button onclick="location.reload()">🔄 刷新页面</button>
+                </div>
+            `;
+        }
     }
 
     loadMessages();
