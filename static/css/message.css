@@ -696,3 +696,141 @@ form {
     }
 }
 
+/* =====================================================
+   🌈 极限镭射 / 全息 / 光谱效果（终极版）
+   覆盖 premium-bg / premium-border
+   ===================================================== */
+
+/* ===== 全局镭射动画（一次即可） ===== */
+@keyframes holo-spectrum {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes holo-scan {
+    0%   { transform: translateX(-60%); opacity: 0; }
+    50%  { opacity: 0.6; }
+    100% { transform: translateX(60%); opacity: 0; }
+}
+
+/* ===============================
+   ✨ 镭射留言卡片
+   =============================== */
+.message.premium-bg {
+    position: relative;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.95),
+            rgba(255,200,255,0.45),
+            rgba(200,255,255,0.45),
+            rgba(255,255,200,0.45),
+            rgba(255,255,255,0.95)
+        );
+    background-size: 400% 400%;
+    animation: holo-spectrum 10s ease infinite;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* 光谱扫描层 */
+.message.premium-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(
+            60deg,
+            transparent,
+            rgba(255,255,255,0.35),
+            rgba(255,0,255,0.25),
+            rgba(0,255,255,0.25),
+            rgba(255,255,0,0.25),
+            transparent
+        );
+    mix-blend-mode: screen;
+    animation: holo-scan 4.5s linear infinite;
+    pointer-events: none;
+}
+
+/* 轻微玻璃感 */
+.message.premium-bg {
+    backdrop-filter: blur(2px) saturate(1.3);
+}
+
+/* ===============================
+   ✨ 镭射回复卡片（稍弱一点）
+   =============================== */
+.reply.premium-bg {
+    position: relative;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,0.9),
+            rgba(230,200,255,0.4),
+            rgba(200,240,255,0.4),
+            rgba(255,255,255,0.9)
+        );
+    background-size: 300% 300%;
+    animation: holo-spectrum 7s ease infinite;
+    overflow: hidden;
+}
+
+.reply.premium-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(
+            60deg,
+            transparent,
+            rgba(255,255,255,0.25),
+            rgba(255,255,255,0.15),
+            transparent
+        );
+    mix-blend-mode: screen;
+    animation: holo-scan 6s linear infinite;
+    pointer-events: none;
+}
+
+/* ===============================
+   ✨ 输入框：液态镭射边框
+   =============================== */
+.todo.premium-border,
+.todo_new.premium-border {
+    position: relative;
+    border: 2px solid transparent;
+    background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(
+            135deg,
+            #ff9a9e,
+            #fad0c4,
+            #fbc2eb,
+            #a6c1ee,
+            #fbc2eb,
+            #ff9a9e
+        ) border-box;
+    background-size: 400% 400%;
+    animation: holo-spectrum 6s ease infinite;
+    border-radius: 10px;
+}
+
+/* 输入框高光 */
+.todo.premium-border::after,
+.todo_new.premium-border::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 12px;
+    background:
+        linear-gradient(
+            60deg,
+            transparent,
+            rgba(255,255,255,0.6),
+            transparent
+        );
+    animation: holo-scan 3.5s linear infinite;
+    pointer-events: none;
+}
