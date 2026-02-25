@@ -211,4 +211,5 @@ def api_messages():
     return jsonify({"data": result})
 
 if __name__ == "__main__":
-    app.run(host="192.168.3.60", port=8080, debug=True)
+    port = int(os.environ.get("PORT", 8080))  # 获取环境变量 PORT，如果没有则用 8080
+    app.run(host="0.0.0.0", port=port, debug=True) # host 必须是 0.0.0.0
