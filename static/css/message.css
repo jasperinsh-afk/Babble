@@ -543,6 +543,24 @@ form {
     border: 2px dashed #ccc;
 }
 
+/* =================================================
+   按钮再缩小一档（提交 / 回复 / 炫彩背景）
+   ================================================= */
+
+.submit,
+.member-btn {
+    padding: 6px 12px;     /* 明显变小 */
+    font-size: 16px;       /* 字体降一档 */
+    border-radius: 6px;
+    max-width: 150px;
+}
+
+/* 炫彩背景按钮的“会员专享”字 */
+.member-tag {
+    font-size: 12px;
+    margin-top: 3px;
+}
+
 /* ===== 移动端适配（≤768px） ===== */
 @media (max-width: 768px) {
     .success-toast {
@@ -641,5 +659,14 @@ form {
     
     .error-message p {
         font-size: 18px;
+    }
+    .submit,
+    .member-btn {
+        padding: 6px 10px;
+        font-size: 15px;
+    }
+
+    .member-tag {
+        font-size: 11px;
     }
 }
