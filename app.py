@@ -34,7 +34,6 @@ class Message(db.Model):
     ip = db.Column(db.String(50))
     content = db.Column(db.Text)
     date = db.Column(db.String(50))
-    is_premium = db.Column(db.String(1), default='0')  # 新增字段：是否为炫彩帖子
     replies = db.relationship('Reply', backref='message', lazy='dynamic', cascade="all, delete-orphan")
 
 class Reply(db.Model):
@@ -42,7 +41,6 @@ class Reply(db.Model):
     ip = db.Column(db.String(50))
     content = db.Column(db.Text)
     date = db.Column(db.String(50))
-    is_premium = db.Column(db.String(1), default='0')  # 新增字段：是否为炫彩回复
     message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False)
 
 with app.app_context():
@@ -73,7 +71,6 @@ def allowed_file(filename):
 def upload():
     ip = request.remote_addr
     content = request.form.get("content", "")
-    is_premium = request.form.get("is_premium", "0")  # 新增：获取炫彩标记
     date = now_cn_str()
 
     # 处理图片上传
@@ -101,13 +98,13 @@ def upload():
         print(f"【上传调试】内容为空，忽略提交。")
         return redirect('/message')
 
-    print(f"【上传调试】接收到数据 -> IP: {ip}, 时间: {date}, 炫彩: {is_premium}, 内容: {content[:100]}...")
+    print(f"【上传调试】接收到数据 -> IP: {ip}, 时间: {date}, 内容: {content[:100]}...")
 
     try:
-        new_msg = Message(ip=ip, content=content, date=date, is_premium=is_premium)  # 保存炫彩标记
+        new_msg = Message(ip=ip, content=content, date=date)
         db.session.add(new_msg)
         db.session.commit()
-        print(f"【上传调试】成功写入数据库，消息ID: {new_msg.id}, 炫彩: {is_premium}")
+        print(f"【上传调试】成功写入数据库，消息ID: {new_msg.id}")
     except Exception as e:
         db.session.rollback()
         print(f"【上传调试】严重错误：数据写入数据库失败！原因: {e}")
@@ -119,18 +116,16 @@ def reply():
     ip = request.remote_addr
     reply_content = request.form.get("reply_content")
     message_id = request.form.get("message_id")
-    is_premium = request.form.get("is_premium", "0")  # 新增：获取炫彩标记
     date = now_cn_str()
 
-    print(f"回复消息 - 时间: {date}, 炫彩: {is_premium}")
+    print(f"回复消息 - 时间: {date}")
 
     try:
         message_id_int = int(message_id)
     except (ValueError, TypeError):
         return jsonify({"status": "error", "message": "无效的 message_id"}), 400
 
-    new_reply = Reply(ip=ip, content=reply_content, date=date, 
-                     message_id=message_id_int, is_premium=is_premium)  # 保存炫彩标记
+    new_reply = Reply(ip=ip, content=reply_content, date=date, message_id=message_id_int)
     db.session.add(new_reply)
     db.session.commit()
     return jsonify({"status": "ok", "message": "回复已保存"})
@@ -146,8 +141,7 @@ def api_messages():
             "id": m.id,
             "content": m.content,
             "date": m.date,
-            "is_premium": m.is_premium,  # 返回炫彩标记
-            "replies": [{"content": r.content, "date": r.date, "is_premium": r.is_premium} for r in m.replies]  # 回复也返回炫彩标记
+            "replies": [{"content": r.content, "date": r.date} for r in m.replies]
         })
     return jsonify({"data": result})
 
