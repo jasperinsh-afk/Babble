@@ -670,3 +670,29 @@ form {
         font-size: 11px;
     }
 }
+/* =================================================
+   ✅ 修复移动端按钮过大的问题（最终覆盖）
+   ================================================= */
+@media (max-width: 768px) {
+
+    .button-group {
+        flex-direction: column;
+        align-items: center;   /* ✅ 不拉满 */
+        gap: 8px;
+    }
+
+    .submit,
+    .member-btn {
+        width: auto;           /* ✅ 关键：取消 100% */
+        max-width: none;
+        padding: 6px 12px;     /* ✅ 真正变小 */
+        font-size: 14px;       /* ✅ 手机舒适字号 */
+        border-radius: 6px;
+    }
+
+    .member-tag {
+        font-size: 11px;
+        margin-top: 2px;
+    }
+}
+
