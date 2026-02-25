@@ -187,29 +187,48 @@ def api_messages():
     print(f"【API调试】查询完成，共找到 {len(msgs)} 条消息。")
     result = []
     for m in msgs:
-        # 安全地获取 is_premium 字段（如果存在）
-        is_premium_value = getattr(m, 'is_premium', '0')
+        # 安全地获取 is_premium 字段
+        is_premium_value = '0'
+        try:
+            is_premium_value = m.is_premium if hasattr(m, 'is_premium') else '0'
+        except:
+            is_premium_value = '0'
         
         msg_data = {
             "id": m.id,
             "content": m.content,
             "date": m.date,
-            "is_premium": is_premium_value,  # 返回炫彩标记
+            "is_premium": is_premium_value,
             "replies": []
         }
         
-        for r in m.replies:
-            # 安全地获取回复的 is_premium 字段
-            reply_is_premium = getattr(r, 'is_premium', '0')
-            msg_data["replies"].append({
-                "content": r.content,
-                "date": r.date,
-                "is_premium": reply_is_premium  # 回复也返回炫彩标记
-            })
+        try:
+            for r in m.replies:
+                # 安全地获取回复的 is_premium 字段
+                reply_is_premium = '0'
+                try:
+                    reply_is_premium = r.is_premium if hasattr(r, 'is_premium') else '0'
+                except:
+                    reply_is_premium = '0'
+                
+                msg_data["replies"].append({
+                    "content": r.content,
+                    "date": r.date,
+                    "is_premium": reply_is_premium
+                })
+        except Exception as e:
+            print(f"⚠️ 获取回复信息出错: {e}")
+            # 如果出错，只添加内容而不包含 is_premium
+            for r in m.replies:
+                msg_data["replies"].append({
+                    "content": r.content,
+                    "date": r.date,
+                    "is_premium": '0'  # 默认为非炫彩
+                })
         
         result.append(msg_data)
     return jsonify({"data": result})
-
+    
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))  # 获取环境变量 PORT，如果没有则用 8080
     app.run(host="0.0.0.0", port=port, debug=True) # host 必须是 0.0.0.0
