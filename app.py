@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import inspect
 import time
 import os
 from datetime import datetime
 from werkzeug.utils import secure_filename
+from sqlalchemy import inspect, text
+
 
 # =========================
 # 基础配置
@@ -79,15 +80,17 @@ def force_rebuild_message_is_premium():
         if 'is_premium' in columns:
             print("🗑️ 删除 message.is_premium ...")
             db.session.execute(
-                "ALTER TABLE message DROP COLUMN is_premium"
+                text("ALTER TABLE message DROP COLUMN is_premium")
             )
             db.session.commit()
             print("✅ 已删除 message.is_premium")
 
         print("🔧 重建 message.is_premium（默认 0）...")
         db.session.execute(
-            "ALTER TABLE message "
-            "ADD COLUMN is_premium VARCHAR(1) NOT NULL DEFAULT '0'"
+            text(
+                "ALTER TABLE message "
+                "ADD COLUMN is_premium VARCHAR(1) NOT NULL DEFAULT '0'"
+            )
         )
         db.session.commit()
         print("✅ message.is_premium 重建完成")
@@ -95,6 +98,7 @@ def force_rebuild_message_is_premium():
     except Exception as e:
         print("❌ 兜底修复失败：", e)
         db.session.rollback()
+
 
 # =========================
 # 正常补列逻辑（安全）
@@ -110,7 +114,7 @@ def check_and_add_columns():
             try:
                 print("➕ 添加 reply.is_premium")
                 db.session.execute(
-                    "ALTER TABLE reply ADD COLUMN is_premium VARCHAR(1) DEFAULT '0'"
+                    text("ALTER TABLE reply ADD COLUMN is_premium VARCHAR(1) DEFAULT '0'")
                 )
                 db.session.commit()
             except Exception as e:
