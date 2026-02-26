@@ -6,6 +6,24 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 from sqlalchemy import inspect, text
 
+def get_real_ip(req):
+    """
+    Railway / 代理环境下获取真实客户端 IP
+    优先级按监管认可顺序
+    """
+    # 1️⃣ 标准反向代理头
+    xff = req.headers.get("X-Forwarded-For", "")
+    if xff:
+        # X-Forwarded-For 可能是 "客户端IP, 代理IP, ..."
+        return xff.split(",")[0].strip(), "X-Forwarded-For"
+
+    # 2️⃣ 常见真实 IP 头
+    xri = req.headers.get("X-Real-IP")
+    if xri:
+        return xri.strip(), "X-Real-IP"
+
+    # 3️⃣ 兜底：Flask 看到的地址（可能是 100.64.x.x）
+    return req.remote_addr or "", "REMOTE_ADDR"
 
 # =========================
 # 基础配置
