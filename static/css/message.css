@@ -878,3 +878,52 @@ form {
         padding: 2px 6px;
     }
 }
+/* =====================================================
+   🌈 会员帖：同款「心动PLUS会员」流动彩虹背景
+   ===================================================== */
+
+@keyframes plus-rainbow-flow {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+}
+
+/* ✅ 只作用于会员帖 */
+.message.premium-bg {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+
+    /* 和会员标签一模一样的彩虹 */
+    background: linear-gradient(
+        90deg,
+        #ff0000,
+        #ff9900,
+        #ffff00,
+        #00ff00,
+        #0099ff,
+        #6600ff,
+        #ff00ff,
+        #ff0000
+    );
+    background-size: 300% 100%;
+    animation: plus-rainbow-flow 3.5s linear infinite;
+}
+
+/* ✅ 内容可读层（不花） */
+.message.premium-bg .content,
+.message.premium-bg .date,
+.message.premium-bg .reply-box,
+.message.premium-bg .reply-form {
+    position: relative;
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 8px;
+}
+
+/* 微调间距，保持你原本版式 */
+.message.premium-bg .content {
+    margin: 12px;
+}
+
+.message.premium-bg .date {
+    margin: 0 12px 12px;
+}
