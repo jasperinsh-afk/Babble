@@ -72,20 +72,20 @@
     let currentFormType = ''; // 'new' 或 message_id
     const MEMBER_CODE = 'PZ01';
 
-    // 会员验证相关函数
     function openModal(formType) {
         currentFormType = formType;
     
-        // ✅ 如果已经是会员，不再弹窗
+        document.getElementById('memberModal').style.display = 'flex';
+    
         if (isMemberVerified()) {
-            applyPremium(formType);
-            return;
+            document.getElementById('memberCode').value = MEMBER_CODE;
+        } else {
+            document.getElementById('memberCode').value = '';
         }
     
-        // 否则才要求输入会员号
-        document.getElementById('memberModal').style.display = 'flex';
         document.getElementById('memberCode').focus();
     }
+
 
     function closeModal() {
         document.getElementById('memberModal').style.display = 'none';
