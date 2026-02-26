@@ -62,42 +62,7 @@ class Reply(db.Model):
         nullable=False
     )
 
-# =========================
-# 🚑 兜底方案：强制重建 message.is_premium
-# =========================
 
-def force_rebuild_message_is_premium():
-    print("🔥 启动兜底修复：重建 message.is_premium")
-
-    try:
-        inspector = inspect(db.engine)
-        if 'message' not in inspector.get_table_names():
-            print("⚠️ message 表不存在，跳过兜底")
-            return
-
-        columns = [c['name'] for c in inspector.get_columns('message')]
-
-        if 'is_premium' in columns:
-            print("🗑️ 删除 message.is_premium ...")
-            db.session.execute(
-                text("ALTER TABLE message DROP COLUMN is_premium")
-            )
-            db.session.commit()
-            print("✅ 已删除 message.is_premium")
-
-        print("🔧 重建 message.is_premium（默认 0）...")
-        db.session.execute(
-            text(
-                "ALTER TABLE message "
-                "ADD COLUMN is_premium VARCHAR(1) NOT NULL DEFAULT '0'"
-            )
-        )
-        db.session.commit()
-        print("✅ message.is_premium 重建完成")
-
-    except Exception as e:
-        print("❌ 兜底修复失败：", e)
-        db.session.rollback()
 
 
 # =========================
@@ -129,7 +94,6 @@ def check_and_add_columns():
 
 with app.app_context():
     db.create_all()
-    force_rebuild_message_is_premium()  # 🚑 只需成功跑一次
     check_and_add_columns()
 
 # =========================
