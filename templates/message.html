@@ -200,7 +200,11 @@
                     html += `
                     <div class="message ${isPremiumMsg ? 'premium-bg' : ''}" data-id="${msg.id}">
                         <div class="content">${contentHtml}</div>
-                        <div class="date">${msg.date}</div>
+                        <div class="date">
+                            ${msg.date}
+                            ${isPremiumMsg ? `<span class="plus-badge">心动PLUS会员</span>` : ''}
+                        </div>
+
                     
                         ${msg.replies.length ? `<div class="reply-box">` +
                             msg.replies.map(r => {
@@ -208,7 +212,12 @@
                                 return `
                                 <div class="reply ${isPremiumReply ? 'premium-bg' : ''}">
                                     <div class="reply-content">${r.content}</div>
-                                    <div class="reply-date">${r.date}</div>
+                                    <div class="reply-date">
+                                        ${r.date}
+                                        ${(r.is_premium === '1' || r.is_premium === 1)
+                                            ? `<span class="plus-badge">心动PLUS会员</span>`
+                                            : ''}
+                                    </div>
                                 </div>`;
                             }).join("")
                             + `</div>` : ""
