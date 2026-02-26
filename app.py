@@ -139,23 +139,11 @@ def allowed_file(filename):
 
 @app.route("/upload", methods=["POST"])
 def upload():
-    ip = request.remote_addr
+    ip, ip_source = get_real_ip(request)
+
     content = request.form.get("content", "").strip()
     is_premium = request.form.get("is_premium", "0")
     date = now_cn_str()
-
-    file = request.files.get("image")
-    image_url = None
-
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        unique = f"{int(time.time())}_{filename}"
-        path = os.path.join(app.root_path, "static/uploads", unique)
-        file.save(path)
-        image_url = url_for("static", filename=f"uploads/{unique}")
-
-    if image_url:
-        content = f"[图片]({image_url})\n{content}"
 
     if not content:
         return redirect("/message")
@@ -166,10 +154,14 @@ def upload():
         date=date,
         is_premium=is_premium
     )
+
     db.session.add(msg)
     db.session.commit()
 
+    print(f"📌 新留言 IP: {ip} | 来源: {ip_source}")
+
     return redirect("/message")
+
 
 # =========================
 # 回复
@@ -177,7 +169,8 @@ def upload():
 
 @app.route("/reply", methods=["POST"])
 def reply():
-    ip = request.remote_addr
+    ip, ip_source = get_real_ip(request)
+
     content = request.form.get("reply_content", "")
     message_id = int(request.form.get("message_id"))
     is_premium = request.form.get("is_premium", "0")
@@ -190,10 +183,14 @@ def reply():
         message_id=message_id,
         is_premium=is_premium
     )
+
     db.session.add(r)
     db.session.commit()
 
+    print(f"📌 新回复 IP: {ip} | 来源: {ip_source}")
+
     return jsonify({"status": "ok"})
+
 
 # =========================
 # API
