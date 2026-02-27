@@ -18,7 +18,7 @@
     <div class="member-modal" id="memberModal">
         <div class="modal-content">
             <h3>会员验证</h3>
-            <p>请输入4位会员号</p>
+            <p>请输入会员号</p>
             <input type="text" id="memberCode" placeholder="输入会员号" maxlength="4">
             <div class="modal-buttons">
                 <button class="modal-btn confirm" onclick="verifyMember()">验证</button>
@@ -41,7 +41,7 @@
             <p></p>
             <div class="button-group">
                 <button type="submit" class="submit">提交</button>
-                <button type="button" class="member-btn" onclick="openModal('new')">开启炫彩<br><span class="member-tag">心动PLUS会员专享</span></button>
+                <button type="button" class="member-btn" onclick="openModal('new')">开启炫彩<br><span class="member-tag">心动会员专享</span></button>
             </div>
             <input type="hidden" name="is_premium" id="newIsPremium" value="0">
         </form>
@@ -66,7 +66,7 @@
 
     let lastData = [];
     let currentFormType = ''; // 'new' 或 message_id
-    const MEMBER_CODE = 'PZ01';
+    const MEMBER_CODE = '971899';
 
     function openModal(formType) {
         currentFormType = formType;
@@ -215,7 +215,7 @@
                         <div class="content">${contentHtml}</div>
                         <div class="date">
                             ${msg.date}
-                            ${isPremiumMsg ? `<span class="plus-badge">心动PLUS会员 已优先置顶</span>` : ''}
+                            ${isPremiumMsg ? `<span class="plus-badge">心动会员 已优先置顶</span>` : ''}
                         </div>
 
                     
@@ -228,7 +228,7 @@
                                     <div class="reply-date">
                                         ${r.date}
                                         ${(r.is_premium === '1' || r.is_premium === 1)
-                                            ? `<span class="plus-badge">心动PLUS会员</span>`
+                                            ? `<span class="plus-badge">心动会员</span>`
                                             : ''}
                                     </div>
                                 </div>`;
