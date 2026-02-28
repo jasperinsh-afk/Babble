@@ -156,23 +156,6 @@
                 const val = t.value.trim();
                 if (val) currentReplies[id] = val;
             });
-            const ONE_DAY = 24 * 60 * 60 * 1000;
-
-            msgs.sort((a, b) => {
-                const now = Date.now();
-            
-                const aPremium = a.is_premium === '1' || a.is_premium === 1;
-                const bPremium = b.is_premium === '1' || b.is_premium === 1;
-            
-                const aTime = new Date(a.date).getTime();
-                const bTime = new Date(b.date).getTime();
-            
-                const aPinned = aPremium && (now - aTime < ONE_DAY);
-                const bPinned = bPremium && (now - bTime < ONE_DAY);
-            
-                if (aPinned !== bPinned) return bPinned - aPinned;
-                return bTime - aTime;
-            });
 
             // 重要修改：直接显示所有数据，不进行过滤
             if (lastData.length && JSON.stringify(msgs) === JSON.stringify(lastData)) return;
@@ -215,7 +198,7 @@
                         <div class="content">${contentHtml}</div>
                         <div class="date">
                             ${msg.date}
-                            ${isPremiumMsg ? `<span class="plus-badge">心动会员 已优先置顶</span>` : ''}
+                            ${isPremiumMsg ? `<span class="plus-badge">心动会员</span>` : ''}
                         </div>
 
                     
