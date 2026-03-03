@@ -5,7 +5,7 @@
 }
 
 body {
-    background-color: #ffde59;
+    background-color: #3d00ad;
     font-family: "Alibaba Sans Medium", sans-serif;
 }
 
@@ -147,7 +147,7 @@ body {
 .header {
     padding: 20px;
     text-align: center;
-    background-color: #cc0000;
+    background-color: #ff914d;
 }
 
 .header a {
@@ -181,7 +181,7 @@ body {
     max-width: 800px;
     height: 120px;
     margin: 10px auto;
-    border: 4px solid #cc0000;
+    border: 4px solid #ff914d;
     border-radius: 8px;
     padding: 10px;
     font-size: 24px;
@@ -278,10 +278,10 @@ body {
     font-size: 20px;
     border-radius: 8px;
     max-width: 180px;
-    background-color: #cc0000;
+    background-color: #3d00ad;
     border: 2px solid rgba(255, 255, 255);
     transition: all 0.2s;
-    color: #ffde59;
+    color: #ff914d;
     font-weight: bold;
     cursor: pointer;
     display: block;
@@ -410,7 +410,7 @@ body {
     text-align: right;
     padding: 8px 12px;
     font-size: 22px;
-    color: #cc0000;
+    color: #3d00ad;
     font-weight: bold;
 }
 
