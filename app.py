@@ -3,34 +3,37 @@ import random
 import string
 from datetime import datetime, timedelta
 
-from flask import (
-    Flask, render_template, request, redirect, jsonify, session
-)
+from flask import Flask, render_template, request, redirect, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-# =========================
-# Flask 基础配置
-# =========================
 app = Flask(__name__)
 
-# 生产环境建议用环境变量设置
+# =========================
+# 基础配置
+# =========================
 app.secret_key = os.environ.get("SECRET_KEY", "replace-with-a-strong-secret-key")
 
-# 数据库（兼容 mysql:// -> mysql+pymysql://）
-raw_uri = os.environ.get("DATABASE_URL")
-if raw_uri:
-    db_uri = raw_uri.replace("mysql://", "mysql+pymysql://", 1)
-else:
-    # 本地兜底
-    db_uri = "mysql+pymysql://root:password@127.0.0.1:3306/msgboard?charset=utf8mb4"
+# 线上必须有数据库连接；兼容 Railway 常见变量名
+raw_uri = os.environ.get("DATABASE_URL") or os.environ.get("MYSQL_URL")
+if not raw_uri:
+    raise RuntimeError("DATABASE_URL / MYSQL_URL is not set in environment")
+
+# 兼容 mysql://
+db_uri = raw_uri.replace("mysql://", "mysql+pymysql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 180,
+    "pool_size": 3,
+    "max_overflow": 2,
+    "pool_timeout": 30,
+}
 
-# 上传目录
 UPLOAD_FOLDER = os.path.join("static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -47,9 +50,9 @@ class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=True)
     date = db.Column(db.String(50), nullable=True)
-    username = db.Column(db.String(30), nullable=True)         # 发帖人
-    image_path = db.Column(db.String(255), nullable=True)      # 图片路径
-    is_premium = db.Column(db.Integer, default=0)              # 会员帖标记（0/1）
+    username = db.Column(db.String(30), nullable=True)
+    image_path = db.Column(db.String(255), nullable=True)
+    is_premium = db.Column(db.Integer, default=0)
 
 
 class Reply(db.Model):
@@ -65,14 +68,10 @@ class User(db.Model):
     username = db.Column(db.String(30), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     date = db.Column(db.String(50), nullable=True)
-    register_ip = db.Column(db.String(50), nullable=True, index=True)  # 同IP限注册
+    register_ip = db.Column(db.String(50), nullable=True, index=True)
 
 
 class PostLog(db.Model):
-    """
-    发帖/回复限流日志
-    60秒内最多3次（按IP）
-    """
     id = db.Column(db.Integer, primary_key=True)
     ip = db.Column(db.String(50), index=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -86,13 +85,9 @@ def now_cn_str():
 
 
 def get_real_ip(req):
-    """
-    在反向代理环境下优先取 X-Forwarded-For
-    """
     xff = req.headers.get("X-Forwarded-For", "")
     if xff:
-        ip = xff.split(",")[0].strip()
-        return ip, True
+        return xff.split(",")[0].strip(), True
     return req.remote_addr or "0.0.0.0", False
 
 
@@ -107,13 +102,9 @@ def random_filename(filename):
 
 
 def check_post_rate_limit(ip: str, limit=3, window_seconds=60):
-    """
-    60秒内最多 limit 次（留言+回复共用）
-    """
     now = datetime.utcnow()
     window_start = now - timedelta(seconds=window_seconds)
 
-    # 清理旧数据（可选）
     PostLog.query.filter(PostLog.created_at < window_start).delete()
     db.session.commit()
 
@@ -131,66 +122,47 @@ def check_post_rate_limit(ip: str, limit=3, window_seconds=60):
 
 
 def check_and_add_columns():
-    """
-    对旧库做最小兼容：自动补字段
-    """
     inspector = db.inspect(db.engine)
     tables = inspector.get_table_names()
 
-    # user.register_ip
     if "user" in tables:
         columns = [c["name"] for c in inspector.get_columns("user")]
         if "register_ip" not in columns:
             try:
                 db.session.execute(text("ALTER TABLE user ADD COLUMN register_ip VARCHAR(50)"))
                 db.session.commit()
-                print("✅ user.register_ip 添加完成")
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                print("⚠️ 添加 user.register_ip 失败：", e)
 
-    # message.image_path / is_premium / username
     if "message" in tables:
         columns = [c["name"] for c in inspector.get_columns("message")]
-
         if "image_path" not in columns:
             try:
                 db.session.execute(text("ALTER TABLE message ADD COLUMN image_path VARCHAR(255)"))
                 db.session.commit()
-                print("✅ message.image_path 添加完成")
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                print("⚠️ 添加 message.image_path 失败：", e)
-
         if "is_premium" not in columns:
             try:
                 db.session.execute(text("ALTER TABLE message ADD COLUMN is_premium INT DEFAULT 0"))
                 db.session.commit()
-                print("✅ message.is_premium 添加完成")
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                print("⚠️ 添加 message.is_premium 失败：", e)
-
         if "username" not in columns:
             try:
                 db.session.execute(text("ALTER TABLE message ADD COLUMN username VARCHAR(30)"))
                 db.session.commit()
-                print("✅ message.username 添加完成")
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                print("⚠️ 添加 message.username 失败：", e)
 
-    # reply.username
     if "reply" in tables:
         columns = [c["name"] for c in inspector.get_columns("reply")]
         if "username" not in columns:
             try:
                 db.session.execute(text("ALTER TABLE reply ADD COLUMN username VARCHAR(30)"))
                 db.session.commit()
-                print("✅ reply.username 添加完成")
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                print("⚠️ 添加 reply.username 失败：", e)
 
 
 # =========================
@@ -216,19 +188,14 @@ def register():
 
     if not username or not password:
         return jsonify({"status": "error", "message": "用户名和密码不能为空"})
-
     if len(username) < 2 or len(username) > 30:
         return jsonify({"status": "error", "message": "用户名长度需在2-30之间"})
 
     ip, _ = get_real_ip(request)
 
-    # 同IP最多注册1个账号
-    ip_exists = User.query.filter_by(register_ip=ip).first()
-    if ip_exists:
+    if User.query.filter_by(register_ip=ip).first():
         return jsonify({"status": "error", "message": "该IP已注册过账号，无法重复注册"})
-
-    exists = User.query.filter_by(username=username).first()
-    if exists:
+    if User.query.filter_by(username=username).first():
         return jsonify({"status": "error", "message": "用户名已存在"})
 
     u = User(
@@ -281,9 +248,7 @@ def change_username():
         return jsonify({"status": "error", "message": "新用户名不能为空"})
     if len(new_username) < 2 or len(new_username) > 30:
         return jsonify({"status": "error", "message": "用户名长度需在2-30之间"})
-
-    exists = User.query.filter_by(username=new_username).first()
-    if exists:
+    if User.query.filter_by(username=new_username).first():
         return jsonify({"status": "error", "message": "用户名已存在"})
 
     old_username = session["username"]
@@ -293,14 +258,11 @@ def change_username():
         return jsonify({"status": "error", "message": "用户不存在，请重新登录"}), 401
 
     user.username = new_username
-
-    # 同步历史发言中的显示名
     Message.query.filter_by(username=old_username).update({"username": new_username})
     Reply.query.filter_by(username=old_username).update({"username": new_username})
-
     db.session.commit()
-    session["username"] = new_username
 
+    session["username"] = new_username
     return jsonify({"status": "ok", "username": new_username})
 
 
@@ -315,10 +277,8 @@ def delete_account():
         session.pop("username", None)
         return jsonify({"status": "error", "message": "用户不存在"}), 404
 
-    # 只删除账号，保留历史内容并匿名化
     Message.query.filter_by(username=username).update({"username": "已注销用户"})
     Reply.query.filter_by(username=username).update({"username": "已注销用户"})
-
     db.session.delete(user)
     db.session.commit()
     session.pop("username", None)
@@ -365,8 +325,6 @@ def upload():
         return jsonify({"status": "error", "message": "请先登录后再发帖"}), 401
 
     ip, _ = get_real_ip(request)
-
-    # 防刷：60秒最多3次（留言/回复共用，本接口先记一笔）
     ok, _ = check_post_rate_limit(ip, limit=3, window_seconds=60)
     if not ok:
         return jsonify({"status": "error", "message": "发送过于频繁：60秒内最多3次"}), 429
@@ -409,8 +367,6 @@ def reply():
         return jsonify({"status": "error", "message": "请先登录后再回复"}), 401
 
     ip, _ = get_real_ip(request)
-
-    # 防刷：60秒最多3次（留言/回复共用）
     ok, _ = check_post_rate_limit(ip, limit=3, window_seconds=60)
     if not ok:
         return jsonify({"status": "error", "message": "发送过于频繁：60秒内最多3次"}), 429
@@ -439,12 +395,10 @@ def reply():
 
 
 # =========================
-# 启动初始化
+# 仅本地初始化（避免 gunicorn 导入即连库）
 # =========================
-with app.app_context():
-    db.create_all()
-    check_and_add_columns()
-
 if __name__ == "__main__":
-    # 开发模式
+    with app.app_context():
+        db.create_all()
+        check_and_add_columns()
     app.run(host="0.0.0.0", port=5000, debug=True)
