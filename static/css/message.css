@@ -927,3 +927,91 @@ form {
 .message.premium-bg .date {
     margin: 0 12px 12px;
 }
+
+/* =====================================================
+   账号区：登录/注册 居中 + 放大
+   ===================================================== */
+#authPanel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 18px auto 26px !important;
+    text-align: center;
+}
+
+#authNotLogin,
+#authLogged {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* 输入框放大 */
+#loginUsername,
+#loginPassword {
+    width: 220px;
+    max-width: 42vw;
+    height: 46px;
+    padding: 0 14px;
+    border: 2px solid #ff914d;
+    border-radius: 8px;
+    font-size: 18px;
+    color: #333;
+    outline: none;
+    text-align: center;
+    background: #fff;
+}
+
+#loginUsername:focus,
+#loginPassword:focus {
+    border-color: #cc0000;
+    box-shadow: 0 0 8px rgba(204, 0, 0, 0.25);
+}
+
+/* 登录/注册/退出按钮放大（仅账号区） */
+#authPanel .submit {
+    min-width: 120px;
+    max-width: none;
+    padding: 10px 20px;
+    font-size: 18px;
+    border-radius: 8px;
+    flex: 0 0 auto;
+}
+
+/* “当前账号”文字放大 */
+#authLogged {
+    font-size: 22px !important;
+    color: #3d00ad;
+    font-weight: bold;
+}
+
+/* 手机端仍保持居中并适度放大 */
+@media (max-width: 768px) {
+    #authNotLogin,
+    #authLogged {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    #loginUsername,
+    #loginPassword {
+        width: 88vw;
+        max-width: 360px;
+        height: 44px;
+        font-size: 17px;
+    }
+
+    #authPanel .submit {
+        width: auto;
+        min-width: 130px;
+        padding: 9px 18px;
+        font-size: 16px;
+    }
+
+    #authLogged {
+        font-size: 18px !important;
+    }
+}
