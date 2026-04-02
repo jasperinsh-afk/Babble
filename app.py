@@ -1,163 +1,214 @@
-from flask import Flask, render_template, request, redirect, jsonify, session
-from flask_sqlalchemy import SQLAlchemy
-import time
 import os
-from datetime import datetime
-from sqlalchemy import inspect, text
+import random
+import string
+from datetime import datetime, timedelta
+
+from flask import (
+    Flask, render_template, request, redirect, jsonify, session
+)
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
-
-def get_real_ip(req):
-    """
-    Railway / 代理环境下获取真实客户端 IP
-    """
-    xff = req.headers.get("X-Forwarded-For", "")
-    if xff:
-        return xff.split(",")[0].strip(), "X-Forwarded-For"
-
-    xri = req.headers.get("X-Real-IP")
-    if xri:
-        return xri.strip(), "X-Real-IP"
-
-    return req.remote_addr or "", "REMOTE_ADDR"
+from werkzeug.utils import secure_filename
 
 # =========================
-# 基础配置
+# Flask 基础配置
 # =========================
-
-os.makedirs("static/uploads", exist_ok=True)
-
-def now_cn_str():
-    utc_timestamp = time.time()
-    beijing_timestamp = utc_timestamp + 8 * 3600
-    beijing_dt = datetime.utcfromtimestamp(beijing_timestamp)
-    return beijing_dt.strftime("%Y-%m-%d %H:%M:%S")
-
-print("=== 服务器时间调试信息 ===")
-print(f"当前时间戳: {time.time()}")
-print(f"本地时间: {datetime.now()}")
-print(f"UTC时间: {datetime.utcnow()}")
-print(f"计算的北京时间: {now_cn_str()}")
-print("=========================")
-
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'MolicaSecret'
+
+# 生产环境建议用环境变量设置
+app.secret_key = os.environ.get("SECRET_KEY", "replace-with-a-strong-secret-key")
+
+# 数据库（兼容 mysql:// -> mysql+pymysql://）
+raw_uri = os.environ.get("DATABASE_URL")
+if raw_uri:
+    db_uri = raw_uri.replace("mysql://", "mysql+pymysql://", 1)
+else:
+    # 本地兜底
+    db_uri = "mysql+pymysql://root:password@127.0.0.1:3306/msgboard?charset=utf8mb4"
+
+app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# 上传目录
+UPLOAD_FOLDER = os.path.join("static", "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 db = SQLAlchemy(app)
+
 
 # =========================
 # 数据模型
 # =========================
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=True)
+    date = db.Column(db.String(50), nullable=True)
+    username = db.Column(db.String(30), nullable=True)         # 发帖人
+    image_path = db.Column(db.String(255), nullable=True)      # 图片路径
+    is_premium = db.Column(db.Integer, default=0)              # 会员帖标记（0/1）
+
+
+class Reply(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, nullable=False, index=True)
+    content = db.Column(db.Text, nullable=False)
+    date = db.Column(db.String(50), nullable=True)
+    username = db.Column(db.String(30), nullable=True)
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(30), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    date = db.Column(db.String(50))
+    date = db.Column(db.String(50), nullable=True)
+    register_ip = db.Column(db.String(50), nullable=True, index=True)  # 同IP限注册
 
-class Message(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    ip = db.Column(db.String(50))
-    username = db.Column(db.String(30), default='匿名')  # 新增：发帖用户名
-    content = db.Column(db.Text)
-    date = db.Column(db.String(50))
-    is_premium = db.Column(db.String(1), default='0')
-    replies = db.relationship(
-        'Reply',
-        backref='message',
-        lazy='dynamic',
-        cascade="all, delete-orphan"
-    )
 
-class Reply(db.Model):
+class PostLog(db.Model):
+    """
+    发帖/回复限流日志
+    60秒内最多3次（按IP）
+    """
     id = db.Column(db.Integer, primary_key=True)
-    ip = db.Column(db.String(50))
-    username = db.Column(db.String(30), default='匿名')  # 新增：回复用户名
-    content = db.Column(db.Text)
-    date = db.Column(db.String(50))
-    is_premium = db.Column(db.String(1), default='0')
-    message_id = db.Column(
-        db.Integer,
-        db.ForeignKey('message.id'),
-        nullable=False
-    )
+    ip = db.Column(db.String(50), index=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
 
 # =========================
-# 自动补列逻辑（无需手动SQL）
+# 工具函数
 # =========================
+def now_cn_str():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_real_ip(req):
+    """
+    在反向代理环境下优先取 X-Forwarded-For
+    """
+    xff = req.headers.get("X-Forwarded-For", "")
+    if xff:
+        ip = xff.split(",")[0].strip()
+        return ip, True
+    return req.remote_addr or "0.0.0.0", False
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def random_filename(filename):
+    ext = filename.rsplit(".", 1)[1].lower()
+    rand = "".join(random.choices(string.ascii_lowercase + string.digits, k=18))
+    return f"{rand}.{ext}"
+
+
+def check_post_rate_limit(ip: str, limit=3, window_seconds=60):
+    """
+    60秒内最多 limit 次（留言+回复共用）
+    """
+    now = datetime.utcnow()
+    window_start = now - timedelta(seconds=window_seconds)
+
+    # 清理旧数据（可选）
+    PostLog.query.filter(PostLog.created_at < window_start).delete()
+    db.session.commit()
+
+    count = PostLog.query.filter(
+        PostLog.ip == ip,
+        PostLog.created_at >= window_start
+    ).count()
+
+    if count >= limit:
+        return False, window_seconds
+
+    db.session.add(PostLog(ip=ip, created_at=now))
+    db.session.commit()
+    return True, 0
+
 
 def check_and_add_columns():
-    print("🔍 正在检查数据库结构...")
-    inspector = inspect(db.engine)
+    """
+    对旧库做最小兼容：自动补字段
+    """
+    inspector = db.inspect(db.engine)
     tables = inspector.get_table_names()
 
-    # message.username
-    if 'message' in tables:
-        columns = [c['name'] for c in inspector.get_columns('message')]
-        if 'username' not in columns:
+    # user.register_ip
+    if "user" in tables:
+        columns = [c["name"] for c in inspector.get_columns("user")]
+        if "register_ip" not in columns:
             try:
-                print("➕ 添加 message.username")
-                db.session.execute(
-                    text("ALTER TABLE message ADD COLUMN username VARCHAR(30) DEFAULT '匿名'")
-                )
+                db.session.execute(text("ALTER TABLE user ADD COLUMN register_ip VARCHAR(50)"))
                 db.session.commit()
+                print("✅ user.register_ip 添加完成")
             except Exception as e:
-                print("⚠️ 添加 message.username 失败:", e)
                 db.session.rollback()
+                print("⚠️ 添加 user.register_ip 失败：", e)
 
-    # reply.is_premium（兼容你旧库）
-    if 'reply' in tables:
-        columns = [c['name'] for c in inspector.get_columns('reply')]
-        if 'is_premium' not in columns:
+    # message.image_path / is_premium / username
+    if "message" in tables:
+        columns = [c["name"] for c in inspector.get_columns("message")]
+
+        if "image_path" not in columns:
             try:
-                print("➕ 添加 reply.is_premium")
-                db.session.execute(
-                    text("ALTER TABLE reply ADD COLUMN is_premium VARCHAR(1) DEFAULT '0'")
-                )
+                db.session.execute(text("ALTER TABLE message ADD COLUMN image_path VARCHAR(255)"))
                 db.session.commit()
+                print("✅ message.image_path 添加完成")
             except Exception as e:
-                print("⚠️ 添加 reply.is_premium 失败:", e)
                 db.session.rollback()
+                print("⚠️ 添加 message.image_path 失败：", e)
+
+        if "is_premium" not in columns:
+            try:
+                db.session.execute(text("ALTER TABLE message ADD COLUMN is_premium INT DEFAULT 0"))
+                db.session.commit()
+                print("✅ message.is_premium 添加完成")
+            except Exception as e:
+                db.session.rollback()
+                print("⚠️ 添加 message.is_premium 失败：", e)
+
+        if "username" not in columns:
+            try:
+                db.session.execute(text("ALTER TABLE message ADD COLUMN username VARCHAR(30)"))
+                db.session.commit()
+                print("✅ message.username 添加完成")
+            except Exception as e:
+                db.session.rollback()
+                print("⚠️ 添加 message.username 失败：", e)
 
     # reply.username
-    if 'reply' in tables:
-        columns = [c['name'] for c in inspector.get_columns('reply')]
-        if 'username' not in columns:
+    if "reply" in tables:
+        columns = [c["name"] for c in inspector.get_columns("reply")]
+        if "username" not in columns:
             try:
-                print("➕ 添加 reply.username")
-                db.session.execute(
-                    text("ALTER TABLE reply ADD COLUMN username VARCHAR(30) DEFAULT '匿名'")
-                )
+                db.session.execute(text("ALTER TABLE reply ADD COLUMN username VARCHAR(30)"))
                 db.session.commit()
+                print("✅ reply.username 添加完成")
             except Exception as e:
-                print("⚠️ 添加 reply.username 失败:", e)
                 db.session.rollback()
+                print("⚠️ 添加 reply.username 失败：", e)
 
-    print("✅ 数据库结构检查完成")
-
-with app.app_context():
-    db.create_all()            # 自动建 user 表
-    check_and_add_columns()    # 自动补 message/reply 字段
 
 # =========================
 # 页面路由
 # =========================
-
 @app.route("/")
-@app.route("/index")
-def home():
-    return render_template("index.html")
+def index():
+    return redirect("/message")
+
 
 @app.route("/message")
-def message():
-    msgs = Message.query.order_by(Message.id.desc()).all()
-    return render_template("message.html", data=msgs)
+def message_page():
+    return render_template("message.html")
+
 
 # =========================
-# 账号功能
+# 鉴权接口
 # =========================
-
 @app.route("/register", methods=["POST"])
 def register():
     username = request.form.get("username", "").strip()
@@ -169,8 +220,12 @@ def register():
     if len(username) < 2 or len(username) > 30:
         return jsonify({"status": "error", "message": "用户名长度需在2-30之间"})
 
-    if len(password) < 4:
-        return jsonify({"status": "error", "message": "密码至少4位"})
+    ip, _ = get_real_ip(request)
+
+    # 同IP最多注册1个账号
+    ip_exists = User.query.filter_by(register_ip=ip).first()
+    if ip_exists:
+        return jsonify({"status": "error", "message": "该IP已注册过账号，无法重复注册"})
 
     exists = User.query.filter_by(username=username).first()
     if exists:
@@ -179,11 +234,13 @@ def register():
     u = User(
         username=username,
         password_hash=generate_password_hash(password),
-        date=now_cn_str()
+        date=now_cn_str(),
+        register_ip=ip
     )
     db.session.add(u)
     db.session.commit()
     return jsonify({"status": "ok", "message": "注册成功"})
+
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -191,121 +248,203 @@ def login():
     password = request.form.get("password", "").strip()
 
     user = User.query.filter_by(username=username).first()
-    if not user or not check_password_hash(user.password_hash, password):
-        return jsonify({"status": "error", "message": "用户名或密码错误"})
+    if not user:
+        return jsonify({"status": "error", "message": "用户不存在"})
+    if not check_password_hash(user.password_hash, password):
+        return jsonify({"status": "error", "message": "密码错误"})
 
     session["username"] = user.username
     return jsonify({"status": "ok", "username": user.username})
+
 
 @app.route("/logout", methods=["POST"])
 def logout():
     session.pop("username", None)
     return jsonify({"status": "ok"})
 
-@app.route("/api/me")
-def api_me():
-    return jsonify({
-        "logged_in": bool(session.get("username")),
-        "username": session.get("username", "")
-    })
+
+@app.route("/me", methods=["GET"])
+def me():
+    username = session.get("username")
+    if not username:
+        return jsonify({"logged_in": False})
+    return jsonify({"logged_in": True, "username": username})
+
+
+@app.route("/change_username", methods=["POST"])
+def change_username():
+    if not session.get("username"):
+        return jsonify({"status": "error", "message": "请先登录"}), 401
+
+    new_username = request.form.get("new_username", "").strip()
+    if not new_username:
+        return jsonify({"status": "error", "message": "新用户名不能为空"})
+    if len(new_username) < 2 or len(new_username) > 30:
+        return jsonify({"status": "error", "message": "用户名长度需在2-30之间"})
+
+    exists = User.query.filter_by(username=new_username).first()
+    if exists:
+        return jsonify({"status": "error", "message": "用户名已存在"})
+
+    old_username = session["username"]
+    user = User.query.filter_by(username=old_username).first()
+    if not user:
+        session.pop("username", None)
+        return jsonify({"status": "error", "message": "用户不存在，请重新登录"}), 401
+
+    user.username = new_username
+
+    # 同步历史发言中的显示名
+    Message.query.filter_by(username=old_username).update({"username": new_username})
+    Reply.query.filter_by(username=old_username).update({"username": new_username})
+
+    db.session.commit()
+    session["username"] = new_username
+
+    return jsonify({"status": "ok", "username": new_username})
+
+
+@app.route("/delete_account", methods=["POST"])
+def delete_account():
+    if not session.get("username"):
+        return jsonify({"status": "error", "message": "请先登录"}), 401
+
+    username = session["username"]
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        session.pop("username", None)
+        return jsonify({"status": "error", "message": "用户不存在"}), 404
+
+    # 只删除账号，保留历史内容并匿名化
+    Message.query.filter_by(username=username).update({"username": "已注销用户"})
+    Reply.query.filter_by(username=username).update({"username": "已注销用户"})
+
+    db.session.delete(user)
+    db.session.commit()
+    session.pop("username", None)
+
+    return jsonify({"status": "ok", "message": "账号已注销"})
+
 
 # =========================
-# 上传留言
+# 消息接口
 # =========================
+@app.route("/messages", methods=["GET"])
+def get_messages():
+    msgs = Message.query.order_by(Message.id.desc()).all()
+    all_replies = Reply.query.order_by(Reply.id.asc()).all()
+
+    reply_map = {}
+    for r in all_replies:
+        reply_map.setdefault(r.message_id, []).append({
+            "id": r.id,
+            "content": r.content,
+            "date": r.date,
+            "username": r.username or "匿名"
+        })
+
+    data = []
+    for m in msgs:
+        data.append({
+            "id": m.id,
+            "content": m.content or "",
+            "date": m.date or "",
+            "username": m.username or "匿名",
+            "image_path": m.image_path or "",
+            "is_premium": int(m.is_premium or 0),
+            "replies": reply_map.get(m.id, [])
+        })
+
+    return jsonify({"status": "ok", "messages": data})
+
 
 @app.route("/upload", methods=["POST"])
 def upload():
-    ip, ip_source = get_real_ip(request)
+    username = session.get("username")
+    if not username:
+        return jsonify({"status": "error", "message": "请先登录后再发帖"}), 401
 
-    content = request.form.get("content", "").strip()
-    is_premium = request.form.get("is_premium", "0")
-    date = now_cn_str()
-    username = session.get("username", "匿名")
+    ip, _ = get_real_ip(request)
 
-    if not content:
-        return redirect("/message")
+    # 防刷：60秒最多3次（留言/回复共用，本接口先记一笔）
+    ok, _ = check_post_rate_limit(ip, limit=3, window_seconds=60)
+    if not ok:
+        return jsonify({"status": "error", "message": "发送过于频繁：60秒内最多3次"}), 429
 
-    msg = Message(
-        ip=ip,
-        username=username,
+    content = (request.form.get("content") or "").strip()
+    member_code = (request.form.get("member_code") or "").strip().upper()
+
+    file = request.files.get("image")
+    image_path = None
+
+    if file and file.filename:
+        if not allowed_file(file.filename):
+            return jsonify({"status": "error", "message": "图片格式不支持，仅允许 png/jpg/jpeg/gif/webp"})
+        filename = random_filename(secure_filename(file.filename))
+        save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(save_path)
+        image_path = f"/static/uploads/{filename}"
+
+    if not content and not image_path:
+        return jsonify({"status": "error", "message": "内容和图片至少填写一个"})
+
+    is_premium = 1 if member_code == "XINHUIYUAN888" else 0
+
+    m = Message(
         content=content,
-        date=date,
+        date=now_cn_str(),
+        username=username,
+        image_path=image_path,
         is_premium=is_premium
     )
-
-    db.session.add(msg)
+    db.session.add(m)
     db.session.commit()
+    return jsonify({"status": "ok"})
 
-    print(f"📌 新留言 IP: {ip} | 来源: {ip_source} | 用户: {username}")
-
-    return redirect("/message")
-
-# =========================
-# 回复
-# =========================
 
 @app.route("/reply", methods=["POST"])
 def reply():
-    ip, ip_source = get_real_ip(request)
+    username = session.get("username")
+    if not username:
+        return jsonify({"status": "error", "message": "请先登录后再回复"}), 401
 
-    content = request.form.get("reply_content", "").strip()
-    message_id = int(request.form.get("message_id"))
-    is_premium = request.form.get("is_premium", "0")
-    date = now_cn_str()
-    username = session.get("username", "匿名")
+    ip, _ = get_real_ip(request)
 
+    # 防刷：60秒最多3次（留言/回复共用）
+    ok, _ = check_post_rate_limit(ip, limit=3, window_seconds=60)
+    if not ok:
+        return jsonify({"status": "error", "message": "发送过于频繁：60秒内最多3次"}), 429
+
+    message_id = request.form.get("message_id", "").strip()
+    content = (request.form.get("reply_content") or "").strip()
+
+    if not message_id.isdigit():
+        return jsonify({"status": "error", "message": "message_id非法"})
     if not content:
         return jsonify({"status": "error", "message": "回复内容不能为空"})
 
-    r = Reply(
-        ip=ip,
-        username=username,
-        content=content,
-        date=date,
-        message_id=message_id,
-        is_premium=is_premium
-    )
+    msg = Message.query.get(int(message_id))
+    if not msg:
+        return jsonify({"status": "error", "message": "原消息不存在"}), 404
 
+    r = Reply(
+        message_id=int(message_id),
+        content=content,
+        date=now_cn_str(),
+        username=username
+    )
     db.session.add(r)
     db.session.commit()
-
-    print(f"📌 新回复 IP: {ip} | 来源: {ip_source} | 用户: {username}")
-
     return jsonify({"status": "ok"})
 
-# =========================
-# API
-# =========================
-
-@app.route("/api/messages")
-def api_messages():
-    msgs = Message.query.order_by(Message.id.desc()).all()
-    data = []
-
-    for m in msgs:
-        item = {
-            "id": m.id,
-            "content": m.content,
-            "date": m.date,
-            "username": m.username or "匿名",
-            "is_premium": m.is_premium,
-            "replies": []
-        }
-        for r in m.replies:
-            item["replies"].append({
-                "content": r.content,
-                "date": r.date,
-                "username": r.username or "匿名",
-                "is_premium": r.is_premium
-            })
-        data.append(item)
-
-    return jsonify({"data": data})
 
 # =========================
-# 启动
+# 启动初始化
 # =========================
+with app.app_context():
+    db.create_all()
+    check_and_add_columns()
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    # 开发模式
+    app.run(host="0.0.0.0", port=5000, debug=True)
