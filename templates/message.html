@@ -1,381 +1,336 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8" />
-    <title>匿语阁 | BABBLE</title>
-    <link rel="stylesheet" type="text/css" href="/static/css/message.css"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>留言板</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='message.css') }}">
 </head>
 <body>
-
-    <!-- 发送成功提示条 -->
-    <div class="success-toast" id="successToast">
-        ✅ 发送成功！
-        <button class="close-btn" onclick="hideSuccess()">×</button>
+    <div class="header">
+        <a href="/message">留言板</a>
     </div>
 
-    <!-- 会员验证模态框 -->
-    <div class="member-modal" id="memberModal">
+    <!-- 顶部提示 -->
+    <div id="toast" class="success-toast">
+        <span id="toastText">发送成功</span>
+        <button class="close-btn" onclick="hideToast()">×</button>
+    </div>
+
+    <!-- 会员码弹窗（可选沿用） -->
+    <div id="memberModal" class="member-modal">
         <div class="modal-content">
             <h3>会员验证</h3>
-            <p>请输入4位会员号</p>
-            <input type="text" id="memberCode" placeholder="输入会员号" maxlength="4">
+            <p>输入会员码可发布炫彩会员帖</p>
+            <input type="text" id="memberCodeInput" placeholder="请输入会员码">
             <div class="modal-buttons">
-                <button class="modal-btn confirm" onclick="verifyMember()">验证</button>
-                <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+                <button class="modal-btn confirm" onclick="confirmMemberCode()">确认</button>
+                <button class="modal-btn cancel" onclick="closeMemberModal()">取消</button>
             </div>
+            <div class="hint">提示：会员码区分大小写已关闭（自动转大写）</div>
         </div>
-    </div>
-
-    <div class="header">
-        <a href="/index">返回首页</a>
     </div>
 
     <div class="main">
-        <h1 class="title">多谢支持匿语阁</h1>
+        <h2 class="title">公开留言区</h2>
 
-        <!-- 账号区 -->
-        <div id="authPanel" style="text-align:center; margin: 10px auto 20px; max-width: 800px;">
-            <div id="authNotLogin">
-                <input id="loginUsername" type="text" placeholder="用户名" maxlength="30" style="padding:8px; font-size:16px;">
-                <input id="loginPassword" type="password" placeholder="密码" maxlength="50" style="padding:8px; font-size:16px;">
-                <button type="button" class="submit" onclick="doLogin()" style="max-width:120px;">登录</button>
-                <button type="button" class="submit" onclick="doRegister()" style="max-width:120px;">注册</button>
+        <!-- 登录注册区 -->
+        <div id="authPanel" style="text-align:center; margin:12px 0 18px;">
+            <div id="authNotLogin" style="display:none;">
+                <input id="loginUsername" type="text" placeholder="用户名"
+                       style="padding:8px; font-size:16px; width:150px;">
+                <input id="loginPassword" type="password" placeholder="密码"
+                       style="padding:8px; font-size:16px; width:150px;">
+                <button class="submit" type="button" onclick="doRegister()">注册</button>
+                <button class="submit" type="button" onclick="doLogin()">登录</button>
             </div>
-            <div id="authLogged" style="display:none; font-size:18px;">
-                当前账号：<b id="currentUsername"></b>
-                <button type="button" class="submit" onclick="doLogout()" style="max-width:120px; margin-left:8px;">退出登录</button>
+
+            <div id="authLogged" style="display:none; font-size:20px;">
+                当前账号：<span id="currentUser" style="font-weight:bold;"></span>
+                <button class="submit" type="button" onclick="doChangeUsername()" style="max-width:140px; margin-left:8px;">
+                    修改用户名
+                </button>
+                <button class="submit" type="button" onclick="doDeleteAccount()" style="max-width:140px; margin-left:8px; background:#b00020; color:#fff;">
+                    注销账号
+                </button>
+                <button class="submit" type="button" onclick="doLogout()" style="max-width:100px; margin-left:8px;">退出</button>
             </div>
         </div>
-        
-        <!-- 留言提交表单 -->
-        <form action="/upload" method="post" enctype="multipart/form-data" id="mainForm">
-            <textarea class="todo_new" name="content" placeholder="发起一个新话题" required></textarea>
-            <br>
-            <p></p>
-            <div class="button-group">
-                <button type="submit" class="submit">提交</button>
+
+        <!-- 发帖表单 -->
+        <form id="mainForm" enctype="multipart/form-data">
+            <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
+
+            <div class="upload-wrapper">
+                <label for="imageInput">📷 上传图片（可选）</label>
+                <input id="imageInput" type="file" name="image" accept="image/*">
             </div>
-            <input type="hidden" name="is_premium" id="newIsPremium" value="0">
+
+            <!-- 隐藏会员码字段 -->
+            <input type="hidden" name="member_code" id="memberCodeHidden" value="">
+
+            <div class="button-group">
+                <button class="submit" type="submit">提交</button>
+                <button class="member-btn" type="button" onclick="openMemberModal()">
+                    炫彩背景
+                    <span class="member-tag">会员专享</span>
+                </button>
+            </div>
         </form>
 
-        <!-- 留言列表容器 -->
-        <div id="messages"></div>
+        <!-- 留言列表 -->
+        <div id="listContainer"></div>
     </div>
 
-    <script>
-    function isMemberVerified() {
-        return localStorage.getItem('member_verified') === '1';
+<script>
+let me = null;
+
+// ========== 通用 ==========
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    document.getElementById('toastText').innerText = msg || '操作成功';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+}
+function hideToast() {
+    document.getElementById('toast').classList.remove('show');
+}
+function esc(s='') {
+    return s.replace(/[&<>"']/g, c => (
+        {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+    ));
+}
+
+// ========== 会员弹窗 ==========
+function openMemberModal() {
+    document.getElementById('memberModal').style.display = 'flex';
+}
+function closeMemberModal() {
+    document.getElementById('memberModal').style.display = 'none';
+}
+function confirmMemberCode() {
+    const code = (document.getElementById('memberCodeInput').value || '').trim().toUpperCase();
+    document.getElementById('memberCodeHidden').value = code;
+    closeMemberModal();
+    if (code) showToast('会员码已设置');
+}
+
+// ========== 登录态 ==========
+async function refreshMe() {
+    const res = await fetch('/me');
+    const data = await res.json();
+    me = data.logged_in ? data.username : null;
+
+    const notLogin = document.getElementById('authNotLogin');
+    const logged = document.getElementById('authLogged');
+    const currentUser = document.getElementById('currentUser');
+
+    if (me) {
+        notLogin.style.display = 'none';
+        logged.style.display = 'inline-flex';
+        logged.style.alignItems = 'center';
+        currentUser.innerText = me;
+    } else {
+        logged.style.display = 'none';
+        notLogin.style.display = 'inline-flex';
+        notLogin.style.gap = '8px';
+        notLogin.style.alignItems = 'center';
     }
+}
 
-    function setMemberVerified() {
-        localStorage.setItem('member_verified', '1');
+async function doRegister() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    if (!username || !password) return alert('请输入用户名和密码');
+
+    const fd = new FormData();
+    fd.append('username', username);
+    fd.append('password', password);
+
+    const res = await fetch('/register', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.status === 'ok') {
+        showToast('注册成功，请登录');
+    } else {
+        alert('❌ ' + (data.message || '注册失败'));
     }
+}
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text ?? '';
-        return div.innerHTML;
+async function doLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    if (!username || !password) return alert('请输入用户名和密码');
+
+    const fd = new FormData();
+    fd.append('username', username);
+    fd.append('password', password);
+
+    const res = await fetch('/login', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.status === 'ok') {
+        showToast('登录成功');
+        await refreshMe();
+        await loadMessages();
+    } else {
+        alert('❌ ' + (data.message || '登录失败'));
     }
+}
 
-    let lastData = [];
-    let currentFormType = '';
-    const MEMBER_CODE = 'PZ01';
-
-    // ========= 账号功能 =========
-    async function refreshMe() {
-        try {
-            const res = await fetch('/api/me', { cache: "no-store" });
-            const me = await res.json();
-            if (me.logged_in) {
-                document.getElementById('authNotLogin').style.display = 'none';
-                document.getElementById('authLogged').style.display = 'block';
-                document.getElementById('currentUsername').textContent = me.username;
-            } else {
-                document.getElementById('authNotLogin').style.display = 'block';
-                document.getElementById('authLogged').style.display = 'none';
-                document.getElementById('currentUsername').textContent = '';
-            }
-        } catch (e) {
-            console.error("获取登录状态失败", e);
-        }
-    }
-
-    async function doRegister() {
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value.trim();
-
-        const fd = new FormData();
-        fd.append('username', username);
-        fd.append('password', password);
-
-        const res = await fetch('/register', { method: 'POST', body: fd });
-        const data = await res.json();
-
-        if (data.status === 'ok') {
-            alert('✅ 注册成功，请点击登录');
-        } else {
-            alert('❌ ' + (data.message || '注册失败'));
-        }
-    }
-
-    async function doLogin() {
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value.trim();
-
-        const fd = new FormData();
-        fd.append('username', username);
-        fd.append('password', password);
-
-        const res = await fetch('/login', { method: 'POST', body: fd });
-        const data = await res.json();
-
-        if (data.status === 'ok') {
-            alert('✅ 登录成功');
-            document.getElementById('loginPassword').value = '';
-            await refreshMe();
-            await loadMessages();
-        } else {
-            alert('❌ ' + (data.message || '登录失败'));
-        }
-    }
-
-    async function doLogout() {
-        await fetch('/logout', { method: 'POST' });
-        alert('已退出登录');
+async function doLogout() {
+    const res = await fetch('/logout', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+        showToast('已退出');
         await refreshMe();
         await loadMessages();
     }
+}
 
-    function openModal(formType) {
-        currentFormType = formType;
-        document.getElementById('memberModal').style.display = 'flex';
+// 修改用户名
+async function doChangeUsername() {
+    const newName = prompt('请输入新用户名（2-30字）：');
+    if (!newName) return;
 
-        if (isMemberVerified()) {
-            document.getElementById('memberCode').value = MEMBER_CODE;
-        } else {
-            document.getElementById('memberCode').value = '';
-        }
+    const fd = new FormData();
+    fd.append('new_username', newName.trim());
 
-        document.getElementById('memberCode').focus();
+    const res = await fetch('/change_username', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.status === 'ok') {
+        showToast('用户名修改成功');
+        await refreshMe();
+        await loadMessages();
+    } else {
+        alert('❌ ' + (data.message || '修改失败'));
+    }
+}
+
+// 注销账号
+async function doDeleteAccount() {
+    const ok = confirm('确认注销账号？此操作不可恢复。');
+    if (!ok) return;
+
+    const res = await fetch('/delete_account', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.status === 'ok') {
+        showToast('账号已注销');
+        await refreshMe();
+        await loadMessages();
+    } else {
+        alert('❌ ' + (data.message || '注销失败'));
+    }
+}
+
+// ========== 发帖 ==========
+document.getElementById('mainForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const fd = new FormData(this);
+    const res = await fetch('/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (res.status === 401) {
+        return alert('❌ 请先登录后再发帖');
+    }
+    if (res.status === 429) {
+        return alert('⏱ ' + (data.message || '发送太频繁'));
     }
 
-    function closeModal() {
-        document.getElementById('memberModal').style.display = 'none';
-        document.getElementById('memberCode').value = '';
+    if (data.status === 'ok') {
+        this.reset();
+        document.getElementById('memberCodeHidden').value = '';
+        showToast('发送成功');
+        await loadMessages();
+    } else {
+        alert('❌ ' + (data.message || '发送失败'));
+    }
+});
+
+// ========== 回复 ==========
+async function submitReply(messageId) {
+    const input = document.getElementById('reply_input_' + messageId);
+    const content = input.value.trim();
+    if (!content) return alert('回复内容不能为空');
+
+    const fd = new FormData();
+    fd.append('message_id', String(messageId));
+    fd.append('reply_content', content);
+
+    const res = await fetch('/reply', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (res.status === 401) {
+        return alert('❌ 请先登录后再回复');
+    }
+    if (res.status === 429) {
+        return alert('⏱ ' + (data.message || '发送太频繁'));
     }
 
-    function applyPremium(formType) {
-        if (formType === 'new') {
-            document.getElementById('newIsPremium').value = '1';
-            document.querySelector('.todo_new').classList.add('premium-border');
-        } else {
-            const form = document.querySelector(`.reply-form[data-id="${formType}"]`);
-            if (form) {
-                form.querySelector('textarea').classList.add('premium-border');
-                localStorage.setItem(`premium_${formType}`, '1');
-            }
-        }
+    if (data.status === 'ok') {
+        input.value = '';
+        showToast('回复成功');
+        await loadMessages();
+    } else {
+        alert('❌ ' + (data.message || '回复失败'));
+    }
+}
+
+// ========== 渲染列表 ==========
+async function loadMessages() {
+    const container = document.getElementById('listContainer');
+    const res = await fetch('/messages');
+    const data = await res.json();
+
+    if (data.status !== 'ok') {
+        container.innerHTML = `<div class="error-message"><h3>加载失败</h3><p>请稍后重试</p></div>`;
+        return;
     }
 
-    function verifyMember() {
-        const inputCode = document.getElementById('memberCode').value.trim().toUpperCase();
-
-        if (inputCode === MEMBER_CODE) {
-            localStorage.setItem('member_verified', '1');
-            applyPremium(currentFormType);
-            closeModal();
-            alert('✅ 会员验证成功！');
-        } else {
-            alert('❌ 会员号错误，请重新输入');
-            document.getElementById('memberCode').value = '';
-            document.getElementById('memberCode').focus();
-        }
+    const list = data.messages || [];
+    if (!list.length) {
+        container.innerHTML = `<div class="no-messages">还没有留言，快来发布第一条吧～</div>`;
+        return;
     }
 
-    function checkReplyPremium(messageId) {
-        return localStorage.getItem(`premium_${messageId}`) === '1';
-    }
+    container.innerHTML = list.map(m => {
+        const premiumCls = Number(m.is_premium) ? 'premium-bg' : '';
+        const contentHtml = m.content ? `<div class="content">${esc(m.content)}</div>` : '';
+        const imageHtml = m.image_path ? `<div class="content"><img src="${m.image_path}" alt="img"></div>` : '';
 
-    function showSuccess() {
-        const toast = document.getElementById('successToast');
-        toast.classList.add('show');
-        setTimeout(hideSuccess, 5000);
-    }
+        const replies = (m.replies || []).map(r => `
+            <div class="reply ${premiumCls}">
+                <div class="reply-content"><b>${esc(r.username || '匿名')}：</b>${esc(r.content || '')}</div>
+                <div class="reply-date">${esc(r.date || '')}</div>
+            </div>
+        `).join('');
 
-    function hideSuccess() {
-        const toast = document.getElementById('successToast');
-        toast.classList.remove('show');
-    }
+        return `
+            <div class="message ${premiumCls}">
+                ${contentHtml}
+                ${imageHtml}
+                <div class="date">#${m.id} · ${esc(m.username || '匿名')} · ${esc(m.date || '')}</div>
 
-    async function loadMessages() {
-        try {
-            const res = await fetch('/api/messages', { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
-
-            const data = await res.json();
-            const msgs = data.data;
-            const container = document.getElementById('messages');
-
-            const currentReplies = {};
-            document.querySelectorAll('.reply-form textarea').forEach(t => {
-                const id = t.closest('.reply-form').querySelector('input[name="message_id"]').value;
-                const val = t.value.trim();
-                if (val) currentReplies[id] = val;
-            });
-
-            if (lastData.length && JSON.stringify(msgs) === JSON.stringify(lastData)) return;
-            lastData = msgs;
-
-            let html = "";
-
-            if (msgs.length === 0) {
-                html = `<div class="no-messages">还没有留言，快来发布第一条吧！</div>`;
-            } else {
-                msgs.forEach(msg => {
-                    let contentHtml = "";
-                    const imgRegex = /$$图片]$([^)]+)$/g;
-                    let lastIndex = 0;
-                    let match;
-
-                    while ((match = imgRegex.exec(msg.content)) !== null) {
-                        if (match.index > lastIndex) {
-                            const text = msg.content.substring(lastIndex, match.index);
-                            contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
-                        }
-                        let imageUrl = match[1];
-                        if (!imageUrl.startsWith('/')) imageUrl = '/' + imageUrl;
-                        contentHtml += `<img src="${escapeHtml(imageUrl)}" style="max-width:100%; border-radius:8px; margin:10px 0;">`;
-                        lastIndex = imgRegex.lastIndex;
-                    }
-
-                    if (lastIndex < msg.content.length) {
-                        const text = msg.content.substring(lastIndex);
-                        contentHtml += escapeHtml(text).replace(/\n/g, "<br>");
-                    }
-
-                    const isPremiumMsg = msg.is_premium === '1' || msg.is_premium === 1;
-
-                    html += `
-                    <div class="message ${isPremiumMsg ? 'premium-bg' : ''}" data-id="${msg.id}">
-                        <div class="content">${contentHtml}</div>
-                        <div class="date">
-                            （${escapeHtml(msg.username || '匿名')}）发送 · ${escapeHtml(msg.date)}
-                            ${isPremiumMsg ? `<span class="plus-badge">心动会员</span>` : ''}
-                        </div>
-
-                        ${msg.replies.length ? `<div class="reply-box">` +
-                            msg.replies.map(r => {
-                                const isPremiumReply = r.is_premium === '1' || r.is_premium === 1;
-                                return `
-                                <div class="reply ${isPremiumReply ? 'premium-bg' : ''}">
-                                    <div class="reply-content">${escapeHtml(r.content).replace(/\n/g, "<br>")}</div>
-                                    <div class="reply-date">
-                                        （${escapeHtml(r.username || '匿名')}）发送 · ${escapeHtml(r.date)}
-                                        ${isPremiumReply ? `<span class="plus-badge">心动会员</span>` : ''}
-                                    </div>
-                                </div>`;
-                            }).join("")
-                            + `</div>` : ""
-                        }
-
-                        <form class="reply-form" data-id="${msg.id}">
-                            <input type="hidden" name="message_id" value="${msg.id}">
-                            <input type="hidden" name="is_premium" id="replyIsPremium_${msg.id}" value="0">
-                            <textarea class="todo" name="reply_content" placeholder="回复该留言" required></textarea>
-                            <br>
-                            <div class="button-group">
-                                <button type="submit" class="submit">回复</button>
-                            </div>
-                        </form>
-                    </div>`;
-                });
-            }
-
-            container.innerHTML = html;
-
-            Object.keys(currentReplies).forEach(id => {
-                const form = container.querySelector(`.reply-form input[value="${id}"]`);
-                if (form) {
-                    const textarea = form.closest('.reply-form')?.querySelector('textarea');
-                    if (textarea) {
-                        textarea.value = currentReplies[id];
-                        if (checkReplyPremium(id)) {
-                            textarea.classList.add('premium-border');
-                            const hidden = document.getElementById(`replyIsPremium_${id}`);
-                            if (hidden) hidden.value = '1';
-                        }
-                    }
-                }
-            });
-
-            document.querySelectorAll('.reply-form').forEach(form => {
-                form.onsubmit = async (e) => {
-                    e.preventDefault();
-                    const messageId = form.querySelector('input[name="message_id"]').value;
-                    const isPremium = checkReplyPremium(messageId) ? '1' : '0';
-
-                    const formData = new FormData(form);
-                    formData.set('is_premium', isPremium);
-
-                    const res = await fetch('/reply', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await res.json();
-
-                    if (result.status === "ok") {
-                        showSuccess();
-                        localStorage.removeItem(`premium_${messageId}`);
-                        setTimeout(loadMessages, 500);
-                    } else {
-                        alert(result.message || "提交失败");
-                    }
-                };
-            });
-        } catch (error) {
-            console.error("加载消息失败:", error);
-            const container = document.getElementById('messages');
-            container.innerHTML = `
-                <div class="error-message">
-                    <h3>😔 加载失败</h3>
-                    <p>无法连接到服务器，请检查网络连接或稍后重试</p>
-                    <button onclick="location.reload()">🔄 刷新页面</button>
+                <div class="reply-box">
+                    ${replies || '<div style="color:#777;">暂无回复</div>'}
                 </div>
-            `;
-        }
-    }
 
-    // 初始化
-    refreshMe();
-    loadMessages();
-    setInterval(loadMessages, 5000);
+                <div class="reply-form" style="display:flex; gap:8px; padding:0 12px 12px;">
+                    <input id="reply_input_${m.id}" type="text" placeholder="写下回复..."
+                           style="flex:1; padding:8px; font-size:16px; border:1px solid #ccc; border-radius:6px;">
+                    <button class="submit" type="button" onclick="submitReply(${m.id})">回复</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
-    // 波纹效果（事件委托，兼容动态按钮）
-    document.addEventListener('click', function(e) {
-        const button = e.target.closest('.submit, .member-btn');
-        if (!button) return;
-
-        const ripple = document.createElement('span');
-        ripple.classList.add('ripple');
-
-        const rect = button.getBoundingClientRect();
-        const size = Math.max(rect.width, rect.height);
-        ripple.style.width = ripple.style.height = size + 'px';
-        ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
-        ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
-
-        button.appendChild(ripple);
-        ripple.addEventListener('animationend', () => ripple.remove());
-    });
-
-    document.getElementById('memberModal').addEventListener('click', function(e) {
-        if (e.target === this) closeModal();
-    });
-
-    document.getElementById('memberCode').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') verifyMember();
-    });
-    </script>
+// ========== 初始化 ==========
+(async function init() {
+    await refreshMe();
+    await loadMessages();
+})();
+</script>
 </body>
 </html>
