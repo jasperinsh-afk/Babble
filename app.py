@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from flask import Flask, render_template, request, redirect, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -16,26 +16,42 @@ app = Flask(__name__)
 # =========================
 app.secret_key = os.environ.get("SECRET_KEY", "replace-with-a-strong-secret-key")
 
+
 def get_db_uri():
-    raw_uri = os.environ.get("DATABASE_URL") or os.environ.get("MYSQL_URL")
+    raw_uri = (
+        os.environ.get("DATABASE_URL")
+        or os.environ.get("MYSQL_URL")
+        or os.environ.get("SQLALCHEMY_DATABASE_URI")
+    )
+
+    # 如果没有配置数据库，自动降级为 sqlite，保证应用能启动
     if not raw_uri:
-        raise RuntimeError("DATABASE_URL / MYSQL_URL is not set in environment")
-    return raw_uri.replace("mysql://", "mysql+pymysql://", 1)
+        return "sqlite:///app.db"
+
+    # 兼容 mysql://
+    if raw_uri.startswith("mysql://"):
+        raw_uri = raw_uri.replace("mysql://", "mysql+pymysql://", 1)
+
+    return raw_uri
+
 
 app.config["SQLALCHEMY_DATABASE_URI"] = get_db_uri()
-
-# 兼容 mysql://
-db_uri = raw_uri.replace("mysql://", "mysql+pymysql://", 1)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True,
-    "pool_recycle": 180,
-    "pool_size": 3,
-    "max_overflow": 2,
-    "pool_timeout": 30,
-}
+
+# 仅对非 sqlite 启用连接池参数
+db_uri = app.config["SQLALCHEMY_DATABASE_URI"]
+if db_uri.startswith("sqlite"):
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True
+    }
+else:
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 180,
+        "pool_size": 3,
+        "max_overflow": 2,
+        "pool_timeout": 30,
+    }
 
 UPLOAD_FOLDER = os.path.join("static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -108,6 +124,7 @@ def check_post_rate_limit(ip: str, limit=3, window_seconds=60):
     now = datetime.utcnow()
     window_start = now - timedelta(seconds=window_seconds)
 
+    # 清理过期日志
     PostLog.query.filter(PostLog.created_at < window_start).delete()
     db.session.commit()
 
@@ -125,7 +142,7 @@ def check_post_rate_limit(ip: str, limit=3, window_seconds=60):
 
 
 def check_and_add_columns():
-    inspector = db.inspect(db.engine)
+    inspector = inspect(db.engine)
     tables = inspector.get_table_names()
 
     if "user" in tables:
@@ -166,6 +183,16 @@ def check_and_add_columns():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
+
+
+def init_db():
+    with app.app_context():
+        db.create_all()
+        check_and_add_columns()
+
+
+# 在模块加载时初始化数据库，保证 gunicorn 启动时也会建表
+init_db()
 
 
 # =========================
@@ -382,7 +409,7 @@ def reply():
     if not content:
         return jsonify({"status": "error", "message": "回复内容不能为空"})
 
-    msg = Message.query.get(int(message_id))
+    msg = db.session.get(Message, int(message_id))
     if not msg:
         return jsonify({"status": "error", "message": "原消息不存在"}), 404
 
@@ -398,10 +425,7 @@ def reply():
 
 
 # =========================
-# 仅本地初始化（避免 gunicorn 导入即连库）
+# 启动入口
 # =========================
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-        check_and_add_columns()
     app.run(host="0.0.0.0", port=5000, debug=True)
