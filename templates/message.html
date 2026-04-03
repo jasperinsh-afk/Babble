@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>留言板</title>
+    <title>匿语阁 | BABBLE</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/message.css') }}">
 </head>
 <body>
     <div class="header">
-        <a href="/message">留言板</a>
+        <a href="/message">匿语阁 | BABBLE</a>
     </div>
 
     <!-- 顶部提示 -->
@@ -32,7 +32,7 @@
     </div>
 
     <div class="main">
-        <h2 class="title">公开留言区</h2>
+        <h2 class="title">多谢使用匿语阁</h2>
 
         <!-- 登录注册区 -->
         <div id="authPanel" style="text-align:center; margin:12px 0 18px;">
@@ -61,20 +61,21 @@
         <form id="mainForm" enctype="multipart/form-data">
             <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
 
-            <div class="upload-wrapper">
+            <!--<div class="upload-wrapper">
                 <label for="imageInput">📷 上传图片（可选）</label>
                 <input id="imageInput" type="file" name="image" accept="image/*">
             </div>
-
+            -->
             <!-- 隐藏会员码字段 -->
             <input type="hidden" name="member_code" id="memberCodeHidden" value="">
 
             <div class="button-group">
                 <button class="submit" type="submit">提交</button>
-                <button class="member-btn" type="button" onclick="openMemberModal()">
+                <!--<button class="member-btn" type="button" onclick="openMemberModal()">
                     炫彩背景
                     <span class="member-tag">会员专享</span>
                 </button>
+                -->
             </div>
         </form>
 
