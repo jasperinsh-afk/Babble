@@ -16,10 +16,13 @@ app = Flask(__name__)
 # =========================
 app.secret_key = os.environ.get("SECRET_KEY", "replace-with-a-strong-secret-key")
 
-# 线上必须有数据库连接；兼容 Railway 常见变量名
-raw_uri = os.environ.get("DATABASE_URL") or os.environ.get("MYSQL_URL")
-if not raw_uri:
-    raise RuntimeError("DATABASE_URL / MYSQL_URL is not set in environment")
+def get_db_uri():
+    raw_uri = os.environ.get("DATABASE_URL") or os.environ.get("MYSQL_URL")
+    if not raw_uri:
+        raise RuntimeError("DATABASE_URL / MYSQL_URL is not set in environment")
+    return raw_uri.replace("mysql://", "mysql+pymysql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = get_db_uri()
 
 # 兼容 mysql://
 db_uri = raw_uri.replace("mysql://", "mysql+pymysql://", 1)
