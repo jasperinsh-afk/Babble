@@ -1,3 +1,63 @@
+/* ========= 主题变量 ========= */
+/* 默认：原本主题（紫+橙） */
+:root {
+    --bg-body: #f6f3ff;
+    --bg-main: #ffffff;
+    --bg-message: #fffaf5;
+    --bg-reply-box: #f7f3ff;
+    --bg-reply: #ffffff;
+
+    --text-main: #2b1d4a;
+    --text-secondary: #5d3ea8;
+    --text-muted: #7d6f9f;
+
+    --border-color: #d8cfff;
+    --input-border: #b49cff;
+    --input-bg: #ffffff;
+
+    --header-bg: #5d3ea8;
+    --header-text: #ff914d;
+
+    --btn-bg: #ff914d;
+    --btn-text: #3d00ad;
+    --btn-border: rgba(255, 255, 255, 0.85);
+    --btn-hover-bg: #cc0000;
+    --btn-hover-text: #ffffff;
+
+    --toggle-bg: #ff914d;
+    --toggle-text: #3d00ad;
+}
+
+/* 暗色主题 */
+[data-theme="dark"] {
+    --bg-body: #12141a;
+    --bg-main: #1b1f2a;
+    --bg-message: #222838;
+    --bg-reply-box: #171c28;
+    --bg-reply: #242b3d;
+
+    --text-main: #e8ecf8;
+    --text-secondary: #bfc9ea;
+    --text-muted: #93a0c8;
+
+    --border-color: #36405a;
+    --input-border: #4c5a84;
+    --input-bg: #141a27;
+
+    --header-bg: #0f1320;
+    --header-text: #d8e0ff;
+
+    --btn-bg: #2d3752;
+    --btn-text: #f1f5ff;
+    --btn-border: #4b5a84;
+    --btn-hover-bg: #3f4d73;
+    --btn-hover-text: #ffffff;
+
+    --toggle-bg: #2d3752;
+    --toggle-text: #f1f5ff;
+}
+
+/* ========= 基础 ========= */
 * {
     margin: 0;
     padding: 0;
@@ -7,160 +67,8 @@
 body {
     background-color: var(--bg-body);
     font-family: "Alibaba Sans Medium", sans-serif;
-    transition: all 0.3s ease;
-}
-
-/* 模式切换按钮 */
-.theme-toggle {
-    position: absolute;
-    top: 24px;
-    right: 20px;
-    background: var(--header-text);
-    color: var(--header-bg);
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-/* 发送成功提示条 */
-.success-toast {
-    position: fixed;
-    top: -60px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #4caf50;
-    color: white;
-    padding: 15px 30px;
-    border-radius: 8px;
-    font-size: 22px;
-    font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    z-index: 9999;
-    transition: top 0.5s ease;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.success-toast.show {
-    top: 20px;
-}
-
-.success-toast .close-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 26px;
-    cursor: pointer;
-    margin-left: 15px;
-    line-height: 1;
-}
-
-/* 会员验证模态框 */
-.member-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 10000;
-    justify-content: center;
-    align-items: center;
-}
-
-.modal-content {
-    background-color: var(--bg-main);
     color: var(--text-main);
-    padding: 30px;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 400px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    animation: modalFadeIn 0.3s ease;
-}
-
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.modal-content h3 {
-    color: #ff4444;
-    font-size: 28px;
-    margin-bottom: 10px;
-}
-
-.modal-content p {
-    font-size: 18px;
-    color: var(--text-muted);
-    margin-bottom: 20px;
-}
-
-.modal-content input {
-    width: 100%;
-    padding: 12px;
-    font-size: 20px;
-    text-align: center;
-    border: 3px solid var(--input-border);
-    border-radius: 8px;
-    margin-bottom: 20px;
-    outline: none;
-    text-transform: uppercase;
-    background: var(--input-bg);
-    color: var(--text-main);
-}
-
-.modal-content input:focus {
-    border-color: #ff4444;
-    box-shadow: 0 0 10px rgba(255,68,68,0.3);
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-}
-
-.modal-btn {
-    padding: 12px 24px;
-    font-size: 18px;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.modal-btn.confirm {
-    background-color: #ff4444;
-    color: white;
-}
-
-.modal-btn.confirm:hover {
-    background-color: #ff0000;
-    transform: translateY(-2px);
-}
-
-.modal-btn.cancel {
-    background-color: #444;
-    color: #fff;
-}
-
-.modal-btn.cancel:hover {
-    background-color: #555;
-}
-
-.hint {
-    margin-top: 15px;
-    font-size: 16px;
-    color: var(--text-muted);
-    font-style: italic;
+    transition: background-color .25s ease, color .25s ease;
 }
 
 .header {
@@ -176,10 +84,24 @@ body {
     font-weight: bold;
     color: var(--header-text);
 }
+.header a:hover { color: #fff; }
 
-.header a:hover {
-    color: #ffffff;
+/* 主题按钮 */
+.theme-toggle {
+    position: absolute;
+    top: 24px;
+    right: 20px;
+    background: var(--toggle-bg);
+    color: var(--toggle-text);
+    border: 1px solid var(--btn-border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .2s ease;
 }
+.theme-toggle:hover { filter: brightness(1.08); }
 
 .main {
     width: 90%;
@@ -189,7 +111,7 @@ body {
     background-color: var(--bg-main);
     color: var(--text-main);
     border-radius: 10px;
-    transition: all 0.3s ease;
+    transition: background-color .25s ease, color .25s ease;
 }
 
 .title {
@@ -199,765 +121,114 @@ body {
     color: var(--text-secondary);
 }
 
-.todo {
-    width: 90%;
-    max-width: 800px;
-    height: 120px;
-    margin: 10px auto;
-    border: 4px solid var(--input-border);
+/* ========= 提示条 ========= */
+.success-toast {
+    position: fixed;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4caf50;
+    color: #fff;
+    padding: 15px 30px;
     border-radius: 8px;
-    padding: 10px;
-    font-size: 24px;
-    color: var(--text-main);
-    outline: none;
-    resize: vertical;
-    font-family: inherit;
-    display: block;
-    background: var(--input-bg);
-}
-
-/* 炫彩边框 */
-.todo.premium-border {
-    border: 4px solid transparent;
-    background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff);
-    background-size: 400% 400%;
-    background-clip: padding-box, border-box;
-    animation: rainbow-border 3s linear infinite;
-    position: relative;
-}
-
-.todo.premium-border::before {
-    content: '';
-    position: absolute;
-    top: -4px;
-    left: -4px;
-    right: -4px;
-    bottom: -4px;
-    background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff);
-    background-size: 400% 400%;
-    border-radius: 12px;
-    z-index: -1;
-    animation: rainbow-border 3s linear infinite;
-}
-
-@keyframes rainbow-border {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-.todo_new {
-    width: 90%;
-    max-width: 800px;
-    height: 120px;
-    margin: 10px auto;
-    border: 5px solid var(--input-border);
-    border-radius: 8px;
-    padding: 10px;
     font-size: 22px;
-    color: var(--text-main);
-    outline: none;
-    resize: vertical;
-    font-family: inherit;
-    display: block;
-    background: var(--input-bg);
-}
-
-.todo_new.premium-border {
-    border: 5px solid transparent;
-    background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff);
-    background-size: 400% 400%;
-    background-clip: padding-box, border-box;
-    animation: rainbow-border 3s linear infinite;
-    position: relative;
-}
-
-.todo_new.premium-border::before {
-    content: '';
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    right: -5px;
-    bottom: -5px;
-    background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff);
-    background-size: 400% 400%;
-    border-radius: 13px;
-    z-index: -1;
-    animation: rainbow-border 3s linear infinite;
-}
-
-/* 按钮组 */
-.button-group {
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    z-index: 9999;
+    transition: top .5s ease;
     display: flex;
-    gap: 20px;
-    justify-content: center;
-    align-items: center;
-    margin: 20px auto;
-    max-width: 800px;
-}
-
-.submit {
-    position: relative;
-    overflow: hidden;
-    padding: 8px 16px;
-    font-size: 20px;
-    border-radius: 8px;
-    max-width: 180px;
-    background-color: #ff914d;
-    border: 2px solid rgba(255, 255, 255);
-    transition: all 0.2s;
-    color: #3d00ad;
-    font-weight: bold;
-    cursor: pointer;
-    display: block;
-    flex: 1;
-}
-
-.submit:hover {
-    background-color: #cc0000;
-    color: white;
-    font-weight: bold;
-}
-
-/* 会员按钮 */
-.member-btn {
-    position: relative;
-    overflow: hidden;
-    padding: 12px 20px;
-    background: linear-gradient(135deg, #ffde59, #ff9900, #ffde59);
-    border: 2px solid #cc0000;
-    border-radius: 5px;
-    transition: all 0.3s;
-    font-size: 18px;
-    color: #cc0000;
-    font-weight: bold;
-    cursor: pointer;
-    display: block;
-    flex: 1;
-    max-width: 200px;
-    text-align: center;
-}
-
-.member-btn:hover {
-    background: linear-gradient(135deg, #ff9900, #ff6600, #ff9900);
-    color: white;
-    border-color: #ff0000;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(204, 0, 0, 0.3);
-}
-
-.member-tag {
-    font-size: 14px;
-    display: block;
-    margin-top: 5px;
-    color: #990000;
-    font-weight: normal;
-}
-
-/* 按钮波纹效果 */
-.submit .ripple,
-.member-btn .ripple {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.5);
-    transform: scale(0);
-    animation: ripple-animation 0.6s linear;
-    pointer-events: none;
-}
-
-@keyframes ripple-animation {
-    to {
-        transform: scale(4);
-        opacity: 0;
-    }
-}
-
-/* 炫彩背景消息 */
-.message.premium-bg {
-    background: linear-gradient(135deg, 
-        rgba(255, 0, 0, 0.1), 
-        rgba(255, 153, 0, 0.1), 
-        rgba(255, 255, 0, 0.1), 
-        rgba(0, 255, 0, 0.1), 
-        rgba(0, 153, 255, 0.1), 
-        rgba(102, 0, 255, 0.1), 
-        rgba(255, 0, 255, 0.1));
-    background-size: 400% 400%;
-    animation: rainbow-bg 10s ease infinite;
-    border: 2px solid transparent;
-    border-image: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff) 1;
-}
-
-.reply.premium-bg {
-    background: linear-gradient(135deg, 
-        rgba(255, 0, 0, 0.15), 
-        rgba(255, 153, 0, 0.15), 
-        rgba(255, 255, 0, 0.15), 
-        rgba(0, 255, 0, 0.15), 
-        rgba(0, 153, 255, 0.15), 
-        rgba(102, 0, 255, 0.15), 
-        rgba(255, 0, 255, 0.15));
-    background-size: 400% 400%;
-    animation: rainbow-bg 8s ease infinite;
-    border-left: 4px solid transparent;
-    border-image: linear-gradient(to bottom, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6600ff, #ff00ff) 1;
-}
-
-@keyframes rainbow-bg {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-.message {
-    border: 1px solid var(--border-color);
-    margin-top: 20px;
-    border-radius: 8px;
-    background-color: var(--bg-message);
-    animation: fadeInUp 0.6s ease forwards;
-}
-
-.content {
-    padding: 15px;
-    font-size: 28px;
-    word-wrap: break-word;
-    white-space: pre-wrap;
-}
-
-.content img {
-    max-width: 100%;
-    border-radius: 8px;
-    margin: 10px 0;
-    display: block;
-}
-
-.date {
-    text-align: right;
-    padding: 8px 12px;
-    font-size: 22px;
-    color: var(--text-secondary);
-    font-weight: bold;
-}
-
-form {
-    text-align: center;
-    padding: 10px;
-}
-
-.reply-box {
-    background-color: var(--bg-reply-box);
-    padding: 10px;
-    margin: 10px 15px;
-    border-radius: 8px;
-}
-
-.reply {
-    background-color: var(--bg-reply);
-    color: var(--text-main);
-    padding: 8px;
-    border-radius: 4px;
-    margin-bottom: 8px;
-    animation: fadeInUp 0.5s ease forwards;
-}
-
-.reply-content {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    font-size: 24px;
-    padding: 5px 0;
-}
-
-.reply-date {
-    font-size: 14px;
-    color: var(--text-muted);
-}
-
-.reply-form {
-    padding: 5px;
-}
-
-/* 消息淡入动画 */
-@keyframes fadeInUp {
-    0% {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* 上传图片区域 */
-.upload-wrapper {
-    margin: 20px auto;
-    display: flex;
-    flex-direction: column;
     align-items: center;
     gap: 10px;
+}
+.success-toast.show { top: 20px; }
+.success-toast .close-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 26px;
+    cursor: pointer;
+    margin-left: 15px;
+    line-height: 1;
+}
+
+/* ========= 模态框 ========= */
+.member-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    padding: 30px;
+    border-radius: 15px;
     width: 90%;
     max-width: 400px;
-}
-
-.upload-wrapper label {
-    font-size: 24px;
-    color: #ff4444;
-    cursor: pointer;
-    font-weight: bold;
-    padding: 10px 20px;
-    border: 2px dashed #ff4444;
-    border-radius: 8px;
-    transition: all 0.2s;
     text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    animation: modalFadeIn .3s ease;
 }
-
-.upload-wrapper label:hover {
-    background-color: #333;
-    color: #ff6666;
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
-
-#imageInput {
-    display: none;
-}
-
-/* 错误信息样式 */
-.error-message {
-    text-align: center;
-    padding: 40px;
-    background: linear-gradient(135deg, #331a1a, #332a1a);
-    border-radius: 10px;
-    margin: 20px;
-    border: 2px dashed #ff4444;
-    color: #fff;
-}
-
-.error-message h3 {
+.modal-content h3 {
     color: #ff4444;
     font-size: 28px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
-
-.error-message p {
-    color: #ccc;
-    font-size: 20px;
+.modal-content p {
+    font-size: 18px;
+    color: var(--text-muted);
     margin-bottom: 20px;
 }
-
-.error-message button {
+.modal-content input {
+    width: 100%;
+    padding: 12px;
+    font-size: 20px;
+    text-align: center;
+    border: 2px solid var(--input-border);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    outline: none;
+    text-transform: uppercase;
+    background: var(--input-bg);
+    color: var(--text-main);
+}
+.modal-content input:focus {
+    border-color: #ff4444;
+    box-shadow: 0 0 10px rgba(255,68,68,.3);
+}
+.modal-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+.modal-btn {
     padding: 12px 24px;
-    background-color: #ff4444;
-    color: white;
+    font-size: 18px;
+    font-weight: bold;
     border: none;
     border-radius: 8px;
-    font-size: 20px;
     cursor: pointer;
-    transition: all 0.2s;
 }
-
-.error-message button:hover {
-    background-color: #ff0000;
-    transform: translateY(-2px);
-}
-
-.no-messages {
-    text-align: center;
-    padding: 40px;
-    font-size: 24px;
+.modal-btn.confirm { background-color: #ff4444; color: #fff; }
+.modal-btn.confirm:hover { background-color: #ff0000; }
+.modal-btn.cancel { background-color: #444; color: #fff; }
+.modal-btn.cancel:hover { background-color: #555; }
+.hint {
+    margin-top: 15px;
+    font-size: 16px;
     color: var(--text-muted);
-    background-color: var(--bg-reply-box);
-    border-radius: 10px;
-    margin: 20px;
-    border: 2px dashed var(--border-color);
+    font-style: italic;
 }
 
-/* =================================================
-按钮再缩小一档（提交 / 回复 / 炫彩背景）
-================================================= */
-
-.submit,
-.member-btn {
-    padding: 6px 12px;     /* 明显变小 */
-    font-size: 16px;       /* 字体降一档 */
-    border-radius: 6px;
-    max-width: 150px;
-}
-
-/* 炫彩背景按钮的“会员专享”字 */
-.member-tag {
-    font-size: 12px;
-    margin-top: 3px;
-}
-
-/* ===== 移动端适配（≤768px） ===== */
-@media (max-width: 768px) {
-    .success-toast {
-        font-size: 18px;
-        padding: 12px 20px;
-    }
-
-    .modal-content {
-        padding: 20px;
-        width: 95%;
-    }
-
-    .modal-content h3 {
-        font-size: 24px;
-    }
-
-    .modal-content input {
-        font-size: 18px;
-        padding: 10px;
-    }
-
-    .modal-btn {
-        padding: 10px 20px;
-        font-size: 16px;
-    }
-
-    .header a {
-        font-size: 28px;
-    }
-
-    .main {
-        width: 95%;
-        padding: 15px;
-        margin: 20px auto;
-    }
-
-    .title {
-        font-size: 28px;
-    }
-
-    .todo, .todo_new {
-        width: 95%;
-        height: 100px;
-        font-size: 18px;
-    }
-
-    .button-group {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .submit, .member-btn {
-        max-width: 100%;
-        width: 100%;
-        font-size: 18px;
-        padding: 10px 16px;
-    }
-
-    .member-btn {
-        font-size: 16px;
-    }
-
-    .content {
-        font-size: 20px;
-        padding: 12px;
-    }
-
-    .date {
-        font-size: 18px;
-    }
-
-    .reply-content {
-        font-size: 18px;
-    }
-
-    .reply-date {
-        font-size: 12px;
-    }
-
-    .upload-wrapper {
-        width: 95%;
-    }
-
-    .upload-wrapper label {
-        font-size: 20px;
-        padding: 8px 16px;
-    }
-    
-    .error-message {
-        padding: 20px;
-    }
-    
-    .error-message h3 {
-        font-size: 24px;
-    }
-    
-    .error-message p {
-        font-size: 18px;
-    }
-    .submit,
-    .member-btn {
-        padding: 6px 10px;
-        font-size: 15px;
-    }
-
-    .member-tag {
-        font-size: 11px;
-    }
-}
-/* =================================================
-✅ 修复移动端按钮过大的问题（最终覆盖）
-================================================= */
-@media (max-width: 768px) {
-
-    .button-group {
-        flex-direction: column;
-        align-items: center;   /* ✅ 不拉满 */
-        gap: 8px;
-    }
-
-    .submit,
-    .member-btn {
-        width: auto;           /* ✅ 关键：取消 100% */
-        max-width: none;
-        padding: 6px 12px;     /* ✅ 真正变小 */
-        font-size: 14px;       /* ✅ 手机舒适字号 */
-        border-radius: 6px;
-    }
-
-    .member-tag {
-        font-size: 11px;
-        margin-top: 2px;
-    }
-}
-
-/* =====================================================
-🌈 极限镭射 / 全息 / 光谱效果（终极版）
-覆盖 premium-bg / premium-border
-===================================================== */
-
-/* ===== 全局镭射动画（一次即可） ===== */
-@keyframes holo-spectrum {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-@keyframes holo-scan {
-    0%   { transform: translateX(-60%); opacity: 0; }
-    50%  { opacity: 0.6; }
-    100% { transform: translateX(60%); opacity: 0; }
-}
-
-/* ===============================
-✨ 镭射留言卡片
-=============================== */
-.message.premium-bg {
-    position: relative;
-    background:
-        linear-gradient(
-            135deg,
-            rgba(255,255,255,0.95),
-            rgba(255,200,255,0.45),
-            rgba(200,255,255,0.45),
-            rgba(255,255,200,0.45),
-            rgba(255,255,255,0.95)
-        );
-    background-size: 400% 400%;
-    animation: holo-spectrum 10s ease infinite;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-/* 光谱扫描层 */
-.message.premium-bg::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        linear-gradient(
-            60deg,
-            transparent,
-            rgba(255,255,255,0.35),
-            rgba(255,0,255,0.25),
-            rgba(0,255,255,0.25),
-            rgba(255,255,0,0.25),
-            transparent
-        );
-    mix-blend-mode: screen;
-    animation: holo-scan 4.5s linear infinite;
-    pointer-events: none;
-}
-
-/* 轻微玻璃感 */
-.message.premium-bg {
-    backdrop-filter: blur(2px) saturate(1.3);
-}
-
-/* ===============================
-✨ 镭射回复卡片（稍弱一点）
-=============================== */
-.reply.premium-bg {
-    position: relative;
-    background:
-        linear-gradient(
-            135deg,
-            rgba(255,255,255,0.9),
-            rgba(230,200,255,0.4),
-            rgba(200,240,255,0.4),
-            rgba(255,255,255,0.9)
-        );
-    background-size: 300% 300%;
-    animation: holo-spectrum 7s ease infinite;
-    overflow: hidden;
-}
-
-.reply.premium-bg::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        linear-gradient(
-            60deg,
-            transparent,
-            rgba(255,255,255,0.25),
-            rgba(255,255,255,0.15),
-            transparent
-        );
-    mix-blend-mode: screen;
-    animation: holo-scan 6s linear infinite;
-    pointer-events: none;
-}
-
-/* ===============================
-✨ 输入框：液态镭射边框
-=============================== */
-.todo.premium-border,
-.todo_new.premium-border {
-    position: relative;
-    border: 2px solid transparent;
-    background:
-        linear-gradient(#ffffff, #ffffff) padding-box,
-        linear-gradient(
-            135deg,
-            #ff9a9e,
-            #fad0c4,
-            #fbc2eb,
-            #a6c1ee,
-            #fbc2eb,
-            #ff9a9e
-        ) border-box;
-    background-size: 400% 400%;
-    animation: holo-spectrum 6s ease infinite;
-    border-radius: 10px;
-}
-
-/* 输入框高光 */
-.todo.premium-border::after,
-.todo_new.premium-border::after {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    border-radius: 12px;
-    background:
-        linear-gradient(
-            60deg,
-            transparent,
-            rgba(255,255,255,0.6),
-            transparent
-        );
-    animation: holo-scan 3.5s linear infinite;
-    pointer-events: none;
-}
-
-/* ==================================
-🔥 心动PLUS会员 · 炫彩标签（外挂）
-================================== */
-.plus-badge {
-    display: inline-block;
-    margin-left: 8px;
-    padding: 2px 8px;
-    font-size: 14px;
-    font-weight: bold;
-    color: #fff;
-    border-radius: 6px;
-    background: linear-gradient(
-        90deg,
-        #ff0000,
-        #ff9900,
-        #ffff00,
-        #00ff00,
-        #0099ff,
-        #6600ff,
-        #ff00ff,
-        #ff0000
-    );
-    background-size: 300% 100%;
-    animation: plusBadgeFlow 3s linear infinite;
-    box-shadow:
-        0 0 6px rgba(255, 0, 0, 0.9),
-        0 0 12px rgba(255, 153, 0, 0.8),
-        0 0 18px rgba(0, 153, 255, 0.6);
-    vertical-align: middle;
-}
-
-@keyframes plusBadgeFlow {
-    0%   { background-position: 0% 50%; }
-    100% { background-position: 300% 50%; }
-}
-
-/* 手机稍微缩小一点 */
-@media (max-width: 768px) {
-    .plus-badge {
-        font-size: 12px;
-        padding: 2px 6px;
-    }
-}
-/* =====================================================
-🌈 会员帖：同款「心动PLUS会员」流动彩虹背景
-===================================================== */
-
-@keyframes plus-rainbow-flow {
-    0%   { background-position: 0% 50%; }
-    100% { background-position: 300% 50%; }
-}
-
-/* ✅ 只作用于会员帖 */
-.message.premium-bg {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-
-    /* 和会员标签一模一样的彩虹 */
-    background: linear-gradient(
-        90deg,
-        #ff0000,
-        #ff9900,
-        #ffff00,
-        #00ff00,
-        #0099ff,
-        #6600ff,
-        #ff00ff,
-        #ff0000
-    );
-    background-size: 300% 100%;
-    animation: plus-rainbow-flow 3.5s linear infinite;
-}
-
-/* ✅ 内容可读层（不花） */
-.message.premium-bg .content,
-.message.premium-bg .date,
-.message.premium-bg .reply-box,
-.message.premium-bg .reply-form {
-    position: relative;
-    background: rgba(255, 255, 255, 0.88);
-    border-radius: 8px;
-}
-
-/* 微调间距，保持你原本版式 */
-.message.premium-bg .content {
-    margin: 12px;
-}
-
-.message.premium-bg .date {
-    margin: 0 12px 12px;
-}
-
-/* =====================================================
-账号区：登录/注册 居中 + 放大
-===================================================== */
+/* ========= 账号区 ========= */
 #authPanel {
     display: flex;
     flex-direction: column;
@@ -966,19 +237,14 @@ form {
     margin: 18px auto 26px !important;
     text-align: center;
 }
-
-#authNotLogin,
-#authLogged {
+#authNotLogin, #authLogged {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
     flex-wrap: wrap;
 }
-
-/* 输入框放大 */
-#loginUsername,
-#loginPassword {
+#loginUsername, #loginPassword {
     width: 220px;
     max-width: 42vw;
     height: 46px;
@@ -991,54 +257,373 @@ form {
     text-align: center;
     background: var(--input-bg);
 }
-
-#loginUsername:focus,
-#loginPassword:focus {
+#loginUsername:focus, #loginPassword:focus {
     border-color: #ff4444;
     box-shadow: 0 0 8px rgba(255,68,68,0.25);
 }
-
-/* 登录/注册/退出按钮放大（仅账号区） */
-#authPanel .submit {
-    min-width: 120px;
-    max-width: none;
-    padding: 10px 20px;
-    font-size: 18px;
-    border-radius: 8px;
-    flex: 0 0 auto;
-}
-
-/* “当前账号”文字放大 */
 #authLogged {
     font-size: 22px !important;
     color: var(--text-secondary);
     font-weight: bold;
 }
 
-/* 手机端仍保持居中并适度放大 */
+/* ========= 发帖输入 ========= */
+form { text-align: center; padding: 10px; }
+
+.todo, .todo_new {
+    width: 90%;
+    max-width: 800px;
+    height: 120px;
+    margin: 10px auto;
+    border: 2px solid var(--input-border);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 24px;
+    color: var(--text-main);
+    outline: none;
+    resize: vertical;
+    font-family: inherit;
+    display: block;
+    background: var(--input-bg);
+}
+
+/* 会员输入框边框 */
+@keyframes holo-spectrum {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+}
+@keyframes holo-scan {
+    0%   { transform: translateX(-60%); opacity: 0; }
+    50%  { opacity: .6; }
+    100% { transform: translateX(60%); opacity: 0; }
+}
+.todo.premium-border,
+.todo_new.premium-border {
+    position: relative;
+    border: 2px solid transparent;
+    background:
+        linear-gradient(var(--input-bg), var(--input-bg)) padding-box,
+        linear-gradient(135deg,#ff9a9e,#fad0c4,#fbc2eb,#a6c1ee,#fbc2eb,#ff9a9e) border-box;
+    background-size: 400% 400%;
+    animation: holo-spectrum 6s ease infinite;
+    border-radius: 10px;
+}
+.todo.premium-border::after,
+.todo_new.premium-border::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 12px;
+    background: linear-gradient(60deg, transparent, rgba(255,255,255,.6), transparent);
+    animation: holo-scan 3.5s linear infinite;
+    pointer-events: none;
+}
+
+/* ========= 按钮 ========= */
+.button-group {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    margin: 20px auto;
+    max-width: 800px;
+}
+
+/* 统一按钮尺寸（桌面） */
+.submit,
+.member-btn {
+    padding: 6px 12px;
+    font-size: 16px;
+    border-radius: 6px;
+}
+
+/* 主要按钮 */
+.submit {
+    position: relative;
+    overflow: hidden;
+    min-width: 90px;
+    max-width: 150px;
+    background-color: var(--btn-bg);
+    color: var(--btn-text);
+    border: 2px solid var(--btn-border);
+    font-weight: bold;
+    cursor: pointer;
+    transition: .2s;
+    display: block;
+    flex: 0 0 auto;
+}
+.submit:hover {
+    background-color: var(--btn-hover-bg);
+    color: var(--btn-hover-text);
+}
+
+/* 会员按钮 */
+.member-btn {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #ffde59, #ff9900, #ffde59);
+    border: 2px solid #cc0000;
+    color: #cc0000;
+    font-weight: bold;
+    cursor: pointer;
+    max-width: 180px;
+    transition: .2s;
+}
+.member-btn:hover {
+    background: linear-gradient(135deg, #ff9900, #ff6600, #ff9900);
+    color: #fff;
+    border-color: #ff0000;
+}
+.member-tag {
+    font-size: 12px;
+    display: block;
+    margin-top: 3px;
+    color: #990000;
+    font-weight: normal;
+}
+
+/* 波纹 */
+.submit .ripple, .member-btn .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,.5);
+    transform: scale(0);
+    animation: ripple-animation .6s linear;
+    pointer-events: none;
+}
+@keyframes ripple-animation {
+    to { transform: scale(4); opacity: 0; }
+}
+
+/* ========= 留言卡片 ========= */
+.message {
+    border: 1px solid var(--border-color);
+    margin-top: 20px;
+    border-radius: 8px;
+    background-color: var(--bg-message);
+    animation: fadeInUp .5s ease forwards;
+}
+.content {
+    padding: 15px;
+    font-size: 28px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+.content img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 10px 0;
+    display: block;
+}
+.date {
+    text-align: right;
+    padding: 8px 12px;
+    font-size: 22px;
+    color: var(--text-secondary);
+    font-weight: bold;
+}
+.reply-box {
+    background-color: var(--bg-reply-box);
+    padding: 10px;
+    margin: 10px 15px;
+    border-radius: 8px;
+}
+.reply {
+    background-color: var(--bg-reply);
+    color: var(--text-main);
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    animation: fadeInUp .4s ease forwards;
+}
+.reply-content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 24px;
+    padding: 5px 0;
+}
+.reply-date {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+.reply-form { padding: 5px; }
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ========= 会员帖彩虹背景 ========= */
+@keyframes plus-rainbow-flow {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+}
+
+/* 会员主贴 */
+.message.premium-bg {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: linear-gradient(
+        90deg,
+        #ff0000, #ff9900, #ffff00, #00ff00,
+        #0099ff, #6600ff, #ff00ff, #ff0000
+    );
+    background-size: 300% 100%;
+    animation: plus-rainbow-flow 3.5s linear infinite;
+}
+.message.premium-bg .content,
+.message.premium-bg .date,
+.message.premium-bg .reply-box,
+.message.premium-bg .reply-form {
+    position: relative;
+    background: rgba(255,255,255,.88);
+    border-radius: 8px;
+}
+.message.premium-bg .content { margin: 12px; }
+.message.premium-bg .date { margin: 0 12px 12px; }
+
+/* 会员回复（轻一点） */
+.reply.premium-bg {
+    position: relative;
+    background: linear-gradient(
+        135deg,
+        rgba(255,255,255,0.95),
+        rgba(230,200,255,0.45),
+        rgba(200,240,255,0.45),
+        rgba(255,255,255,0.95)
+    );
+    background-size: 300% 300%;
+    animation: holo-spectrum 7s ease infinite;
+    overflow: hidden;
+}
+
+/* 会员标签 */
+.plus-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    border-radius: 6px;
+    background: linear-gradient(
+        90deg,
+        #ff0000,#ff9900,#ffff00,#00ff00,#0099ff,#6600ff,#ff00ff,#ff0000
+    );
+    background-size: 300% 100%;
+    animation: plus-rainbow-flow 3s linear infinite;
+    box-shadow: 0 0 6px rgba(255,0,0,.9), 0 0 12px rgba(255,153,0,.8), 0 0 18px rgba(0,153,255,.6);
+    vertical-align: middle;
+}
+
+/* ========= 其他 ========= */
+.upload-wrapper {
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 90%;
+    max-width: 400px;
+}
+.upload-wrapper label {
+    font-size: 24px;
+    color: #ff4444;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 10px 20px;
+    border: 2px dashed #ff4444;
+    border-radius: 8px;
+}
+#imageInput { display: none; }
+
+.error-message {
+    text-align: center;
+    padding: 40px;
+    background: linear-gradient(135deg, #331a1a, #332a1a);
+    border-radius: 10px;
+    margin: 20px;
+    border: 2px dashed #ff4444;
+    color: #fff;
+}
+.error-message h3 { color: #ff4444; font-size: 28px; margin-bottom: 15px; }
+.error-message p { color: #ccc; font-size: 20px; margin-bottom: 20px; }
+
+.no-messages {
+    text-align: center;
+    padding: 40px;
+    font-size: 24px;
+    color: var(--text-muted);
+    background-color: var(--bg-reply-box);
+    border-radius: 10px;
+    margin: 20px;
+    border: 2px dashed var(--border-color);
+}
+
+/* ========= 移动端 ========= */
 @media (max-width: 768px) {
-    #authNotLogin,
-    #authLogged {
+    .header a { font-size: 28px; }
+
+    .theme-toggle {
+        top: 14px;
+        right: 12px;
+        font-size: 12px;
+        padding: 5px 10px;
+    }
+
+    .main {
+        width: 95%;
+        padding: 15px;
+        margin: 20px auto;
+    }
+    .title { font-size: 28px; }
+
+    .todo, .todo_new {
+        width: 95%;
+        height: 100px;
+        font-size: 18px;
+    }
+
+    .button-group {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .submit, .member-btn {
+        width: auto;
+        max-width: none;
+        padding: 6px 12px;
+        font-size: 14px;
+        border-radius: 6px;
+    }
+    .member-tag { font-size: 11px; margin-top: 2px; }
+
+    .content { font-size: 20px; padding: 12px; }
+    .date { font-size: 18px; }
+    .reply-content { font-size: 18px; }
+    .reply-date { font-size: 12px; }
+
+    #authNotLogin, #authLogged {
         flex-direction: column;
         gap: 10px;
     }
-
-    #loginUsername,
-    #loginPassword {
+    #loginUsername, #loginPassword {
         width: 88vw;
         max-width: 360px;
         height: 44px;
         font-size: 17px;
     }
-
     #authPanel .submit {
-        width: auto;
         min-width: 130px;
         padding: 9px 18px;
         font-size: 16px;
     }
+    #authLogged { font-size: 18px !important; }
 
-    #authLogged {
-        font-size: 18px !important;
+    .plus-badge {
+        font-size: 12px;
+        padding: 2px 6px;
     }
 }
