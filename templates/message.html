@@ -328,7 +328,31 @@ async function loadMessages() {
         `;
     }).join('');
 }
+// ========== 暗黑 / 正常模式切换 ==========
+function initTheme() {
+  const saved = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  syncThemeBtnText(saved);
+}
 
+function syncThemeBtnText(theme) {
+  const btn = document.getElementById('themeToggle');
+  btn.innerText = theme === 'dark' ? '☀️ 正常模式' : '🌙 暗黑模式';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  syncThemeBtnText(next);
+}
+
+// 绑定按钮
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+// 初始化时调用
+initTheme();
 // ========== 初始化 ==========
 (async function init() {
     await refreshMe();
