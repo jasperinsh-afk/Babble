@@ -1,6 +1,8 @@
 import os
+import json
 import random
 import string
+import threading
 from datetime import datetime, timedelta
 
 from flask import Flask, render_template, request, redirect, jsonify, session
@@ -58,6 +60,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+
+# 点赞 JSON（不改数据库结构）
+LIKES_FILE = os.path.join(app.root_path, "likes.json")
+likes_lock = threading.Lock()
 
 db = SQLAlchemy(app)
 
@@ -141,6 +147,72 @@ def check_post_rate_limit(ip: str, limit=3, window_seconds=60):
     return True, 0
 
 
+# ========= 点赞 JSON 工具 =========
+def _normalize_likes_data(data):
+    if not isinstance(data, dict):
+        return {"messages": {}}
+    msgs = data.get("messages", {})
+    if not isinstance(msgs, dict):
+        msgs = {}
+    # 过滤脏数据
+    clean = {}
+    for k, v in msgs.items():
+        if not isinstance(k, str):
+            k = str(k)
+        if isinstance(v, list):
+            clean[k] = [str(x) for x in v if isinstance(x, (str, int, float))]
+        else:
+            clean[k] = []
+    return {"messages": clean}
+
+
+def load_likes():
+    if not os.path.exists(LIKES_FILE):
+        return {"messages": {}}
+    try:
+        with open(LIKES_FILE, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        return _normalize_likes_data(raw)
+    except Exception:
+        return {"messages": {}}
+
+
+def save_likes(data):
+    data = _normalize_likes_data(data)
+    with open(LIKES_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def replace_like_username(old_username, new_username):
+    with likes_lock:
+        data = load_likes()
+        changed = False
+        for mid, users in data["messages"].items():
+            if old_username in users:
+                users = [new_username if u == old_username else u for u in users]
+                # 去重，避免 old/new 冲突重复
+                dedup = []
+                for u in users:
+                    if u not in dedup:
+                        dedup.append(u)
+                data["messages"][mid] = dedup
+                changed = True
+        if changed:
+            save_likes(data)
+
+
+def remove_like_username(username):
+    with likes_lock:
+        data = load_likes()
+        changed = False
+        for mid, users in data["messages"].items():
+            if username in users:
+                data["messages"][mid] = [u for u in users if u != username]
+                changed = True
+        if changed:
+            save_likes(data)
+
+
 def check_and_add_columns():
     inspector = inspect(db.engine)
     tables = inspector.get_table_names()
@@ -189,6 +261,10 @@ def init_db():
     with app.app_context():
         db.create_all()
         check_and_add_columns()
+        # 初始化 likes.json
+        with likes_lock:
+            if not os.path.exists(LIKES_FILE):
+                save_likes({"messages": {}})
 
 
 # 在模块加载时初始化数据库，保证 gunicorn 启动时也会建表
@@ -292,6 +368,9 @@ def change_username():
     Reply.query.filter_by(username=old_username).update({"username": new_username})
     db.session.commit()
 
+    # 同步点赞JSON中的用户名
+    replace_like_username(old_username, new_username)
+
     session["username"] = new_username
     return jsonify({"status": "ok", "username": new_username})
 
@@ -311,8 +390,11 @@ def delete_account():
     Reply.query.filter_by(username=username).update({"username": "已注销用户"})
     db.session.delete(user)
     db.session.commit()
-    session.pop("username", None)
 
+    # 从点赞JSON里移除此用户
+    remove_like_username(username)
+
+    session.pop("username", None)
     return jsonify({"status": "ok", "message": "账号已注销"})
 
 
@@ -333,8 +415,18 @@ def get_messages():
             "username": r.username or "匿名"
         })
 
+    current_user = session.get("username")
+
+    with likes_lock:
+        likes_data = load_likes()
+    likes_map = likes_data.get("messages", {})
+
     data = []
     for m in msgs:
+        users = likes_map.get(str(m.id), [])
+        if not isinstance(users, list):
+            users = []
+
         data.append({
             "id": m.id,
             "content": m.content or "",
@@ -342,7 +434,9 @@ def get_messages():
             "username": m.username or "匿名",
             "image_path": m.image_path or "",
             "is_premium": int(m.is_premium or 0),
-            "replies": reply_map.get(m.id, [])
+            "replies": reply_map.get(m.id, []),
+            "like_count": len(users),
+            "liked_by_me": (current_user in users) if current_user else False
         })
 
     return jsonify({"status": "ok", "messages": data})
@@ -422,6 +516,53 @@ def reply():
     db.session.add(r)
     db.session.commit()
     return jsonify({"status": "ok"})
+
+
+# =========================
+# 点赞接口（不改数据库结构）
+# =========================
+@app.route("/toggle_like", methods=["POST"])
+def toggle_like():
+    username = session.get("username")
+    if not username:
+        return jsonify({"status": "error", "message": "请先登录"}), 401
+
+    message_id = (request.form.get("message_id") or "").strip()
+    if not message_id.isdigit():
+        return jsonify({"status": "error", "message": "message_id 无效"}), 400
+
+    # 校验消息存在
+    msg = db.session.get(Message, int(message_id))
+    if not msg:
+        return jsonify({"status": "error", "message": "消息不存在"}), 404
+
+    with likes_lock:
+        data = load_likes()
+        users = data["messages"].get(message_id, [])
+
+        if username in users:
+            users.remove(username)
+            liked = False
+        else:
+            users.append(username)
+            liked = True
+
+        # 去重保护
+        dedup = []
+        for u in users:
+            if u not in dedup:
+                dedup.append(u)
+
+        data["messages"][message_id] = dedup
+        save_likes(data)
+
+        like_count = len(dedup)
+
+    return jsonify({
+        "status": "ok",
+        "liked": liked,
+        "like_count": like_count
+    })
 
 
 # =========================
