@@ -329,7 +329,6 @@ form { text-align: center; padding: 10px; }
     max-width: 800px;
 }
 
-/* 统一按钮尺寸（桌面） */
 .submit,
 .member-btn {
     padding: 6px 12px;
@@ -337,7 +336,6 @@ form { text-align: center; padding: 10px; }
     border-radius: 6px;
 }
 
-/* 主要按钮 */
 .submit {
     position: relative;
     overflow: hidden;
@@ -357,7 +355,6 @@ form { text-align: center; padding: 10px; }
     color: var(--btn-hover-text);
 }
 
-/* 会员按钮 */
 .member-btn {
     position: relative;
     overflow: hidden;
@@ -422,6 +419,33 @@ form { text-align: center; padding: 10px; }
     color: var(--text-secondary);
     font-weight: bold;
 }
+
+/* 点赞区 */
+.message-actions {
+    padding: 0 12px 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+.like-btn {
+    border: 1px solid var(--border-color);
+    background: var(--bg-reply);
+    color: var(--text-main);
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+.like-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+}
+.like-btn.liked {
+    background: #ff4d6d;
+    color: #fff;
+    border-color: #ff4d6d;
+}
+
 .reply-box {
     background-color: var(--bg-reply-box);
     padding: 10px;
@@ -459,7 +483,6 @@ form { text-align: center; padding: 10px; }
     100% { background-position: 300% 50%; }
 }
 
-/* 会员主贴 */
 .message.premium-bg {
     position: relative;
     border-radius: 12px;
@@ -483,7 +506,6 @@ form { text-align: center; padding: 10px; }
 .message.premium-bg .content { margin: 12px; }
 .message.premium-bg .date { margin: 0 12px 12px; }
 
-/* 会员回复（轻一点） */
 .reply.premium-bg {
     position: relative;
     background: linear-gradient(
