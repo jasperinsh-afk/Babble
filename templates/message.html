@@ -9,8 +9,7 @@
 <body>
     <div class="header">
         <a href="/message">匿语阁 | BABBLE</a>
-        <!-- 暗黑/正常模式切换按钮 -->
-        <button id="themeToggle" class="theme-toggle">🌙 暗黑模式</button>
+        <button id="themeToggle" class="theme-toggle">🌙 暗色主题</button>
     </div>
 
     <!-- 顶部提示 -->
@@ -18,8 +17,8 @@
         <span id="toastText">发送成功</span>
         <button class="close-btn" onclick="hideToast()">×</button>
     </div>
-    
-    <!-- 会员码弹窗（可选沿用） -->
+
+    <!-- 会员码弹窗 -->
     <div id="memberModal" class="member-modal">
         <div class="modal-content">
             <h3>会员验证</h3>
@@ -37,25 +36,23 @@
         <h2 class="title">多谢使用匿语阁</h2>
 
         <!-- 登录注册区 -->
-        <div id="authPanel" style="text-align:center; margin:12px 0 18px;">
+        <div id="authPanel">
             <div id="authNotLogin" style="display:none;">
-                <input id="loginUsername" type="text" placeholder="用户名"
-                       style="padding:8px; font-size:16px; width:150px;">
-                <input id="loginPassword" type="password" placeholder="密码"
-                       style="padding:8px; font-size:16px; width:150px;">
+                <input id="loginUsername" type="text" placeholder="用户名">
+                <input id="loginPassword" type="password" placeholder="密码">
                 <button class="submit" type="button" onclick="doRegister()">注册</button>
                 <button class="submit" type="button" onclick="doLogin()">登录</button>
             </div>
 
-            <div id="authLogged" style="display:none; font-size:20px;">
+            <div id="authLogged" style="display:none;">
                 当前账号：<span id="currentUser" style="font-weight:bold;"></span>
-                <button class="submit" type="button" onclick="doChangeUsername()" style="max-width:140px; margin-left:8px;">
+                <button class="submit" type="button" onclick="doChangeUsername()" style="margin-left:8px;">
                     修改用户名
                 </button>
-                <button class="submit" type="button" onclick="doDeleteAccount()" style="max-width:140px; margin-left:8px; background:#b00020; color:#fff;">
+                <button class="submit" type="button" onclick="doDeleteAccount()" style="margin-left:8px; background:#b00020; color:#fff;">
                     注销账号
                 </button>
-                <button class="submit" type="button" onclick="doLogout()" style="max-width:100px; margin-left:8px;">退出</button>
+                <button class="submit" type="button" onclick="doLogout()" style="margin-left:8px;">退出</button>
             </div>
         </div>
 
@@ -63,17 +60,19 @@
         <form id="mainForm" enctype="multipart/form-data">
             <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
 
-            <!--<div class="upload-wrapper">
+            <!-- 如需上传图片可恢复
+            <div class="upload-wrapper">
                 <label for="imageInput">📷 上传图片（可选）</label>
                 <input id="imageInput" type="file" name="image" accept="image/*">
             </div>
             -->
-            <!-- 隐藏会员码字段 -->
+
             <input type="hidden" name="member_code" id="memberCodeHidden" value="">
 
             <div class="button-group">
                 <button class="submit" type="submit">提交</button>
-                <!--<button class="member-btn" type="button" onclick="openMemberModal()">
+                <!--
+                <button class="member-btn" type="button" onclick="openMemberModal()">
                     炫彩背景
                     <span class="member-tag">会员专享</span>
                 </button>
@@ -99,7 +98,7 @@ function hideToast() {
     document.getElementById('toast').classList.remove('show');
 }
 function esc(s='') {
-    return s.replace(/[&<>"']/g, c => (
+    return String(s).replace(/[&<>"']/g, c => (
         {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
     ));
 }
@@ -234,12 +233,8 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
     const res = await fetch('/upload', { method: 'POST', body: fd });
     const data = await res.json();
 
-    if (res.status === 401) {
-        return alert('❌ 请先登录后再发帖');
-    }
-    if (res.status === 429) {
-        return alert('⏱ ' + (data.message || '发送太频繁'));
-    }
+    if (res.status === 401) return alert('❌ 请先登录后再发帖');
+    if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
 
     if (data.status === 'ok') {
         this.reset();
@@ -250,6 +245,22 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
         alert('❌ ' + (data.message || '发送失败'));
     }
 });
+
+// ========== 点赞 ==========
+async function toggleLike(messageId, btnEl) {
+    const fd = new FormData();
+    fd.append('message_id', String(messageId));
+
+    const res = await fetch('/toggle_like', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (res.status === 401) return alert('❌ 请先登录后再点赞');
+    if (data.status !== 'ok') return alert('❌ ' + (data.message || '点赞失败'));
+
+    btnEl.classList.toggle('liked', !!data.liked);
+    const c = btnEl.querySelector('.like-count');
+    if (c) c.innerText = Number(data.like_count || 0);
+}
 
 // ========== 回复 ==========
 async function submitReply(messageId) {
@@ -264,12 +275,8 @@ async function submitReply(messageId) {
     const res = await fetch('/reply', { method: 'POST', body: fd });
     const data = await res.json();
 
-    if (res.status === 401) {
-        return alert('❌ 请先登录后再回复');
-    }
-    if (res.status === 429) {
-        return alert('⏱ ' + (data.message || '发送太频繁'));
-    }
+    if (res.status === 401) return alert('❌ 请先登录后再回复');
+    if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
 
     if (data.status === 'ok') {
         input.value = '';
@@ -302,6 +309,9 @@ async function loadMessages() {
         const contentHtml = m.content ? `<div class="content">${esc(m.content)}</div>` : '';
         const imageHtml = m.image_path ? `<div class="content"><img src="${m.image_path}" alt="img"></div>` : '';
 
+        const likeCount = Number(m.like_count || 0);
+        const likedCls = m.liked_by_me ? 'liked' : '';
+
         const replies = (m.replies || []).map(r => `
             <div class="reply ${premiumCls}">
                 <div class="reply-content"><b>${esc(r.username || '匿名')}：</b>${esc(r.content || '')}</div>
@@ -315,44 +325,46 @@ async function loadMessages() {
                 ${imageHtml}
                 <div class="date">#${m.id} · ${esc(m.username || '匿名')} · ${esc(m.date || '')}</div>
 
+                <div class="message-actions">
+                    <button class="like-btn ${likedCls}" type="button" onclick="toggleLike(${m.id}, this)">
+                        ❤️ <span class="like-count">${likeCount}</span>
+                    </button>
+                </div>
+
                 <div class="reply-box">
                     ${replies || '<div style="color:#777;">暂无回复</div>'}
                 </div>
 
                 <div class="reply-form" style="display:flex; gap:8px; padding:0 12px 12px;">
                     <input id="reply_input_${m.id}" type="text" placeholder="写下回复..."
-                           style="flex:1; padding:8px; font-size:16px; border:1px solid #ccc; border-radius:6px;">
+                        style="flex:1; padding:8px; font-size:16px; border:1px solid #ccc; border-radius:6px;">
                     <button class="submit" type="button" onclick="submitReply(${m.id})">回复</button>
                 </div>
             </div>
         `;
     }).join('');
 }
-// ========== 暗黑 / 正常模式切换 ==========
+
+// ========== 暗色 / 原本主题 ==========
 function initTheme() {
-  const saved = localStorage.getItem('theme') || 'light';
-  document.documentElement.setAttribute('data-theme', saved);
-  syncThemeBtnText(saved);
+    const saved = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    syncThemeBtnText(saved);
 }
-
 function syncThemeBtnText(theme) {
-  const btn = document.getElementById('themeToggle');
-  btn.innerText = theme === 'dark' ? '☀️ 正常模式' : '🌙 暗黑模式';
+    const btn = document.getElementById('themeToggle');
+    btn.innerText = theme === 'dark' ? '🎨 原本主题（紫橙）' : '🌙 暗色主题';
 }
-
 function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  syncThemeBtnText(next);
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    syncThemeBtnText(next);
 }
-
-// 绑定按钮
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
-
-// 初始化时调用
 initTheme();
+
 // ========== 初始化 ==========
 (async function init() {
     await refreshMe();
