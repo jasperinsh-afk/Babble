@@ -78,6 +78,7 @@ class Message(db.Model):
     username = db.Column(db.String(30), nullable=True)
     image_path = db.Column(db.String(255), nullable=True)
     is_premium = db.Column(db.Integer, default=0)
+    user_id = db.Column(db.Integer, nullable=True, default=None)  # 如果用户登录则为用户ID，匿名则为None
 
 
 class Reply(db.Model):
@@ -86,6 +87,7 @@ class Reply(db.Model):
     content = db.Column(db.Text, nullable=False)
     date = db.Column(db.String(50), nullable=True)
     username = db.Column(db.String(30), nullable=True)
+    user_id = db.Column(db.Integer, nullable=True, default=None)  # 如果用户登录则为用户ID，匿名则为None
 
 
 class User(db.Model):
@@ -124,6 +126,22 @@ def random_filename(filename):
     ext = filename.rsplit(".", 1)[1].lower()
     rand = "".join(random.choices(string.ascii_lowercase + string.digits, k=18))
     return f"{rand}.{ext}"
+
+
+def generate_anonymous_name(ip=None):
+    """生成匿名用户名"""
+    # 从预定义的匿名名字列表中随机选择
+    anonymous_names = [
+        "神秘过客", "匿名网友", "路过群众", "吃瓜群众", "热心市民", 
+        "江湖过客", "无名氏", "影子", "风语者", "星辰大海",
+        "云端漫步", "林间隐者", "深海鱼", "北极星", "南风知意",
+        "西山暮色", "东篱采菊", "北国风光", "南山隐士", "西湖游客"
+    ]
+    name = random.choice(anonymous_names)
+    
+    # 添加随机数字后缀
+    suffix = ''.join(random.choices(string.digits, k=4))
+    return f"{name}#{suffix}"
 
 
 def check_post_rate_limit(ip: str, limit=3, window_seconds=60):
@@ -246,12 +264,24 @@ def check_and_add_columns():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
+        if "user_id" not in columns:
+            try:
+                db.session.execute(text("ALTER TABLE message ADD COLUMN user_id INT DEFAULT NULL"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
 
     if "reply" in tables:
         columns = [c["name"] for c in inspector.get_columns("reply")]
         if "username" not in columns:
             try:
                 db.session.execute(text("ALTER TABLE reply ADD COLUMN username VARCHAR(30)"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+        if "user_id" not in columns:
+            try:
+                db.session.execute(text("ALTER TABLE reply ADD COLUMN user_id INT DEFAULT NULL"))
                 db.session.commit()
             except Exception:
                 db.session.rollback()
@@ -327,12 +357,14 @@ def login():
         return jsonify({"status": "error", "message": "密码错误"})
 
     session["username"] = user.username
+    session["user_id"] = user.id
     return jsonify({"status": "ok", "username": user.username})
 
 
 @app.route("/logout", methods=["POST"])
 def logout():
     session.pop("username", None)
+    session.pop("user_id", None)
     return jsonify({"status": "ok"})
 
 
@@ -444,10 +476,6 @@ def get_messages():
 
 @app.route("/upload", methods=["POST"])
 def upload():
-    username = session.get("username")
-    if not username:
-        return jsonify({"status": "error", "message": "请先登录后再发帖"}), 401
-
     ip, _ = get_real_ip(request)
     ok, _ = check_post_rate_limit(ip, limit=3, window_seconds=60)
     if not ok:
@@ -471,13 +499,22 @@ def upload():
         return jsonify({"status": "error", "message": "内容和图片至少填写一个"})
 
     is_premium = 1 if member_code == "XINHUIYUAN888" else 0
+    
+    # 获取用户名：如果用户已登录使用登录用户名，否则生成匿名用户名
+    if session.get("username"):
+        username = session["username"]
+        user_id = session.get("user_id")
+    else:
+        username = generate_anonymous_name(ip)
+        user_id = None
 
     m = Message(
         content=content,
         date=now_cn_str(),
         username=username,
         image_path=image_path,
-        is_premium=is_premium
+        is_premium=is_premium,
+        user_id=user_id
     )
     db.session.add(m)
     db.session.commit()
@@ -486,10 +523,6 @@ def upload():
 
 @app.route("/reply", methods=["POST"])
 def reply():
-    username = session.get("username")
-    if not username:
-        return jsonify({"status": "error", "message": "请先登录后再回复"}), 401
-
     ip, _ = get_real_ip(request)
     ok, _ = check_post_rate_limit(ip, limit=3, window_seconds=60)
     if not ok:
@@ -506,12 +539,21 @@ def reply():
     msg = db.session.get(Message, int(message_id))
     if not msg:
         return jsonify({"status": "error", "message": "原消息不存在"}), 404
+    
+    # 获取用户名：如果用户已登录使用登录用户名，否则生成匿名用户名
+    if session.get("username"):
+        username = session["username"]
+        user_id = session.get("user_id")
+    else:
+        username = generate_anonymous_name(ip)
+        user_id = None
 
     r = Reply(
         message_id=int(message_id),
         content=content,
         date=now_cn_str(),
-        username=username
+        username=username,
+        user_id=user_id
     )
     db.session.add(r)
     db.session.commit()
