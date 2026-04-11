@@ -56,6 +56,21 @@
             </div>
         </div>
 
+        <!-- 匿名发帖说明 -->
+        <div class="anonymous-info" style="
+            background-color: var(--bg-message);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 15px auto;
+            max-width: 800px;
+            text-align: center;
+            font-size: 16px;
+            color: var(--text-secondary);
+        ">
+            💬 无需登录即可匿名发帖，系统将为您生成随机昵称
+        </div>
+
         <!-- 发帖表单 -->
         <form id="mainForm" enctype="multipart/form-data">
             <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
@@ -70,7 +85,7 @@
             <input type="hidden" name="member_code" id="memberCodeHidden" value="">
 
             <div class="button-group">
-                <button class="submit" type="submit">提交</button>
+                <button class="submit" type="submit">匿名发帖</button>
                 <!--
                 <button class="member-btn" type="button" onclick="openMemberModal()">
                     炫彩背景
@@ -230,16 +245,26 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
     e.preventDefault();
 
     const fd = new FormData(this);
+    
+    // 显示正在发送的提示
+    const submitBtn = this.querySelector('.submit');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '发送中...';
+    submitBtn.disabled = true;
+
     const res = await fetch('/upload', { method: 'POST', body: fd });
     const data = await res.json();
 
-    if (res.status === 401) return alert('❌ 请先登录后再发帖');
+    // 恢复按钮状态
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+
     if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
 
     if (data.status === 'ok') {
         this.reset();
         document.getElementById('memberCodeHidden').value = '';
-        showToast('发送成功');
+        showToast('发送成功！系统已为您生成随机昵称');
         await loadMessages();
     } else {
         alert('❌ ' + (data.message || '发送失败'));
@@ -272,15 +297,24 @@ async function submitReply(messageId) {
     fd.append('message_id', String(messageId));
     fd.append('reply_content', content);
 
+    // 显示正在发送的提示
+    const replyBtn = input.nextElementSibling;
+    const originalText = replyBtn.textContent;
+    replyBtn.textContent = '回复中...';
+    replyBtn.disabled = true;
+
     const res = await fetch('/reply', { method: 'POST', body: fd });
     const data = await res.json();
 
-    if (res.status === 401) return alert('❌ 请先登录后再回复');
+    // 恢复按钮状态
+    replyBtn.textContent = originalText;
+    replyBtn.disabled = false;
+
     if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
 
     if (data.status === 'ok') {
         input.value = '';
-        showToast('回复成功');
+        showToast('回复成功！');
         await loadMessages();
     } else {
         alert('❌ ' + (data.message || '回复失败'));
