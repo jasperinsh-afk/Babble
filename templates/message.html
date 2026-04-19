@@ -5,8 +5,138 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>匿语阁 | BABBLE</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/message.css') }}">
+
+    <style>
+        .emergency-overlay{
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 35%),
+                linear-gradient(135deg, #2b0000 0%, #7a0000 45%, #d10000 100%);
+            overflow: hidden;
+        }
+
+        .emergency-overlay::before,
+        .emergency-overlay::after{
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .emergency-overlay::before{
+            background:
+                repeating-linear-gradient(
+                    180deg,
+                    rgba(255,255,255,0.03) 0px,
+                    rgba(255,255,255,0.03) 2px,
+                    transparent 2px,
+                    transparent 6px
+                );
+            mix-blend-mode: overlay;
+            opacity: 0.35;
+        }
+
+        .emergency-overlay::after{
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.35) 100%);
+        }
+
+        .emergency-panel{
+            position: relative;
+            z-index: 2;
+            width: min(92vw, 760px);
+            padding: 40px 28px;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(6px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                         "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+
+        .emergency-tag{
+            display: inline-block;
+            margin-bottom: 18px;
+            padding: 6px 12px;
+            border: 1px solid rgba(255,255,255,0.22);
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.82);
+            background: rgba(255,255,255,0.06);
+        }
+
+        .emergency-title{
+            margin: 0 0 18px;
+            font-size: clamp(34px, 7vw, 64px);
+            font-weight: 900;
+            line-height: 1.06;
+            letter-spacing: 1px;
+            color: #fff;
+        }
+
+        .emergency-divider{
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.08));
+            margin: 18px 0 26px;
+        }
+
+        .emergency-lines{
+            display: grid;
+            gap: 12px;
+        }
+
+        .emergency-line{
+            font-size: clamp(20px, 3.2vw, 30px);
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            letter-spacing: 1px;
+        }
+
+        .emergency-blink{
+            display: inline-block;
+            color: #ffd6d6;
+            animation: emergencyBlink 1.2s infinite;
+        }
+
+        @keyframes emergencyBlink{
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.35; }
+        }
+
+        @media (max-width: 640px){
+            .emergency-panel{
+                padding: 28px 20px;
+            }
+
+            .emergency-line{
+                line-height: 1.4;
+            }
+        }
+    </style>
 </head>
 <body>
+    <!-- 红屏预留页 -->
+    <div id="emergencyOverlay" class="emergency-overlay">
+        <div class="emergency-panel">
+            <div class="emergency-tag">EMERGENCY SCREEN / 预留突发情况页</div>
+            <h1 class="emergency-title">检测到突发情况</h1>
+            <div class="emergency-divider"></div>
+            <div class="emergency-lines">
+                <div class="emergency-line">服务已终止</div>
+                <div class="emergency-line">我们已介入调查</div>
+                <div class="emergency-line">请稍安勿躁 <span class="emergency-blink">●</span></div>
+            </div>
+        </div>
+    </div>
+
     <div class="header">
         <a href="/message">匿语阁 | BABBLE</a>
         <button id="themeToggle" class="theme-toggle">🌙 暗色主题</button>
@@ -32,7 +162,7 @@
         </div>
     </div>
 
-    <div class="main">
+    <div class="main" id="mainPage">
         <h2 class="title">多谢使用匿语阁</h2>
 
         <!-- 登录注册区 -->
@@ -100,10 +230,34 @@
     </div>
 
 <script>
+const EMERGENCY_MODE = false; // 改成 true 即开启红屏预留页
 let me = null;
+
+function isEmergencyMode() {
+    return EMERGENCY_MODE === true;
+}
+
+function showEmergencyScreen() {
+    const overlay = document.getElementById('emergencyOverlay');
+    const mainPage = document.getElementById('mainPage');
+    const toast = document.getElementById('toast');
+
+    if (mainPage) mainPage.style.display = 'none';
+    if (toast) toast.style.display = 'none';
+    if (overlay) overlay.style.display = 'flex';
+
+    document.body.style.overflow = 'hidden';
+}
+
+function emergencyBlocked() {
+    if (!isEmergencyMode()) return false;
+    showEmergencyScreen();
+    return true;
+}
 
 // ========== 通用 ==========
 function showToast(msg) {
+    if (isEmergencyMode()) return;
     const t = document.getElementById('toast');
     document.getElementById('toastText').innerText = msg || '操作成功';
     t.classList.add('show');
@@ -120,12 +274,14 @@ function esc(s='') {
 
 // ========== 会员弹窗 ==========
 function openMemberModal() {
+    if (emergencyBlocked()) return;
     document.getElementById('memberModal').style.display = 'flex';
 }
 function closeMemberModal() {
     document.getElementById('memberModal').style.display = 'none';
 }
 function confirmMemberCode() {
+    if (emergencyBlocked()) return;
     const code = (document.getElementById('memberCodeInput').value || '').trim().toUpperCase();
     document.getElementById('memberCodeHidden').value = code;
     closeMemberModal();
@@ -134,6 +290,7 @@ function confirmMemberCode() {
 
 // ========== 登录态 ==========
 async function refreshMe() {
+    if (emergencyBlocked()) return;
     const res = await fetch('/me');
     const data = await res.json();
     me = data.logged_in ? data.username : null;
@@ -156,6 +313,7 @@ async function refreshMe() {
 }
 
 async function doRegister() {
+    if (emergencyBlocked()) return;
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     if (!username || !password) return alert('请输入用户名和密码');
@@ -174,6 +332,7 @@ async function doRegister() {
 }
 
 async function doLogin() {
+    if (emergencyBlocked()) return;
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     if (!username || !password) return alert('请输入用户名和密码');
@@ -194,6 +353,7 @@ async function doLogin() {
 }
 
 async function doLogout() {
+    if (emergencyBlocked()) return;
     const res = await fetch('/logout', { method: 'POST' });
     const data = await res.json();
     if (data.status === 'ok') {
@@ -205,6 +365,7 @@ async function doLogout() {
 
 // 修改用户名
 async function doChangeUsername() {
+    if (emergencyBlocked()) return;
     const newName = prompt('请输入新用户名（2-30字）：');
     if (!newName) return;
 
@@ -225,6 +386,7 @@ async function doChangeUsername() {
 
 // 注销账号
 async function doDeleteAccount() {
+    if (emergencyBlocked()) return;
     const ok = confirm('确认注销账号？此操作不可恢复。');
     if (!ok) return;
 
@@ -243,36 +405,42 @@ async function doDeleteAccount() {
 // ========== 发帖 ==========
 document.getElementById('mainForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    if (emergencyBlocked()) return;
 
     const fd = new FormData(this);
     
-    // 显示正在发送的提示
     const submitBtn = this.querySelector('.submit');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = '发送中...';
     submitBtn.disabled = true;
 
-    const res = await fetch('/upload', { method: 'POST', body: fd });
-    const data = await res.json();
+    try {
+        const res = await fetch('/upload', { method: 'POST', body: fd });
+        const data = await res.json();
 
-    // 恢复按钮状态
-    submitBtn.textContent = originalText;
-    submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
 
-    if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
+        if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
 
-    if (data.status === 'ok') {
-        this.reset();
-        document.getElementById('memberCodeHidden').value = '';
-        showToast('发送成功！系统已为您生成随机昵称');
-        await loadMessages();
-    } else {
-        alert('❌ ' + (data.message || '发送失败'));
+        if (data.status === 'ok') {
+            this.reset();
+            document.getElementById('memberCodeHidden').value = '';
+            showToast('发送成功！系统已为您生成随机昵称');
+            await loadMessages();
+        } else {
+            alert('❌ ' + (data.message || '发送失败'));
+        }
+    } catch (e) {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        alert('❌ 发送失败，请稍后重试');
     }
 });
 
 // ========== 点赞 ==========
 async function toggleLike(messageId, btnEl) {
+    if (emergencyBlocked()) return;
     const fd = new FormData();
     fd.append('message_id', String(messageId));
 
@@ -289,6 +457,7 @@ async function toggleLike(messageId, btnEl) {
 
 // ========== 回复 ==========
 async function submitReply(messageId) {
+    if (emergencyBlocked()) return;
     const input = document.getElementById('reply_input_' + messageId);
     const content = input.value.trim();
     if (!content) return alert('回复内容不能为空');
@@ -297,32 +466,38 @@ async function submitReply(messageId) {
     fd.append('message_id', String(messageId));
     fd.append('reply_content', content);
 
-    // 显示正在发送的提示
     const replyBtn = input.nextElementSibling;
     const originalText = replyBtn.textContent;
     replyBtn.textContent = '回复中...';
     replyBtn.disabled = true;
 
-    const res = await fetch('/reply', { method: 'POST', body: fd });
-    const data = await res.json();
+    try {
+        const res = await fetch('/reply', { method: 'POST', body: fd });
+        const data = await res.json();
 
-    // 恢复按钮状态
-    replyBtn.textContent = originalText;
-    replyBtn.disabled = false;
+        replyBtn.textContent = originalText;
+        replyBtn.disabled = false;
 
-    if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
+        if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
 
-    if (data.status === 'ok') {
-        input.value = '';
-        showToast('回复成功！');
-        await loadMessages();
-    } else {
-        alert('❌ ' + (data.message || '回复失败'));
+        if (data.status === 'ok') {
+            input.value = '';
+            showToast('回复成功！');
+            await loadMessages();
+        } else {
+            alert('❌ ' + (data.message || '回复失败'));
+        }
+    } catch (e) {
+        replyBtn.textContent = originalText;
+        replyBtn.disabled = false;
+        alert('❌ 回复失败，请稍后重试');
     }
 }
 
 // ========== 渲染列表 ==========
 async function loadMessages() {
+    if (emergencyBlocked()) return;
+
     const container = document.getElementById('listContainer');
     const res = await fetch('/messages');
     const data = await res.json();
@@ -390,6 +565,7 @@ function syncThemeBtnText(theme) {
     btn.innerText = theme === 'dark' ? '🎨 原本主题（紫橙）' : '🌙 暗色主题';
 }
 function toggleTheme() {
+    if (emergencyBlocked()) return;
     const current = document.documentElement.getAttribute('data-theme');
     const next = current === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
@@ -401,6 +577,11 @@ initTheme();
 
 // ========== 初始化 ==========
 (async function init() {
+    if (isEmergencyMode()) {
+        showEmergencyScreen();
+        return;
+    }
+
     await refreshMe();
     await loadMessages();
 })();
