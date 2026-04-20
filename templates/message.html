@@ -126,12 +126,13 @@
     <!-- 红屏预留页 -->
     <div id="emergencyOverlay" class="emergency-overlay">
         <div class="emergency-panel">
-            <div class="emergency-tag">EMERGENCY SCREEN / 预留突发情况页</div>
-            <h1 class="emergency-title">检测到突发情况</h1>
+            <!--<div class="emergency-tag">EMERGENCY SCREEN / 预留突发情况页</div>-->
+            <h1 class="emergency-title">检测到紧急情况</h1>
             <div class="emergency-divider"></div>
             <div class="emergency-lines">
                 <div class="emergency-line">服务已终止</div>
                 <div class="emergency-line">我们已介入调查</div>
+                <div class="emergency-line">所有数据已被妥善保存</div>
                 <div class="emergency-line">请稍安勿躁 <span class="emergency-blink">●</span></div>
             </div>
         </div>
@@ -230,11 +231,15 @@
     </div>
 
 <script>
+//
 //!!!!!!!!!!!!!!!!!
 //EMERGENCY MODE 应急红屏 
 //USE WITH CAUTION 慎用
 //
-const EMERGENCY_MODE = false; // 改成 true 即开启红屏预留页
+//
+const EMERGENCY_MODE = true; // 改成 true 即开启红屏预留页
+//
+//
 let me = null;
 
 function isEmergencyMode() {
