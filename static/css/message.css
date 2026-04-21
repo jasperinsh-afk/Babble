@@ -76,6 +76,7 @@ body {
     text-align: center;
     background-color: var(--header-bg);
     position: relative;
+    min-height: 110px;
 }
 
 .header a {
@@ -85,6 +86,70 @@ body {
     color: var(--header-text);
 }
 .header a:hover { color: #fff; }
+
+/* 右上角头像 */
+.avatar-box {
+    position: absolute;
+    top: 14px;
+    right: 170px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 3;
+}
+
+.avatar-upload-tip {
+    font-size: 12px;
+    color: #fff5d6;
+    font-weight: bold;
+    letter-spacing: .5px;
+    text-shadow: 0 2px 6px rgba(0,0,0,.35);
+    background: rgba(0,0,0,.18);
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.2);
+}
+
+.avatar-label {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.my-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    border: 3px solid #fff;
+    box-shadow:
+        0 0 0 4px rgba(255,145,77,.45),
+        0 10px 24px rgba(0,0,0,.28);
+    background: #fff;
+    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.avatar-label:hover .my-avatar {
+    transform: scale(1.06);
+    filter: brightness(1.04);
+    box-shadow:
+        0 0 0 5px rgba(255,145,77,.6),
+        0 12px 28px rgba(0,0,0,.35);
+}
+
+.avatar-online-dot {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #31d158;
+    border: 2px solid #fff;
+    box-shadow: 0 0 10px rgba(49,209,88,.7);
+}
 
 /* 主题按钮 */
 .theme-toggle {
@@ -267,6 +332,21 @@ body {
     font-weight: bold;
 }
 
+.inline-user-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inline-user-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    background: #fff;
+}
+
 /* ========= 发帖输入 ========= */
 form { text-align: center; padding: 10px; }
 
@@ -399,7 +479,31 @@ form { text-align: center; padding: 10px; }
     border-radius: 8px;
     background-color: var(--bg-message);
     animation: fadeInUp .5s ease forwards;
+    overflow: hidden;
 }
+
+.message-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px 0;
+}
+
+.message-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    background: #fff;
+    flex: 0 0 auto;
+}
+
+.message-head-meta {
+    min-width: 0;
+    flex: 1;
+}
+
 .content {
     padding: 15px;
     font-size: 28px;
@@ -460,6 +564,24 @@ form { text-align: center; padding: 10px; }
     margin-bottom: 8px;
     animation: fadeInUp .4s ease forwards;
 }
+.reply-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.reply-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    background: #fff;
+    flex: 0 0 auto;
+}
+.reply-head-meta {
+    flex: 1;
+    min-width: 0;
+}
 .reply-content {
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -498,13 +620,15 @@ form { text-align: center; padding: 10px; }
 .message.premium-bg .content,
 .message.premium-bg .date,
 .message.premium-bg .reply-box,
-.message.premium-bg .reply-form {
+.message.premium-bg .reply-form,
+.message.premium-bg .message-head {
     position: relative;
     background: rgba(255,255,255,.88);
     border-radius: 8px;
 }
 .message.premium-bg .content { margin: 12px; }
 .message.premium-bg .date { margin: 0 12px 12px; }
+.message.premium-bg .message-head { margin: 12px 12px 0; }
 
 .reply.premium-bg {
     position: relative;
@@ -585,7 +709,27 @@ form { text-align: center; padding: 10px; }
 
 /* ========= 移动端 ========= */
 @media (max-width: 768px) {
+    .header {
+        min-height: 130px;
+        padding-top: 18px;
+    }
+
     .header a { font-size: 28px; }
+
+    .avatar-box {
+        top: 56px;
+        right: 12px;
+    }
+
+    .my-avatar {
+        width: 58px;
+        height: 58px;
+    }
+
+    .avatar-upload-tip {
+        font-size: 11px;
+        padding: 2px 6px;
+    }
 
     .theme-toggle {
         top: 14px;
@@ -623,7 +767,7 @@ form { text-align: center; padding: 10px; }
     .member-tag { font-size: 11px; margin-top: 2px; }
 
     .content { font-size: 20px; padding: 12px; }
-    .date { font-size: 18px; }
+    .date { font-size: 16px; padding: 6px 8px; }
     .reply-content { font-size: 18px; }
     .reply-date { font-size: 12px; }
 
@@ -647,5 +791,20 @@ form { text-align: center; padding: 10px; }
     .plus-badge {
         font-size: 12px;
         padding: 2px 6px;
+    }
+
+    .message-avatar {
+        width: 42px;
+        height: 42px;
+    }
+
+    .reply-avatar {
+        width: 30px;
+        height: 30px;
+    }
+
+    .inline-user-avatar {
+        width: 28px;
+        height: 28px;
     }
 }
