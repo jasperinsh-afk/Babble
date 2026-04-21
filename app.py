@@ -1,746 +1,442 @@
 import os
-import json
-import random
-import string
-import threading
-from datetime import datetime, timedelta
-
-from flask import Flask, render_template, request, redirect, jsonify, session
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import inspect, text
-from werkzeug.security import generate_password_hash, check_password_hash
+import time
+import sqlite3
+from datetime import datetime
+from flask import Flask, render_template, request, jsonify, session
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.secret_key = "replace-with-your-secret-key"
 
-# =========================
-# 基础配置
-# =========================
-app.secret_key = os.environ.get("SECRET_KEY", "replace-with-a-strong-secret-key")
+DB_PATH = "babble.db"
 
+UPLOAD_FOLDER = os.path.join("static", "uploads", "images")
+AVATAR_FOLDER = os.path.join("static", "uploads", "avatars")
 
-def get_db_uri():
-    raw_uri = (
-        os.environ.get("DATABASE_URL")
-        or os.environ.get("MYSQL_URL")
-        or os.environ.get("SQLALCHEMY_DATABASE_URI")
-    )
-
-    # 如果没有配置数据库，自动降级为 sqlite，保证应用能启动
-    if not raw_uri:
-        return "sqlite:///app.db"
-
-    # 兼容 mysql://
-    if raw_uri.startswith("mysql://"):
-        raw_uri = raw_uri.replace("mysql://", "mysql+pymysql://", 1)
-
-    return raw_uri
-
-
-app.config["SQLALCHEMY_DATABASE_URI"] = get_db_uri()
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-# 仅对非 sqlite 启用连接池参数
-db_uri = app.config["SQLALCHEMY_DATABASE_URI"]
-if db_uri.startswith("sqlite"):
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_pre_ping": True
-    }
-else:
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_pre_ping": True,
-        "pool_recycle": 180,
-        "pool_size": 3,
-        "max_overflow": 2,
-        "pool_timeout": 30,
-    }
-
-UPLOAD_FOLDER = os.path.join("static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+os.makedirs(AVATAR_FOLDER, exist_ok=True)
 
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-
-# 点赞 JSON（不改数据库结构）
-LIKES_FILE = os.path.join(app.root_path, "likes.json")
-likes_lock = threading.Lock()
-
-db = SQLAlchemy(app)
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+ALLOWED_AVATAR_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 
-# =========================
-# 数据模型
-# =========================
-class Message(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    ip = db.Column(db.String(50), nullable=True, index=True)  # 发帖IP
-    content = db.Column(db.Text, nullable=True)
-    date = db.Column(db.String(50), nullable=True)
-    username = db.Column(db.String(30), nullable=True)
-    image_path = db.Column(db.String(255), nullable=True)
-    is_premium = db.Column(db.Integer, default=0)
-    user_id = db.Column(db.Integer, nullable=True, default=None)  # 如果用户登录则为用户ID，匿名则为None
+# ========= 工具 =========
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
-class Reply(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    message_id = db.Column(db.Integer, nullable=False, index=True)
-    ip = db.Column(db.String(50), nullable=True, index=True)  # 回复IP
-    content = db.Column(db.Text, nullable=False)
-    date = db.Column(db.String(50), nullable=True)
-    username = db.Column(db.String(30), nullable=True)
-    user_id = db.Column(db.Integer, nullable=True, default=None)  # 如果用户登录则为用户ID，匿名则为None
-
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(30), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    date = db.Column(db.String(50), nullable=True)
-    register_ip = db.Column(db.String(50), nullable=True, index=True)
-
-
-class PostLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    ip = db.Column(db.String(50), index=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-
-
-# =========================
-# 工具函数
-# =========================
-def now_cn_str():
+def now_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def get_real_ip(req):
-    """
-    获取真实客户端IP。
-
-    优先级：
-    1. Cloudflare: CF-Connecting-IP
-    2. 常见反向代理: X-Forwarded-For 的第一个IP
-    3. Nginx等: X-Real-IP
-    4. Flask/Werkzeug: remote_addr
-    """
-    cf_ip = req.headers.get("CF-Connecting-IP", "").strip()
-    if cf_ip:
-        return cf_ip, True
-
-    xff = req.headers.get("X-Forwarded-For", "").strip()
-    if xff:
-        return xff.split(",")[0].strip(), True
-
-    x_real_ip = req.headers.get("X-Real-IP", "").strip()
-    if x_real_ip:
-        return x_real_ip, True
-
-    return req.remote_addr or "0.0.0.0", False
+def allowed_image_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+def allowed_avatar_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
 
 
-def random_filename(filename):
-    ext = filename.rsplit(".", 1)[1].lower()
-    rand = "".join(random.choices(string.ascii_lowercase + string.digits, k=18))
-    return f"{rand}.{ext}"
+def random_anonymous_name():
+    return f"匿名用户{int(time.time() * 1000) % 1000000}"
 
 
-def generate_anonymous_name(ip=None):
-    """生成匿名用户名"""
-    anonymous_names = [
-        "神秘过客", "匿名网友", "路过群众", "吃瓜群众", "热心市民",
-        "江湖过客", "无名氏", "影子", "风语者", "星辰大海",
-        "云端漫步", "林间隐者", "深海鱼", "北极星", "南风知意",
-        "西山暮色", "东篱采菊", "北国风光", "南山隐士", "西湖游客"
-    ]
-    name = random.choice(anonymous_names)
-    suffix = ''.join(random.choices(string.digits, k=4))
-    return f"{name}#{suffix}"
+def get_current_user():
+    username = session.get("username")
+    if not username:
+        return None
 
-
-def check_post_rate_limit(ip: str, limit=3, window_seconds=60):
-    now = datetime.utcnow()
-    window_start = now - timedelta(seconds=window_seconds)
-
-    # 清理过期日志
-    PostLog.query.filter(PostLog.created_at < window_start).delete()
-    db.session.commit()
-
-    count = PostLog.query.filter(
-        PostLog.ip == ip,
-        PostLog.created_at >= window_start
-    ).count()
-
-    if count >= limit:
-        return False, window_seconds
-
-    db.session.add(PostLog(ip=ip, created_at=now))
-    db.session.commit()
-    return True, 0
-
-
-# =========================
-# 点赞 JSON 工具
-# =========================
-def _normalize_likes_data(data):
-    if not isinstance(data, dict):
-        return {"messages": {}}
-
-    msgs = data.get("messages", {})
-    if not isinstance(msgs, dict):
-        msgs = {}
-
-    clean = {}
-    for k, v in msgs.items():
-        if not isinstance(k, str):
-            k = str(k)
-
-        if isinstance(v, list):
-            clean[k] = [str(x) for x in v if isinstance(x, (str, int, float))]
-        else:
-            clean[k] = []
-
-    return {"messages": clean}
-
-
-def load_likes():
-    if not os.path.exists(LIKES_FILE):
-        return {"messages": {}}
-
-    try:
-        with open(LIKES_FILE, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        return _normalize_likes_data(raw)
-    except Exception:
-        return {"messages": {}}
-
-
-def save_likes(data):
-    data = _normalize_likes_data(data)
-    with open(LIKES_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-def replace_like_username(old_username, new_username):
-    with likes_lock:
-        data = load_likes()
-        changed = False
-
-        for mid, users in data["messages"].items():
-            if old_username in users:
-                users = [new_username if u == old_username else u for u in users]
-
-                # 去重，避免 old/new 冲突重复
-                dedup = []
-                for u in users:
-                    if u not in dedup:
-                        dedup.append(u)
-
-                data["messages"][mid] = dedup
-                changed = True
-
-        if changed:
-            save_likes(data)
-
-
-def remove_like_username(username):
-    with likes_lock:
-        data = load_likes()
-        changed = False
-
-        for mid, users in data["messages"].items():
-            if username in users:
-                data["messages"][mid] = [u for u in users if u != username]
-                changed = True
-
-        if changed:
-            save_likes(data)
-
-
-# =========================
-# 数据库初始化/自动补列
-# =========================
-def check_and_add_columns():
-    inspector = inspect(db.engine)
-    tables = inspector.get_table_names()
-
-    if "user" in tables:
-        columns = [c["name"] for c in inspector.get_columns("user")]
-
-        if "register_ip" not in columns:
-            try:
-                db.session.execute(text("ALTER TABLE user ADD COLUMN register_ip VARCHAR(50)"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-    if "message" in tables:
-        columns = [c["name"] for c in inspector.get_columns("message")]
-
-        if "ip" not in columns:
-            try:
-                db.session.execute(text("ALTER TABLE message ADD COLUMN ip VARCHAR(50)"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-        if "image_path" not in columns:
-            try:
-                db.session.execute(text("ALTER TABLE message ADD COLUMN image_path VARCHAR(255)"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-        if "is_premium" not in columns:
-            try:
-                db.session.execute(text("ALTER TABLE message ADD COLUMN is_premium INT DEFAULT 0"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-        if "username" not in columns:
-            try:
-                db.session.execute(text("ALTER TABLE message ADD COLUMN username VARCHAR(30)"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-        if "user_id" not in columns:
-            try:
-                db.session.execute(text("ALTER TABLE message ADD COLUMN user_id INT DEFAULT NULL"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-    if "reply" in tables:
-        columns = [c["name"] for c in inspector.get_columns("reply")]
-
-        if "ip" not in columns:
-            try:
-                db.session.execute(text("ALTER TABLE reply ADD COLUMN ip VARCHAR(50)"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-        if "username" not in columns:
-            try:
-                db.session.execute(text("ALTER TABLE reply ADD COLUMN username VARCHAR(30)"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-
-        if "user_id" not in columns:
-            try:
-                db.session.execute(text("ALTER TABLE reply ADD COLUMN user_id INT DEFAULT NULL"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    conn.close()
+    return user
 
 
 def init_db():
-    with app.app_context():
-        db.create_all()
-        check_and_add_columns()
+    conn = get_conn()
+    c = conn.cursor()
 
-        # 初始化 likes.json
-        with likes_lock:
-            if not os.path.exists(LIKES_FILE):
-                save_likes({"messages": {}})
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        avatar_path TEXT DEFAULT ''
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        user_id INTEGER,
+        content TEXT,
+        image_path TEXT DEFAULT '',
+        is_premium INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS replies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        user_id INTEGER,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS likes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        UNIQUE(message_id, username)
+    )
+    """)
+
+    conn.commit()
+    conn.close()
 
 
-# 在模块加载时初始化数据库，保证 gunicorn 启动时也会建表
-init_db()
+def ensure_user_avatar_column():
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute("PRAGMA table_info(users)")
+    columns = [row["name"] if isinstance(row, sqlite3.Row) else row[1] for row in c.fetchall()]
+
+    if "avatar_path" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN avatar_path TEXT DEFAULT ''")
+
+    conn.commit()
+    conn.close()
 
 
-# =========================
-# 页面路由
-# =========================
+# ========= 页面 =========
 @app.route("/")
-def index():
-    return redirect("/message")
-
-
 @app.route("/message")
 def message_page():
     return render_template("message.html")
 
 
-# =========================
-# 鉴权接口
-# =========================
-@app.route("/register", methods=["POST"])
-def register():
-    username = request.form.get("username", "").strip()
-    password = request.form.get("password", "").strip()
-
-    if not username or not password:
-        return jsonify({"status": "error", "message": "用户名和密码不能为空"})
-
-    if len(username) < 2 or len(username) > 30:
-        return jsonify({"status": "error", "message": "用户名长度需在2-30之间"})
-
-    ip, _ = get_real_ip(request)
-
-    if User.query.filter_by(register_ip=ip).first():
-        return jsonify({"status": "error", "message": "该IP已注册过账号，无法重复注册"})
-
-    if User.query.filter_by(username=username).first():
-        return jsonify({"status": "error", "message": "用户名已存在"})
-
-    u = User(
-        username=username,
-        password_hash=generate_password_hash(password),
-        date=now_cn_str(),
-        register_ip=ip
-    )
-    db.session.add(u)
-    db.session.commit()
-
-    return jsonify({"status": "ok", "message": "注册成功"})
-
-
-@app.route("/login", methods=["POST"])
-def login():
-    username = request.form.get("username", "").strip()
-    password = request.form.get("password", "").strip()
-
-    user = User.query.filter_by(username=username).first()
-
-    if not user:
-        return jsonify({"status": "error", "message": "用户不存在"})
-
-    if not check_password_hash(user.password_hash, password):
-        return jsonify({"status": "error", "message": "密码错误"})
-
-    session["username"] = user.username
-    session["user_id"] = user.id
-
-    return jsonify({"status": "ok", "username": user.username})
-
-
-@app.route("/logout", methods=["POST"])
-def logout():
-    session.pop("username", None)
-    session.pop("user_id", None)
-    return jsonify({"status": "ok"})
-
-
-@app.route("/me", methods=["GET"])
+# ========= 登录态 =========
+@app.route("/me")
 def me():
     username = session.get("username")
 
     if not username:
-        return jsonify({"logged_in": False})
+        return jsonify({
+            "logged_in": False,
+            "username": None,
+            "avatar_path": ""
+        })
+
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT username, avatar_path FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    conn.close()
+
+    if not user:
+        session.clear()
+        return jsonify({
+            "logged_in": False,
+            "username": None,
+            "avatar_path": ""
+        })
 
     return jsonify({
         "logged_in": True,
-        "username": username
+        "username": user["username"],
+        "avatar_path": user["avatar_path"] or ""
     })
+
+
+# ========= 注册 / 登录 / 退出 =========
+@app.route("/register", methods=["POST"])
+def register():
+    username = (request.form.get("username") or "").strip()
+    password = (request.form.get("password") or "").strip()
+
+    if len(username) < 2 or len(username) > 30:
+        return jsonify({"status": "error", "message": "用户名长度需 2-30 个字符"})
+    if len(password) < 2 or len(password) > 100:
+        return jsonify({"status": "error", "message": "密码长度不合法"})
+
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute("SELECT id FROM users WHERE username = ?", (username,))
+    if c.fetchone():
+        conn.close()
+        return jsonify({"status": "error", "message": "用户名已存在"})
+
+    c.execute(
+        "INSERT INTO users (username, password, avatar_path) VALUES (?, ?, ?)",
+        (username, password, "")
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "ok"})
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    username = (request.form.get("username") or "").strip()
+    password = (request.form.get("password") or "").strip()
+
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+    user = c.fetchone()
+    conn.close()
+
+    if not user:
+        return jsonify({"status": "error", "message": "用户名或密码错误"})
+
+    session["username"] = user["username"]
+    return jsonify({"status": "ok"})
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"status": "ok"})
 
 
 @app.route("/change_username", methods=["POST"])
 def change_username():
-    if not session.get("username"):
+    user = get_current_user()
+    if not user:
         return jsonify({"status": "error", "message": "请先登录"}), 401
 
-    new_username = request.form.get("new_username", "").strip()
-
-    if not new_username:
-        return jsonify({"status": "error", "message": "新用户名不能为空"})
-
+    new_username = (request.form.get("new_username") or "").strip()
     if len(new_username) < 2 or len(new_username) > 30:
-        return jsonify({"status": "error", "message": "用户名长度需在2-30之间"})
+        return jsonify({"status": "error", "message": "用户名长度需 2-30 个字符"})
 
-    if User.query.filter_by(username=new_username).first():
-        return jsonify({"status": "error", "message": "用户名已存在"})
+    conn = get_conn()
+    c = conn.cursor()
 
-    old_username = session["username"]
-    user = User.query.filter_by(username=old_username).first()
+    c.execute("SELECT id FROM users WHERE username = ?", (new_username,))
+    existed = c.fetchone()
+    if existed:
+        conn.close()
+        return jsonify({"status": "error", "message": "新用户名已存在"})
 
-    if not user:
-        session.pop("username", None)
-        session.pop("user_id", None)
-        return jsonify({"status": "error", "message": "用户不存在，请重新登录"}), 401
+    old_username = user["username"]
 
-    user.username = new_username
+    # 如果有头像文件名里包含用户名，可按需保留原路径不改
+    c.execute("UPDATE users SET username = ? WHERE id = ?", (new_username, user["id"]))
+    c.execute("UPDATE messages SET username = ? WHERE user_id = ?", (new_username, user["id"]))
+    c.execute("UPDATE replies SET username = ? WHERE user_id = ?", (new_username, user["id"]))
+    c.execute("UPDATE likes SET username = ? WHERE username = ?", (new_username, old_username))
 
-    Message.query.filter_by(username=old_username).update({"username": new_username})
-    Reply.query.filter_by(username=old_username).update({"username": new_username})
-
-    db.session.commit()
-
-    # 同步点赞JSON中的用户名
-    replace_like_username(old_username, new_username)
+    conn.commit()
+    conn.close()
 
     session["username"] = new_username
-
-    return jsonify({
-        "status": "ok",
-        "username": new_username
-    })
+    return jsonify({"status": "ok"})
 
 
 @app.route("/delete_account", methods=["POST"])
 def delete_account():
-    if not session.get("username"):
+    user = get_current_user()
+    if not user:
         return jsonify({"status": "error", "message": "请先登录"}), 401
 
-    username = session["username"]
-    user = User.query.filter_by(username=username).first()
+    conn = get_conn()
+    c = conn.cursor()
 
+    c.execute("DELETE FROM likes WHERE username = ?", (user["username"],))
+    c.execute("DELETE FROM replies WHERE user_id = ?", (user["id"],))
+    c.execute("DELETE FROM messages WHERE user_id = ?", (user["id"],))
+    c.execute("DELETE FROM users WHERE id = ?", (user["id"],))
+
+    conn.commit()
+    conn.close()
+
+    session.clear()
+    return jsonify({"status": "ok"})
+
+
+# ========= 头像上传 =========
+@app.route("/upload_avatar", methods=["POST"])
+def upload_avatar():
+    user = get_current_user()
     if not user:
-        session.pop("username", None)
-        session.pop("user_id", None)
-        return jsonify({"status": "error", "message": "用户不存在"}), 404
-
-    Message.query.filter_by(username=username).update({"username": "已注销用户"})
-    Reply.query.filter_by(username=username).update({"username": "已注销用户"})
-
-    db.session.delete(user)
-    db.session.commit()
-
-    # 从点赞JSON里移除此用户
-    remove_like_username(username)
-
-    session.pop("username", None)
-    session.pop("user_id", None)
-
-    return jsonify({
-        "status": "ok",
-        "message": "账号已注销"
-    })
-
-
-# =========================
-# 消息接口
-# =========================
-@app.route("/messages", methods=["GET"])
-def get_messages():
-    msgs = Message.query.order_by(Message.id.desc()).all()
-    all_replies = Reply.query.order_by(Reply.id.asc()).all()
-
-    reply_map = {}
-
-    for r in all_replies:
-        reply_map.setdefault(r.message_id, []).append({
-            "id": r.id,
-            "content": r.content,
-            "date": r.date,
-            "username": r.username or "匿名"
-            # 默认不返回IP到前端，避免公开暴露隐私
-            # 如需管理员查看，可单独做后台接口
-        })
-
-    current_user = session.get("username")
-
-    with likes_lock:
-        likes_data = load_likes()
-
-    likes_map = likes_data.get("messages", {})
-
-    data = []
-
-    for m in msgs:
-        users = likes_map.get(str(m.id), [])
-
-        if not isinstance(users, list):
-            users = []
-
-        data.append({
-            "id": m.id,
-            "content": m.content or "",
-            "date": m.date or "",
-            "username": m.username or "匿名",
-            "image_path": m.image_path or "",
-            "is_premium": int(m.is_premium or 0),
-            "replies": reply_map.get(m.id, []),
-            "like_count": len(users),
-            "liked_by_me": (current_user in users) if current_user else False
-
-            # 默认不返回IP到前端，避免所有人都能看到
-            # 如果你确实想显示，可以加：
-            # "ip": m.ip or ""
-        })
-
-    return jsonify({
-        "status": "ok",
-        "messages": data
-    })
-
-
-@app.route("/upload", methods=["POST"])
-def upload():
-    ip, _ = get_real_ip(request)
-
-    ok, _ = check_post_rate_limit(ip, limit=3, window_seconds=60)
-    if not ok:
-        return jsonify({
-            "status": "error",
-            "message": "发送过于频繁：60秒内最多3次"
-        }), 429
-
-    content = (request.form.get("content") or "").strip()
-    member_code = (request.form.get("member_code") or "").strip().upper()
-
-    file = request.files.get("image")
-    image_path = None
-
-    if file and file.filename:
-        if not allowed_file(file.filename):
-            return jsonify({
-                "status": "error",
-                "message": "图片格式不支持，仅允许 png/jpg/jpeg/gif/webp"
-            })
-
-        filename = random_filename(secure_filename(file.filename))
-        save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        file.save(save_path)
-
-        image_path = f"/static/uploads/{filename}"
-
-    if not content and not image_path:
-        return jsonify({
-            "status": "error",
-            "message": "内容和图片至少填写一个"
-        })
-
-    is_premium = 1 if member_code == "XINHUIYUAN888" else 0
-
-    # 获取用户名：如果用户已登录使用登录用户名，否则生成匿名用户名
-    if session.get("username"):
-        username = session["username"]
-        user_id = session.get("user_id")
-    else:
-        username = generate_anonymous_name(ip)
-        user_id = None
-
-    m = Message(
-        ip=ip,
-        content=content,
-        date=now_cn_str(),
-        username=username,
-        image_path=image_path,
-        is_premium=is_premium,
-        user_id=user_id
-    )
-
-    db.session.add(m)
-    db.session.commit()
-
-    return jsonify({"status": "ok"})
-
-
-@app.route("/reply", methods=["POST"])
-def reply():
-    ip, _ = get_real_ip(request)
-
-    ok, _ = check_post_rate_limit(ip, limit=3, window_seconds=60)
-    if not ok:
-        return jsonify({
-            "status": "error",
-            "message": "发送过于频繁：60秒内最多3次"
-        }), 429
-
-    message_id = request.form.get("message_id", "").strip()
-    content = (request.form.get("reply_content") or "").strip()
-
-    if not message_id.isdigit():
-        return jsonify({
-            "status": "error",
-            "message": "message_id非法"
-        })
-
-    if not content:
-        return jsonify({
-            "status": "error",
-            "message": "回复内容不能为空"
-        })
-
-    msg = db.session.get(Message, int(message_id))
-
-    if not msg:
-        return jsonify({
-            "status": "error",
-            "message": "原消息不存在"
-        }), 404
-
-    # 获取用户名：如果用户已登录使用登录用户名，否则生成匿名用户名
-    if session.get("username"):
-        username = session["username"]
-        user_id = session.get("user_id")
-    else:
-        username = generate_anonymous_name(ip)
-        user_id = None
-
-    r = Reply(
-        message_id=int(message_id),
-        ip=ip,
-        content=content,
-        date=now_cn_str(),
-        username=username,
-        user_id=user_id
-    )
-
-    db.session.add(r)
-    db.session.commit()
-
-    return jsonify({"status": "ok"})
-
-
-# =========================
-# 点赞接口（不改数据库结构）
-# =========================
-@app.route("/toggle_like", methods=["POST"])
-def toggle_like():
-    username = session.get("username")
-
-    if not username:
         return jsonify({
             "status": "error",
             "message": "请先登录"
         }), 401
 
-    message_id = (request.form.get("message_id") or "").strip()
-
-    if not message_id.isdigit():
+    if "avatar" not in request.files:
         return jsonify({
             "status": "error",
-            "message": "message_id 无效"
+            "message": "未选择头像文件"
         }), 400
 
-    # 校验消息存在
-    msg = db.session.get(Message, int(message_id))
+    file = request.files["avatar"]
 
-    if not msg:
+    if file.filename == "":
         return jsonify({
             "status": "error",
-            "message": "消息不存在"
-        }), 404
+            "message": "未选择头像文件"
+        }), 400
 
-    with likes_lock:
-        data = load_likes()
-        users = data["messages"].get(message_id, [])
+    if not allowed_avatar_file(file.filename):
+        return jsonify({
+            "status": "error",
+            "message": "仅支持 png、jpg、jpeg、gif、webp 格式"
+        }), 400
 
-        if username in users:
-            users.remove(username)
-            liked = False
-        else:
-            users.append(username)
-            liked = True
+    ext = file.filename.rsplit(".", 1)[1].lower()
+    safe_username = secure_filename(user["username"])
+    filename = f"{safe_username}_{int(time.time())}.{ext}"
+    save_path = os.path.join(AVATAR_FOLDER, filename)
+    file.save(save_path)
 
-        # 去重保护
-        dedup = []
-        for u in users:
-            if u not in dedup:
-                dedup.append(u)
+    avatar_path = "/" + save_path.replace("\\", "/")
 
-        data["messages"][message_id] = dedup
-        save_likes(data)
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE users SET avatar_path = ? WHERE id = ?",
+        (avatar_path, user["id"])
+    )
+    conn.commit()
+    conn.close()
 
-        like_count = len(dedup)
+    return jsonify({
+        "status": "ok",
+        "message": "头像上传成功",
+        "avatar_path": avatar_path
+    })
+
+
+# ========= 发帖 =========
+@app.route("/upload", methods=["POST"])
+def upload():
+    content = (request.form.get("content") or "").strip()
+    member_code = (request.form.get("member_code") or "").strip().upper()
+
+    if not content:
+        return jsonify({"status": "error", "message": "内容不能为空"})
+
+    user = get_current_user()
+
+    if user:
+        username = user["username"]
+        user_id = user["id"]
+    else:
+        username = random_anonymous_name()
+        user_id = None
+
+    is_premium = 1 if member_code else 0
+
+    image_path = ""
+    if "image" in request.files:
+        image = request.files["image"]
+        if image and image.filename:
+            if not allowed_image_file(image.filename):
+                return jsonify({"status": "error", "message": "图片格式不支持"})
+            ext = image.filename.rsplit(".", 1)[1].lower()
+            filename = f"msg_{int(time.time())}_{secure_filename(username)}.{ext}"
+            save_path = os.path.join(UPLOAD_FOLDER, filename)
+            image.save(save_path)
+            image_path = "/" + save_path.replace("\\", "/")
+
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO messages (username, user_id, content, image_path, is_premium, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (username, user_id, content, image_path, is_premium, now_str()))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "ok"})
+
+
+# ========= 回复 =========
+@app.route("/reply", methods=["POST"])
+def reply():
+    message_id = (request.form.get("message_id") or "").strip()
+    reply_content = (request.form.get("reply_content") or "").strip()
+
+    if not message_id.isdigit():
+        return jsonify({"status": "error", "message": "参数错误"})
+    if not reply_content:
+        return jsonify({"status": "error", "message": "回复内容不能为空"})
+
+    user = get_current_user()
+    if user:
+        username = user["username"]
+        user_id = user["id"]
+    else:
+        username = random_anonymous_name()
+        user_id = None
+
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO replies (message_id, username, user_id, content, created_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (int(message_id), username, user_id, reply_content, now_str()))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "ok"})
+
+
+# ========= 点赞 =========
+@app.route("/toggle_like", methods=["POST"])
+def toggle_like():
+    user = get_current_user()
+    if not user:
+        return jsonify({"status": "error", "message": "请先登录"}), 401
+
+    message_id = (request.form.get("message_id") or "").strip()
+    if not message_id.isdigit():
+        return jsonify({"status": "error", "message": "参数错误"})
+
+    message_id = int(message_id)
+
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute(
+        "SELECT id FROM likes WHERE message_id = ? AND username = ?",
+        (message_id, user["username"])
+    )
+    existed = c.fetchone()
+
+    if existed:
+        c.execute(
+            "DELETE FROM likes WHERE message_id = ? AND username = ?",
+            (message_id, user["username"])
+        )
+        liked = False
+    else:
+        c.execute(
+            "INSERT OR IGNORE INTO likes (message_id, username) VALUES (?, ?)",
+            (message_id, user["username"])
+        )
+        liked = True
+
+    conn.commit()
+
+    c.execute("SELECT COUNT(*) AS cnt FROM likes WHERE message_id = ?", (message_id,))
+    like_count = c.fetchone()["cnt"]
+
+    conn.close()
 
     return jsonify({
         "status": "ok",
@@ -749,27 +445,88 @@ def toggle_like():
     })
 
 
-# =========================
-# 调试接口：查看当前请求IP
-# =========================
-@app.route("/debug_ip", methods=["GET"])
-def debug_ip():
-    ip, from_proxy = get_real_ip(request)
+# ========= 获取留言 =========
+@app.route("/messages")
+def messages():
+    current_user = get_current_user()
+    current_username = current_user["username"] if current_user else None
+
+    conn = get_conn()
+    c = conn.cursor()
+
+    c.execute("""
+        SELECT
+            m.id,
+            m.username,
+            m.user_id,
+            m.content,
+            m.image_path,
+            m.is_premium,
+            m.created_at,
+            u.avatar_path,
+            (SELECT COUNT(*) FROM likes l WHERE l.message_id = m.id) AS like_count
+        FROM messages m
+        LEFT JOIN users u ON m.user_id = u.id
+        ORDER BY m.id DESC
+    """)
+    message_rows = c.fetchall()
+
+    result = []
+    for m in message_rows:
+        c.execute("""
+            SELECT
+                r.id,
+                r.username,
+                r.user_id,
+                r.content,
+                r.created_at,
+                u.avatar_path
+            FROM replies r
+            LEFT JOIN users u ON r.user_id = u.id
+            WHERE r.message_id = ?
+            ORDER BY r.id ASC
+        """, (m["id"],))
+        reply_rows = c.fetchall()
+
+        liked_by_me = False
+        if current_username:
+            c.execute(
+                "SELECT 1 FROM likes WHERE message_id = ? AND username = ?",
+                (m["id"], current_username)
+            )
+            liked_by_me = c.fetchone() is not None
+
+        result.append({
+            "id": m["id"],
+            "username": m["username"],
+            "content": m["content"] or "",
+            "image_path": m["image_path"] or "",
+            "is_premium": m["is_premium"],
+            "date": m["created_at"],
+            "avatar_path": m["avatar_path"] or "",
+            "like_count": m["like_count"],
+            "liked_by_me": liked_by_me,
+            "replies": [
+                {
+                    "id": r["id"],
+                    "username": r["username"],
+                    "content": r["content"],
+                    "date": r["created_at"],
+                    "avatar_path": r["avatar_path"] or ""
+                }
+                for r in reply_rows
+            ]
+        })
+
+    conn.close()
 
     return jsonify({
-        "ip": ip,
-        "from_proxy_header": from_proxy,
-        "remote_addr": request.remote_addr,
-        "headers": {
-            "CF-Connecting-IP": request.headers.get("CF-Connecting-IP", ""),
-            "X-Forwarded-For": request.headers.get("X-Forwarded-For", ""),
-            "X-Real-IP": request.headers.get("X-Real-IP", "")
-        }
+        "status": "ok",
+        "messages": result
     })
 
 
-# =========================
-# 启动入口
-# =========================
 if __name__ == "__main__":
+    init_db()
+    ensure_user_avatar_column()
     app.run(host="0.0.0.0", port=5000, debug=True)
