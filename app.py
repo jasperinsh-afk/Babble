@@ -10,19 +10,13 @@ app.secret_key = "replace-with-your-secret-key"
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 最大上传 5MB
 
 # ========= 路径配置 =========
-# 固定使用 app.py 所在目录，避免 flask run / python app.py 工作目录不同导致读到不同数据库
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 DB_PATH = os.path.join(BASE_DIR, "babble.db")
-
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "images")
-AVATAR_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "avatars")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(AVATAR_FOLDER, exist_ok=True)
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-ALLOWED_AVATAR_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 
 # ========= 工具 =========
@@ -40,21 +34,11 @@ def allowed_image_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 
-def allowed_avatar_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
-
-
 def random_anonymous_name():
     return f"匿名用户{int(time.time() * 1000) % 1000000}"
 
 
 def to_static_url(abs_path):
-    """
-    把服务器绝对路径转成前端可访问的 /static/... URL。
-    例如：
-    /root/project/static/uploads/avatars/a.png
-    -> /static/uploads/avatars/a.png
-    """
     rel = os.path.relpath(abs_path, BASE_DIR).replace("\\", "/")
     if not rel.startswith("/"):
         rel = "/" + rel
@@ -86,8 +70,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        avatar_path TEXT DEFAULT ''
+        password TEXT NOT NULL
     )
     """)
 
@@ -128,10 +111,6 @@ def init_db():
 
 
 def ensure_db_columns():
-    """
-    兼容旧 babble.db。
-    CREATE TABLE IF NOT EXISTS 不会修改已存在表结构，所以这里手动补字段。
-    """
     conn = get_conn()
     c = conn.cursor()
 
@@ -147,61 +126,41 @@ def ensure_db_columns():
         return [row["name"] for row in c.fetchall()]
 
     try:
-        # users 表
-        if table_exists("users"):
-            user_cols = get_columns("users")
-            if "avatar_path" not in user_cols:
-                c.execute("ALTER TABLE users ADD COLUMN avatar_path TEXT DEFAULT ''")
-
-        # messages 表
         if table_exists("messages"):
             msg_cols = get_columns("messages")
 
             if "username" not in msg_cols:
-                # 理论上不应该缺这个字段，旧库如果真的没有，给一个默认字段
                 c.execute("ALTER TABLE messages ADD COLUMN username TEXT DEFAULT '匿名用户'")
-
             if "user_id" not in msg_cols:
                 c.execute("ALTER TABLE messages ADD COLUMN user_id INTEGER")
-
             if "content" not in msg_cols:
                 c.execute("ALTER TABLE messages ADD COLUMN content TEXT")
-
             if "image_path" not in msg_cols:
                 c.execute("ALTER TABLE messages ADD COLUMN image_path TEXT DEFAULT ''")
-
             if "is_premium" not in msg_cols:
                 c.execute("ALTER TABLE messages ADD COLUMN is_premium INTEGER DEFAULT 0")
-
             if "created_at" not in msg_cols:
                 c.execute("ALTER TABLE messages ADD COLUMN created_at TEXT DEFAULT ''")
 
-        # replies 表
         if table_exists("replies"):
             reply_cols = get_columns("replies")
 
             if "message_id" not in reply_cols:
                 c.execute("ALTER TABLE replies ADD COLUMN message_id INTEGER DEFAULT 0")
-
             if "username" not in reply_cols:
                 c.execute("ALTER TABLE replies ADD COLUMN username TEXT DEFAULT '匿名用户'")
-
             if "user_id" not in reply_cols:
                 c.execute("ALTER TABLE replies ADD COLUMN user_id INTEGER")
-
             if "content" not in reply_cols:
                 c.execute("ALTER TABLE replies ADD COLUMN content TEXT DEFAULT ''")
-
             if "created_at" not in reply_cols:
                 c.execute("ALTER TABLE replies ADD COLUMN created_at TEXT DEFAULT ''")
 
-        # likes 表
         if table_exists("likes"):
             like_cols = get_columns("likes")
 
             if "message_id" not in like_cols:
                 c.execute("ALTER TABLE likes ADD COLUMN message_id INTEGER DEFAULT 0")
-
             if "username" not in like_cols:
                 c.execute("ALTER TABLE likes ADD COLUMN username TEXT DEFAULT ''")
 
@@ -220,15 +179,6 @@ def message_page():
 # ========= 调试接口 =========
 @app.route("/debug_db")
 def debug_db():
-    """
-    浏览器访问：
-    http://127.0.0.1:5000/debug_db
-
-    用来确认：
-    1. 当前读的是哪个 babble.db
-    2. 数据库里有多少 users/messages/replies/likes
-    3. 当前表结构是什么
-    """
     conn = get_conn()
     c = conn.cursor()
 
@@ -272,15 +222,14 @@ def me():
     if not username:
         return jsonify({
             "logged_in": False,
-            "username": None,
-            "avatar_path": ""
+            "username": None
         })
 
     conn = get_conn()
     c = conn.cursor()
 
     try:
-        c.execute("SELECT username, avatar_path FROM users WHERE username = ?", (username,))
+        c.execute("SELECT username FROM users WHERE username = ?", (username,))
         user = c.fetchone()
     finally:
         conn.close()
@@ -289,14 +238,12 @@ def me():
         session.clear()
         return jsonify({
             "logged_in": False,
-            "username": None,
-            "avatar_path": ""
+            "username": None
         })
 
     return jsonify({
         "logged_in": True,
-        "username": user["username"],
-        "avatar_path": user["avatar_path"] or ""
+        "username": user["username"]
     })
 
 
@@ -321,8 +268,8 @@ def register():
             return jsonify({"status": "error", "message": "用户名已存在"})
 
         c.execute(
-            "INSERT INTO users (username, password, avatar_path) VALUES (?, ?, ?)",
-            (username, password, "")
+            "INSERT INTO users (username, password) VALUES (?, ?)",
+            (username, password)
         )
         conn.commit()
     finally:
@@ -355,8 +302,7 @@ def login():
 
     return jsonify({
         "status": "ok",
-        "username": user["username"],
-        "avatar_path": user["avatar_path"] if "avatar_path" in user.keys() else ""
+        "username": user["username"]
     })
 
 
@@ -389,12 +335,8 @@ def change_username():
         old_username = user["username"]
 
         c.execute("UPDATE users SET username = ? WHERE id = ?", (new_username, user["id"]))
-
-        # 只更新绑定 user_id 的历史消息和回复
         c.execute("UPDATE messages SET username = ? WHERE user_id = ?", (new_username, user["id"]))
         c.execute("UPDATE replies SET username = ? WHERE user_id = ?", (new_username, user["id"]))
-
-        # likes 没有 user_id，只能按旧用户名更新
         c.execute("UPDATE likes SET username = ? WHERE username = ?", (new_username, old_username))
 
         conn.commit()
@@ -425,67 +367,7 @@ def delete_account():
         conn.close()
 
     session.clear()
-
     return jsonify({"status": "ok"})
-
-
-# ========= 头像上传 =========
-@app.route("/upload_avatar", methods=["POST"])
-def upload_avatar():
-    user = get_current_user()
-    if not user:
-        return jsonify({
-            "status": "error",
-            "message": "请先登录"
-        }), 401
-
-    if "avatar" not in request.files:
-        return jsonify({
-            "status": "error",
-            "message": "未选择头像文件"
-        }), 400
-
-    file = request.files["avatar"]
-
-    if not file or file.filename == "":
-        return jsonify({
-            "status": "error",
-            "message": "未选择头像文件"
-        }), 400
-
-    if not allowed_avatar_file(file.filename):
-        return jsonify({
-            "status": "error",
-            "message": "仅支持 png、jpg、jpeg、gif、webp 格式"
-        }), 400
-
-    ext = file.filename.rsplit(".", 1)[1].lower()
-
-    safe_username = secure_filename(user["username"]) or "user"
-    filename = f"{safe_username}_{user['id']}_{int(time.time())}.{ext}"
-
-    save_path = os.path.join(AVATAR_FOLDER, filename)
-    file.save(save_path)
-
-    avatar_path = to_static_url(save_path)
-
-    conn = get_conn()
-    c = conn.cursor()
-
-    try:
-        c.execute(
-            "UPDATE users SET avatar_path = ? WHERE id = ?",
-            (avatar_path, user["id"])
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-    return jsonify({
-        "status": "ok",
-        "message": "头像上传成功",
-        "avatar_path": avatar_path
-    })
 
 
 # ========= 发帖 =========
@@ -507,7 +389,6 @@ def upload():
         user_id = None
 
     is_premium = 1 if member_code else 0
-
     image_path = ""
 
     if "image" in request.files:
@@ -523,7 +404,6 @@ def upload():
 
             save_path = os.path.join(UPLOAD_FOLDER, filename)
             image.save(save_path)
-
             image_path = to_static_url(save_path)
 
     conn = get_conn()
@@ -548,7 +428,6 @@ def upload():
             is_premium,
             now_str()
         ))
-
         conn.commit()
     finally:
         conn.close()
@@ -685,19 +564,16 @@ def messages():
                 m.image_path,
                 m.is_premium,
                 m.created_at,
-                u.avatar_path,
                 (
                     SELECT COUNT(*)
                     FROM likes l
                     WHERE l.message_id = m.id
                 ) AS like_count
             FROM messages m
-            LEFT JOIN users u ON m.user_id = u.id
             ORDER BY m.id DESC
         """)
 
         message_rows = c.fetchall()
-
         result = []
 
         for m in message_rows:
@@ -707,10 +583,8 @@ def messages():
                     r.username,
                     r.user_id,
                     r.content,
-                    r.created_at,
-                    u.avatar_path
+                    r.created_at
                 FROM replies r
-                LEFT JOIN users u ON r.user_id = u.id
                 WHERE r.message_id = ?
                 ORDER BY r.id ASC
             """, (m["id"],))
@@ -718,7 +592,6 @@ def messages():
             reply_rows = c.fetchall()
 
             liked_by_me = False
-
             if current_username:
                 c.execute(
                     "SELECT 1 FROM likes WHERE message_id = ? AND username = ?",
@@ -733,7 +606,6 @@ def messages():
                 "image_path": m["image_path"] or "",
                 "is_premium": m["is_premium"] or 0,
                 "date": m["created_at"] or "",
-                "avatar_path": m["avatar_path"] or "",
                 "like_count": m["like_count"] or 0,
                 "liked_by_me": liked_by_me,
                 "replies": [
@@ -741,8 +613,7 @@ def messages():
                         "id": r["id"],
                         "username": r["username"] or "匿名用户",
                         "content": r["content"] or "",
-                        "date": r["created_at"] or "",
-                        "avatar_path": r["avatar_path"] or ""
+                        "date": r["created_at"] or ""
                     }
                     for r in reply_rows
                 ]
@@ -757,7 +628,7 @@ def messages():
     })
 
 
-# ========= 上传过大处理 =========
+# ========= 错误处理 =========
 @app.errorhandler(413)
 def too_large(e):
     return jsonify({
@@ -766,7 +637,6 @@ def too_large(e):
     }), 413
 
 
-# ========= 通用错误处理，避免前端 JSON 解析失败 =========
 @app.errorhandler(500)
 def internal_error(e):
     return jsonify({
@@ -775,7 +645,7 @@ def internal_error(e):
     }), 500
 
 
-# ========= 启动时初始化 =========
+# ========= 启动初始化 =========
 init_db()
 ensure_db_columns()
 
@@ -786,7 +656,6 @@ if __name__ == "__main__":
     print("DB_PATH:", DB_PATH)
     print("DB_EXISTS:", os.path.exists(DB_PATH))
     print("UPLOAD_FOLDER:", UPLOAD_FOLDER)
-    print("AVATAR_FOLDER:", AVATAR_FOLDER)
     print("====================================")
 
     app.run(host="0.0.0.0", port=5000, debug=True)
