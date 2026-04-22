@@ -24,18 +24,12 @@ ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 # ========= 数据库配置解析 =========
 def parse_mysql_uri(uri):
-    """
-    支持解析：
-    mysql://user:pass@host:3306/db
-    mysql+pymysql://user:pass@host:3306/db
-    mysql2://user:pass@host:3306/db
-    """
     if not uri:
         return {}
 
     parsed = urlparse(uri)
-
     scheme = (parsed.scheme or "").lower()
+
     if not scheme.startswith("mysql"):
         return {}
 
@@ -52,14 +46,6 @@ def parse_mysql_uri(uri):
 
 
 def load_mysql_config():
-    """
-    优先级：
-    1. MYSQLHOST / MYSQL_HOST 变量
-    2. SQLALCHEMY_DATABASE_URI
-    3. DATABASE_URL
-    4. MYSQL_URL
-    """
-
     config = {
         "host": os.environ.get("MYSQLHOST") or os.environ.get("MYSQL_HOST"),
         "port": os.environ.get("MYSQLPORT") or os.environ.get("MYSQL_PORT"),
@@ -74,25 +60,16 @@ def load_mysql_config():
     }
 
     has_direct_config = bool(config["host"] and config["user"] and config["database"])
-
     if has_direct_config:
         try:
             config["port"] = int(config["port"] or 3306)
         except ValueError:
             config["port"] = 3306
-
         return config
 
-    uri_keys = [
-        "SQLALCHEMY_DATABASE_URI",
-        "DATABASE_URL",
-        "MYSQL_URL"
-    ]
-
-    for key in uri_keys:
+    for key in ["SQLALCHEMY_DATABASE_URI", "DATABASE_URL", "MYSQL_URL"]:
         uri = os.environ.get(key)
         parsed = parse_mysql_uri(uri)
-
         if parsed.get("host") and parsed.get("user") and parsed.get("database"):
             return {
                 "host": parsed.get("host"),
@@ -134,18 +111,8 @@ def validate_mysql_env():
 
     if MYSQL_HOST:
         normalized_host = MYSQL_HOST.strip().lower()
-        blocked_hosts = {
-            "localhost",
-            "127.0.0.1",
-            "::1",
-            "0.0.0.0"
-        }
-
-        if normalized_host in blocked_hosts:
-            problems.append(
-                f"检测到非法数据库主机 {MYSQL_HOST}，已拒绝连接。"
-                f"Railway MySQL 不应使用 localhost，请检查 Variables。"
-            )
+        if normalized_host in {"localhost", "127.0.0.1", "::1", "0.0.0.0"}:
+            problems.append(f"检测到非法数据库主机 {MYSQL_HOST}，Railway MySQL 不应使用 localhost")
 
     if problems:
         raise RuntimeError(" | ".join(problems))
@@ -153,7 +120,6 @@ def validate_mysql_env():
 
 def get_conn():
     validate_mysql_env()
-
     return pymysql.connect(
         host=MYSQL_HOST,
         port=int(MYSQL_PORT),
@@ -188,15 +154,92 @@ def to_static_url(abs_path):
     return rel
 
 
+def client_ip():
+    xff = request.headers.get("X-Forwarded-For", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.remote_addr or ""
+
+
+def table_exists_with_cursor(cursor, table_name):
+    cursor.execute("""
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = %s
+          AND TABLE_NAME = %s
+    """, (MYSQL_DATABASE, table_name))
+    row = cursor.fetchone()
+    return bool(row and row["cnt"] > 0)
+
+
+def table_exists(table_name):
+    conn = get_conn()
+    try:
+        with conn.cursor() as c:
+            return table_exists_with_cursor(c, table_name)
+    finally:
+        conn.close()
+
+
+def detect_table_mode():
+    """
+    old:  message / reply / user
+    new:  messages / replies / users
+
+    优先 old，因为你现在历史数据在 old 表里。
+    """
+    conn = get_conn()
+    try:
+        with conn.cursor() as c:
+            has_old = (
+                table_exists_with_cursor(c, "message")
+                and table_exists_with_cursor(c, "reply")
+                and table_exists_with_cursor(c, "user")
+            )
+            has_new = (
+                table_exists_with_cursor(c, "messages")
+                and table_exists_with_cursor(c, "replies")
+                and table_exists_with_cursor(c, "users")
+            )
+
+            if has_old:
+                return "old"
+            if has_new:
+                return "new"
+            return "old"
+    finally:
+        conn.close()
+
+
+def current_tables():
+    mode = detect_table_mode()
+    if mode == "old":
+        return {
+            "mode": "old",
+            "message_table": "message",
+            "reply_table": "reply",
+            "user_table": "user"
+        }
+    return {
+        "mode": "new",
+        "message_table": "messages",
+        "reply_table": "replies",
+        "user_table": "users"
+    }
+
+
 def get_current_user():
     username = session.get("username")
     if not username:
         return None
 
+    tables = current_tables()
+    user_table = tables["user_table"]
+
     conn = get_conn()
     try:
         with conn.cursor() as c:
-            c.execute("SELECT * FROM users WHERE username = %s", (username,))
+            c.execute(f"SELECT * FROM `{user_table}` WHERE username = %s", (username,))
             return c.fetchone()
     finally:
         conn.close()
@@ -204,6 +247,10 @@ def get_current_user():
 
 # ========= 数据库初始化 =========
 def init_db():
+    """
+    只补充新表，不破坏旧表。
+    这样 old/new 都能兼容。
+    """
     conn = get_conn()
     try:
         with conn.cursor() as c:
@@ -265,7 +312,6 @@ def column_exists(cursor, table_name, column_name):
           AND TABLE_NAME = %s
           AND COLUMN_NAME = %s
     """, (MYSQL_DATABASE, table_name, column_name))
-
     row = cursor.fetchone()
     return bool(row and row["cnt"] > 0)
 
@@ -274,34 +320,38 @@ def ensure_db_columns():
     conn = get_conn()
     try:
         with conn.cursor() as c:
-            if not column_exists(c, "messages", "username"):
-                c.execute("ALTER TABLE messages ADD COLUMN username VARCHAR(64) NOT NULL DEFAULT '匿名用户'")
-            if not column_exists(c, "messages", "user_id"):
-                c.execute("ALTER TABLE messages ADD COLUMN user_id INT NULL")
-            if not column_exists(c, "messages", "content"):
-                c.execute("ALTER TABLE messages ADD COLUMN content TEXT")
-            if not column_exists(c, "messages", "image_path"):
-                c.execute("ALTER TABLE messages ADD COLUMN image_path VARCHAR(500) DEFAULT ''")
-            if not column_exists(c, "messages", "is_premium"):
-                c.execute("ALTER TABLE messages ADD COLUMN is_premium TINYINT DEFAULT 0")
-            if not column_exists(c, "messages", "created_at"):
-                c.execute("ALTER TABLE messages ADD COLUMN created_at VARCHAR(32) NOT NULL DEFAULT ''")
+            # 新表补字段
+            if table_exists_with_cursor(c, "messages"):
+                if not column_exists(c, "messages", "username"):
+                    c.execute("ALTER TABLE messages ADD COLUMN username VARCHAR(64) NOT NULL DEFAULT '匿名用户'")
+                if not column_exists(c, "messages", "user_id"):
+                    c.execute("ALTER TABLE messages ADD COLUMN user_id INT NULL")
+                if not column_exists(c, "messages", "content"):
+                    c.execute("ALTER TABLE messages ADD COLUMN content TEXT")
+                if not column_exists(c, "messages", "image_path"):
+                    c.execute("ALTER TABLE messages ADD COLUMN image_path VARCHAR(500) DEFAULT ''")
+                if not column_exists(c, "messages", "is_premium"):
+                    c.execute("ALTER TABLE messages ADD COLUMN is_premium TINYINT DEFAULT 0")
+                if not column_exists(c, "messages", "created_at"):
+                    c.execute("ALTER TABLE messages ADD COLUMN created_at VARCHAR(32) NOT NULL DEFAULT ''")
 
-            if not column_exists(c, "replies", "message_id"):
-                c.execute("ALTER TABLE replies ADD COLUMN message_id INT NOT NULL DEFAULT 0")
-            if not column_exists(c, "replies", "username"):
-                c.execute("ALTER TABLE replies ADD COLUMN username VARCHAR(64) NOT NULL DEFAULT '匿名用户'")
-            if not column_exists(c, "replies", "user_id"):
-                c.execute("ALTER TABLE replies ADD COLUMN user_id INT NULL")
-            if not column_exists(c, "replies", "content"):
-                c.execute("ALTER TABLE replies ADD COLUMN content TEXT")
-            if not column_exists(c, "replies", "created_at"):
-                c.execute("ALTER TABLE replies ADD COLUMN created_at VARCHAR(32) NOT NULL DEFAULT ''")
+            if table_exists_with_cursor(c, "replies"):
+                if not column_exists(c, "replies", "message_id"):
+                    c.execute("ALTER TABLE replies ADD COLUMN message_id INT NOT NULL DEFAULT 0")
+                if not column_exists(c, "replies", "username"):
+                    c.execute("ALTER TABLE replies ADD COLUMN username VARCHAR(64) NOT NULL DEFAULT '匿名用户'")
+                if not column_exists(c, "replies", "user_id"):
+                    c.execute("ALTER TABLE replies ADD COLUMN user_id INT NULL")
+                if not column_exists(c, "replies", "content"):
+                    c.execute("ALTER TABLE replies ADD COLUMN content TEXT")
+                if not column_exists(c, "replies", "created_at"):
+                    c.execute("ALTER TABLE replies ADD COLUMN created_at VARCHAR(32) NOT NULL DEFAULT ''")
 
-            if not column_exists(c, "likes", "message_id"):
-                c.execute("ALTER TABLE likes ADD COLUMN message_id INT NOT NULL DEFAULT 0")
-            if not column_exists(c, "likes", "username"):
-                c.execute("ALTER TABLE likes ADD COLUMN username VARCHAR(64) NOT NULL DEFAULT ''")
+            if table_exists_with_cursor(c, "likes"):
+                if not column_exists(c, "likes", "message_id"):
+                    c.execute("ALTER TABLE likes ADD COLUMN message_id INT NOT NULL DEFAULT 0")
+                if not column_exists(c, "likes", "username"):
+                    c.execute("ALTER TABLE likes ADD COLUMN username VARCHAR(64) NOT NULL DEFAULT ''")
 
         conn.commit()
     finally:
@@ -327,25 +377,22 @@ def debug_db():
         "mysql_database": MYSQL_DATABASE,
         "has_password": bool(MYSQL_PASSWORD),
         "connection": "unknown",
+        "detected_mode": None,
         "tables": [],
         "counts": {},
         "columns": {}
     }
 
     conn = None
-
     try:
         validate_mysql_env()
         conn = get_conn()
         info["connection"] = "ok"
+        info["detected_mode"] = detect_table_mode()
 
         with conn.cursor() as c:
-            c.execute("""
-                SELECT DATABASE() AS db_name,
-                       VERSION() AS mysql_version
-            """)
-            server_info = c.fetchone()
-            info["server"] = server_info
+            c.execute("SELECT DATABASE() AS db_name, VERSION() AS mysql_version")
+            info["server"] = c.fetchone()
 
             c.execute("""
                 SELECT TABLE_NAME
@@ -353,7 +400,6 @@ def debug_db():
                 WHERE TABLE_SCHEMA = %s
                 ORDER BY TABLE_NAME
             """, (MYSQL_DATABASE,))
-
             tables = [row["TABLE_NAME"] for row in c.fetchall()]
             info["tables"] = tables
 
@@ -372,7 +418,6 @@ def debug_db():
                           AND TABLE_NAME = %s
                         ORDER BY ORDINAL_POSITION
                     """, (MYSQL_DATABASE, table))
-
                     info["columns"][table] = [row["COLUMN_NAME"] for row in c.fetchall()]
                 except Exception as e:
                     info["columns"][table] = f"error: {repr(e)}"
@@ -391,31 +436,28 @@ def debug_db():
 def me():
     try:
         username = session.get("username")
-
         if not username:
-            return jsonify({
-                "logged_in": False,
-                "username": None
-            })
+            return jsonify({"logged_in": False, "username": None})
+
+        tables = current_tables()
+        user_table = tables["user_table"]
 
         conn = get_conn()
         try:
             with conn.cursor() as c:
-                c.execute("SELECT username FROM users WHERE username = %s", (username,))
+                c.execute(f"SELECT username FROM `{user_table}` WHERE username = %s", (username,))
                 user = c.fetchone()
         finally:
             conn.close()
 
         if not user:
             session.clear()
-            return jsonify({
-                "logged_in": False,
-                "username": None
-            })
+            return jsonify({"logged_in": False, "username": None})
 
         return jsonify({
             "logged_in": True,
-            "username": user["username"]
+            "username": user["username"],
+            "mode": tables["mode"]
         })
 
     except Exception as e:
@@ -431,6 +473,10 @@ def me():
 @app.route("/register", methods=["POST"])
 def register():
     try:
+        tables = current_tables()
+        mode = tables["mode"]
+        user_table = tables["user_table"]
+
         username = (request.form.get("username") or "").strip()
         password = (request.form.get("password") or "").strip()
 
@@ -443,20 +489,26 @@ def register():
         conn = get_conn()
         try:
             with conn.cursor() as c:
-                c.execute("SELECT id FROM users WHERE username = %s", (username,))
+                c.execute(f"SELECT id FROM `{user_table}` WHERE username = %s", (username,))
                 if c.fetchone():
                     return jsonify({"status": "error", "message": "用户名已存在"})
 
-                c.execute(
-                    "INSERT INTO users (username, password) VALUES (%s, %s)",
-                    (username, password)
-                )
+                if mode == "old":
+                    c.execute(f"""
+                        INSERT INTO `{user_table}` (username, password_hash, date, register_ip)
+                        VALUES (%s, %s, %s, %s)
+                    """, (username, password, now_str(), client_ip()))
+                else:
+                    c.execute(f"""
+                        INSERT INTO `{user_table}` (username, password)
+                        VALUES (%s, %s)
+                    """, (username, password))
 
             conn.commit()
         finally:
             conn.close()
 
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "mode": mode})
 
     except Exception as e:
         traceback.print_exc()
@@ -466,16 +518,26 @@ def register():
 @app.route("/login", methods=["POST"])
 def login():
     try:
+        tables = current_tables()
+        mode = tables["mode"]
+        user_table = tables["user_table"]
+
         username = (request.form.get("username") or "").strip()
         password = (request.form.get("password") or "").strip()
 
         conn = get_conn()
         try:
             with conn.cursor() as c:
-                c.execute(
-                    "SELECT * FROM users WHERE username = %s AND password = %s",
-                    (username, password)
-                )
+                if mode == "old":
+                    c.execute(
+                        f"SELECT * FROM `{user_table}` WHERE username = %s AND password_hash = %s",
+                        (username, password)
+                    )
+                else:
+                    c.execute(
+                        f"SELECT * FROM `{user_table}` WHERE username = %s AND password = %s",
+                        (username, password)
+                    )
                 user = c.fetchone()
         finally:
             conn.close()
@@ -484,11 +546,7 @@ def login():
             return jsonify({"status": "error", "message": "用户名或密码错误"})
 
         session["username"] = user["username"]
-
-        return jsonify({
-            "status": "ok",
-            "username": user["username"]
-        })
+        return jsonify({"status": "ok", "username": user["username"], "mode": mode})
 
     except Exception as e:
         traceback.print_exc()
@@ -508,34 +566,38 @@ def change_username():
         if not user:
             return jsonify({"status": "error", "message": "请先登录"}), 401
 
-        new_username = (request.form.get("new_username") or "").strip()
+        tables = current_tables()
+        mode = tables["mode"]
+        user_table = tables["user_table"]
+        message_table = tables["message_table"]
+        reply_table = tables["reply_table"]
 
+        new_username = (request.form.get("new_username") or "").strip()
         if len(new_username) < 2 or len(new_username) > 30:
             return jsonify({"status": "error", "message": "用户名长度需 2-30 个字符"})
 
         conn = get_conn()
         try:
             with conn.cursor() as c:
-                c.execute("SELECT id FROM users WHERE username = %s", (new_username,))
-                existed = c.fetchone()
-
-                if existed:
+                c.execute(f"SELECT id FROM `{user_table}` WHERE username = %s", (new_username,))
+                if c.fetchone():
                     return jsonify({"status": "error", "message": "新用户名已存在"})
 
                 old_username = user["username"]
 
-                c.execute("UPDATE users SET username = %s WHERE id = %s", (new_username, user["id"]))
-                c.execute("UPDATE messages SET username = %s WHERE user_id = %s", (new_username, user["id"]))
-                c.execute("UPDATE replies SET username = %s WHERE user_id = %s", (new_username, user["id"]))
-                c.execute("UPDATE likes SET username = %s WHERE username = %s", (new_username, old_username))
+                c.execute(f"UPDATE `{user_table}` SET username = %s WHERE id = %s", (new_username, user["id"]))
+                c.execute(f"UPDATE `{message_table}` SET username = %s WHERE user_id = %s", (new_username, user["id"]))
+                c.execute(f"UPDATE `{reply_table}` SET username = %s WHERE user_id = %s", (new_username, user["id"]))
+
+                if table_exists("likes"):
+                    c.execute("UPDATE likes SET username = %s WHERE username = %s", (new_username, old_username))
 
             conn.commit()
         finally:
             conn.close()
 
         session["username"] = new_username
-
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "mode": mode})
 
     except Exception as e:
         traceback.print_exc()
@@ -549,20 +611,26 @@ def delete_account():
         if not user:
             return jsonify({"status": "error", "message": "请先登录"}), 401
 
+        tables = current_tables()
+        mode = tables["mode"]
+        user_table = tables["user_table"]
+        message_table = tables["message_table"]
+        reply_table = tables["reply_table"]
+
         conn = get_conn()
         try:
             with conn.cursor() as c:
-                c.execute("DELETE FROM likes WHERE username = %s", (user["username"],))
-                c.execute("DELETE FROM replies WHERE user_id = %s", (user["id"],))
-                c.execute("DELETE FROM messages WHERE user_id = %s", (user["id"],))
-                c.execute("DELETE FROM users WHERE id = %s", (user["id"],))
-
+                if table_exists("likes"):
+                    c.execute("DELETE FROM likes WHERE username = %s", (user["username"],))
+                c.execute(f"DELETE FROM `{reply_table}` WHERE user_id = %s", (user["id"],))
+                c.execute(f"DELETE FROM `{message_table}` WHERE user_id = %s", (user["id"],))
+                c.execute(f"DELETE FROM `{user_table}` WHERE id = %s", (user["id"],))
             conn.commit()
         finally:
             conn.close()
 
         session.clear()
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "mode": mode})
 
     except Exception as e:
         traceback.print_exc()
@@ -573,14 +641,39 @@ def delete_account():
 @app.route("/upload", methods=["POST"])
 def upload():
     try:
-        content = (request.form.get("content") or "").strip()
-        member_code = (request.form.get("member_code") or "").strip().upper()
+        tables = current_tables()
+        mode = tables["mode"]
+        message_table = tables["message_table"]
+
+        print("==== /upload called ====")
+        print("mode:", mode)
+        print("request.content_type:", request.content_type)
+        print("request.form:", dict(request.form))
+        print("request.files:", list(request.files.keys()))
+
+        content = (
+            request.form.get("content")
+            or request.form.get("message")
+            or request.form.get("text")
+            or request.form.get("body")
+            or ""
+        ).strip()
+
+        member_code = (
+            request.form.get("member_code")
+            or request.form.get("vip_code")
+            or ""
+        ).strip().upper()
 
         if not content:
-            return jsonify({"status": "error", "message": "内容不能为空"})
+            return jsonify({
+                "status": "error",
+                "message": "内容不能为空",
+                "debug_form_keys": list(request.form.keys()),
+                "debug_files_keys": list(request.files.keys())
+            }), 400
 
         user = get_current_user()
-
         if user:
             username = user["username"]
             user_id = user["id"]
@@ -591,48 +684,53 @@ def upload():
         is_premium = 1 if member_code else 0
         image_path = ""
 
-        if "image" in request.files:
-            image = request.files["image"]
+        image = request.files.get("image") or request.files.get("file") or request.files.get("photo")
+        if image and image.filename:
+            if not allowed_image_file(image.filename):
+                return jsonify({"status": "error", "message": "图片格式不支持"}), 400
 
-            if image and image.filename:
-                if not allowed_image_file(image.filename):
-                    return jsonify({"status": "error", "message": "图片格式不支持"})
-
-                ext = image.filename.rsplit(".", 1)[1].lower()
-                safe_username = secure_filename(username) or "anonymous"
-                filename = f"msg_{int(time.time())}_{safe_username}.{ext}"
-
-                save_path = os.path.join(UPLOAD_FOLDER, filename)
-                image.save(save_path)
-                image_path = to_static_url(save_path)
+            ext = image.filename.rsplit(".", 1)[1].lower()
+            safe_username = secure_filename(username) or "anonymous"
+            filename = f"msg_{int(time.time())}_{safe_username}.{ext}"
+            save_path = os.path.join(UPLOAD_FOLDER, filename)
+            image.save(save_path)
+            image_path = to_static_url(save_path)
 
         conn = get_conn()
         try:
             with conn.cursor() as c:
-                c.execute("""
-                    INSERT INTO messages (
+                if mode == "old":
+                    c.execute(f"""
+                        INSERT INTO `{message_table}` (
+                            ip, content, date, is_premium, username, image_path, user_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        client_ip(),
+                        content,
+                        now_str(),
+                        is_premium,
+                        username,
+                        image_path,
+                        user_id
+                    ))
+                else:
+                    c.execute(f"""
+                        INSERT INTO `{message_table}` (
+                            username, user_id, content, image_path, is_premium, created_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (
                         username,
                         user_id,
                         content,
                         image_path,
                         is_premium,
-                        created_at
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (
-                    username,
-                    user_id,
-                    content,
-                    image_path,
-                    is_premium,
-                    now_str()
-                ))
-
+                        now_str()
+                    ))
             conn.commit()
         finally:
             conn.close()
 
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "mode": mode})
 
     except Exception as e:
         traceback.print_exc()
@@ -643,6 +741,11 @@ def upload():
 @app.route("/reply", methods=["POST"])
 def reply():
     try:
+        tables = current_tables()
+        mode = tables["mode"]
+        message_table = tables["message_table"]
+        reply_table = tables["reply_table"]
+
         message_id = (request.form.get("message_id") or "").strip()
         reply_content = (request.form.get("reply_content") or "").strip()
 
@@ -657,14 +760,12 @@ def reply():
         conn = get_conn()
         try:
             with conn.cursor() as c:
-                c.execute("SELECT id FROM messages WHERE id = %s", (message_id,))
+                c.execute(f"SELECT id FROM `{message_table}` WHERE id = %s", (message_id,))
                 msg = c.fetchone()
-
                 if not msg:
                     return jsonify({"status": "error", "message": "留言不存在"})
 
                 user = get_current_user()
-
                 if user:
                     username = user["username"]
                     user_id = user["id"]
@@ -672,28 +773,38 @@ def reply():
                     username = random_anonymous_name()
                     user_id = None
 
-                c.execute("""
-                    INSERT INTO replies (
+                if mode == "old":
+                    c.execute(f"""
+                        INSERT INTO `{reply_table}` (
+                            ip, content, date, message_id, is_premium, username, user_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        client_ip(),
+                        reply_content,
+                        now_str(),
+                        message_id,
+                        0,
+                        username,
+                        user_id
+                    ))
+                else:
+                    c.execute(f"""
+                        INSERT INTO `{reply_table}` (
+                            message_id, username, user_id, content, created_at
+                        ) VALUES (%s, %s, %s, %s, %s)
+                    """, (
                         message_id,
                         username,
                         user_id,
-                        content,
-                        created_at
-                    )
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (
-                    message_id,
-                    username,
-                    user_id,
-                    reply_content,
-                    now_str()
-                ))
+                        reply_content,
+                        now_str()
+                    ))
 
             conn.commit()
         finally:
             conn.close()
 
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "mode": mode})
 
     except Exception as e:
         traceback.print_exc()
@@ -704,13 +815,20 @@ def reply():
 @app.route("/toggle_like", methods=["POST"])
 def toggle_like():
     try:
-        user = get_current_user()
+        tables = current_tables()
+        mode = tables["mode"]
 
+        if mode == "old":
+            return jsonify({
+                "status": "error",
+                "message": "旧表模式暂不支持点赞"
+            }), 400
+
+        user = get_current_user()
         if not user:
             return jsonify({"status": "error", "message": "请先登录"}), 401
 
         message_id = (request.form.get("message_id") or "").strip()
-
         if not message_id.isdigit():
             return jsonify({"status": "error", "message": "参数错误"})
 
@@ -721,7 +839,6 @@ def toggle_like():
             with conn.cursor() as c:
                 c.execute("SELECT id FROM messages WHERE id = %s", (message_id,))
                 msg = c.fetchone()
-
                 if not msg:
                     return jsonify({"status": "error", "message": "留言不存在"})
 
@@ -766,56 +883,89 @@ def toggle_like():
 @app.route("/messages")
 def messages():
     try:
+        tables = current_tables()
+        mode = tables["mode"]
+        message_table = tables["message_table"]
+        reply_table = tables["reply_table"]
+
         current_user = get_current_user()
         current_username = current_user["username"] if current_user else None
 
         conn = get_conn()
         try:
             with conn.cursor() as c:
-                c.execute("""
-                    SELECT
-                        m.id,
-                        m.username,
-                        m.user_id,
-                        m.content,
-                        m.image_path,
-                        m.is_premium,
-                        m.created_at,
-                        (
-                            SELECT COUNT(*)
-                            FROM likes l
-                            WHERE l.message_id = m.id
-                        ) AS like_count
-                    FROM messages m
-                    ORDER BY m.id DESC
-                """)
+                if mode == "old":
+                    c.execute(f"""
+                        SELECT
+                            m.id,
+                            m.username,
+                            m.user_id,
+                            m.content,
+                            m.image_path,
+                            m.is_premium,
+                            m.date AS created_at,
+                            0 AS like_count
+                        FROM `{message_table}` m
+                        ORDER BY m.id DESC
+                    """)
+                else:
+                    c.execute(f"""
+                        SELECT
+                            m.id,
+                            m.username,
+                            m.user_id,
+                            m.content,
+                            m.image_path,
+                            m.is_premium,
+                            m.created_at,
+                            (
+                                SELECT COUNT(*)
+                                FROM likes l
+                                WHERE l.message_id = m.id
+                            ) AS like_count
+                        FROM `{message_table}` m
+                        ORDER BY m.id DESC
+                    """)
 
                 message_rows = c.fetchall()
                 result = []
 
                 for m in message_rows:
-                    c.execute("""
-                        SELECT
-                            r.id,
-                            r.username,
-                            r.user_id,
-                            r.content,
-                            r.created_at
-                        FROM replies r
-                        WHERE r.message_id = %s
-                        ORDER BY r.id ASC
-                    """, (m["id"],))
+                    if mode == "old":
+                        c.execute(f"""
+                            SELECT
+                                r.id,
+                                r.username,
+                                r.user_id,
+                                r.content,
+                                r.date AS created_at
+                            FROM `{reply_table}` r
+                            WHERE r.message_id = %s
+                            ORDER BY r.id ASC
+                        """, (m["id"],))
+                        reply_rows = c.fetchall()
+                        liked_by_me = False
+                    else:
+                        c.execute(f"""
+                            SELECT
+                                r.id,
+                                r.username,
+                                r.user_id,
+                                r.content,
+                                r.created_at
+                            FROM `{reply_table}` r
+                            WHERE r.message_id = %s
+                            ORDER BY r.id ASC
+                        """, (m["id"],))
+                        reply_rows = c.fetchall()
 
-                    reply_rows = c.fetchall()
-
-                    liked_by_me = False
-
-                    if current_username:
-                        c.execute(
-                            "SELECT 1 FROM likes WHERE message_id = %s AND username = %s",
-                            (m["id"], current_username)
-                        )
-                        liked_by_me = c.fetchone() is not None
+                        liked_by_me = False
+                        if current_username:
+                            c.execute(
+                                "SELECT 1 FROM likes WHERE message_id = %s AND username = %s",
+                                (m["id"], current_username)
+                            )
+                            liked_by_me = c.fetchone() is not None
 
                     result.append({
                         "id": m["id"],
@@ -841,6 +991,7 @@ def messages():
 
         return jsonify({
             "status": "ok",
+            "mode": mode,
             "messages": result
         })
 
@@ -856,6 +1007,54 @@ def messages():
             "mysql_user": MYSQL_USER,
             "mysql_database": MYSQL_DATABASE
         }), 500
+
+
+# ========= 强制测试写入 =========
+@app.route("/force_test_post")
+def force_test_post():
+    try:
+        tables = current_tables()
+        mode = tables["mode"]
+        message_table = tables["message_table"]
+
+        conn = get_conn()
+        try:
+            with conn.cursor() as c:
+                if mode == "old":
+                    c.execute(f"""
+                        INSERT INTO `{message_table}` (
+                            ip, content, date, is_premium, username, image_path, user_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        client_ip(),
+                        f"这是一条强制测试留言 {now_str()}",
+                        now_str(),
+                        0,
+                        "系统测试用户",
+                        "",
+                        None
+                    ))
+                else:
+                    c.execute(f"""
+                        INSERT INTO `{message_table}` (
+                            username, user_id, content, image_path, is_premium, created_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (
+                        "系统测试用户",
+                        None,
+                        f"这是一条强制测试留言 {now_str()}",
+                        "",
+                        0,
+                        now_str()
+                    ))
+            conn.commit()
+        finally:
+            conn.close()
+
+        return jsonify({"status": "ok", "mode": mode})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "detail": repr(e)}), 500
 
 
 # ========= 错误处理 =========
@@ -895,6 +1094,10 @@ try:
     init_db()
     ensure_db_columns()
     print("DB INIT OK")
+    try:
+        print("DETECTED_TABLE_MODE:", detect_table_mode())
+    except Exception:
+        traceback.print_exc()
 except Exception:
     print("========== DB INIT ERROR ==========")
     traceback.print_exc()
