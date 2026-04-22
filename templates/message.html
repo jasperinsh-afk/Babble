@@ -137,19 +137,53 @@
         </div>
     </div>
 
-    <div class="header">
-        <a href="/message">匿语阁 | BABBLE</a>
+    <!-- 统一功能开发中浮窗 -->
+    <div id="comingSoonModal" class="coming-soon-modal">
+        <div class="coming-soon-card">
+            <button class="coming-soon-close" type="button" onclick="closeComingSoon()">×</button>
 
-        <div id="avatarBox" class="avatar-box" style="display:none;">
-            <div class="avatar-upload-tip">点击更换头像</div>
-            <label for="avatarInput" class="avatar-label" title="上传头像">
-                <img id="myAvatar" class="my-avatar" src="" alt="头像">
-                <span class="avatar-online-dot"></span>
-            </label>
-            <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style="display:none;">
+            <div class="coming-soon-orbit">
+                <div class="coming-soon-core">阁</div>
+            </div>
+
+            <div class="coming-soon-kicker">BABBLE FEATURE CENTER</div>
+            <h3 id="comingSoonTitle">功能开发中</h3>
+            <p id="comingSoonText">功能开发中，敬请期待</p>
+
+            <div class="coming-soon-progress">
+                <span></span>
+            </div>
+
+            <button class="coming-soon-ok" type="button" onclick="closeComingSoon()">我知道了</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <div class="header-top-actions">
+            <button class="portal-btn" type="button" onclick="showComingSoon('匿语阁门户')">
+                🏛 匿语阁门户
+            </button>
+
+            <button class="guild-btn" type="button" onclick="showComingSoon('匿语荟')">
+                ✦ 匿语荟
+            </button>
+
+            <button id="themeToggle" class="theme-toggle">🌙 暗色主题</button>
         </div>
 
-        <button id="themeToggle" class="theme-toggle">🌙 暗色主题</button>
+        <a href="/message" class="brand-title">匿语阁 | BABBLE</a>
+
+        <div class="status-bar">
+            <div class="status-left">
+                <span class="status-dot"></span>
+                <span>运行状态：稳定运行中</span>
+            </div>
+            <div class="status-right">
+                <span>节点：BABBLE-CN-01</span>
+                <span>延迟：24ms</span>
+                <span>版本：Beta</span>
+            </div>
+        </div>
     </div>
 
     <!-- 顶部提示 -->
@@ -187,7 +221,6 @@
             <div id="authLogged" style="display:none;">
                 当前账号：
                 <span class="inline-user-info">
-                    <img id="currentUserAvatar" class="inline-user-avatar" src="" alt="avatar">
                     <span id="currentUser" style="font-weight:bold;"></span>
                 </span>
                 <button class="submit" type="button" onclick="doChangeUsername()" style="margin-left:8px;">
@@ -219,23 +252,27 @@
         <form id="mainForm" enctype="multipart/form-data">
             <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
 
-            <!-- 如需上传图片可恢复
             <div class="upload-wrapper">
-                <label for="imageInput">📷 上传图片（可选）</label>
+                <label for="imageInput" class="image-upload-btn">📷 上传图片（可选）</label>
                 <input id="imageInput" type="file" name="image" accept="image/*">
+                <div id="imageFileName" class="image-file-name">未选择图片</div>
             </div>
-            -->
 
             <input type="hidden" name="member_code" id="memberCodeHidden" value="">
 
             <div class="button-group">
                 <button class="submit" type="submit">匿名发帖</button>
-                <!--
+
+                <button class="super-member-btn" type="button" onclick="showComingSoon('超级会员')">
+                    <span class="super-shine"></span>
+                    👑 超级会员
+                    <span class="super-member-tag">鎏金特权</span>
+                </button>
+
                 <button class="member-btn" type="button" onclick="openMemberModal()">
                     炫彩背景
                     <span class="member-tag">会员专享</span>
                 </button>
-                -->
             </div>
         </form>
 
@@ -244,23 +281,32 @@
     </div>
 
 <script>
-const EMERGENCY_MODE = false; // 改成 true 即开启红屏预留页
+const EMERGENCY_MODE = false;
 let me = null;
-let myAvatarPath = '';
 
-const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
-  <defs>
-    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#ff914d"/>
-      <stop offset="100%" stop-color="#5d3ea8"/>
-    </linearGradient>
-  </defs>
-  <rect width="160" height="160" rx="80" fill="url(#g)"/>
-  <circle cx="80" cy="62" r="28" fill="white" opacity="0.9"/>
-  <path d="M35 136c8-30 28-46 45-46s37 16 45 46" fill="white" opacity="0.9"/>
-</svg>
-`);
+// ========== 统一开发中浮窗 ==========
+function showComingSoon(featureName = '该功能') {
+    if (emergencyBlocked()) return;
+
+    const modal = document.getElementById('comingSoonModal');
+    const title = document.getElementById('comingSoonTitle');
+    const text = document.getElementById('comingSoonText');
+
+    if (title) title.innerText = featureName + '开发中';
+    if (text) text.innerText = '功能开发中，敬请期待';
+
+    if (modal) modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeComingSoon() {
+    const modal = document.getElementById('comingSoonModal');
+    if (modal) modal.style.display = 'none';
+
+    if (!isEmergencyMode()) {
+        document.body.style.overflow = '';
+    }
+}
 
 function isEmergencyMode() {
     return EMERGENCY_MODE === true;
@@ -300,66 +346,6 @@ function esc(s='') {
         {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
     ));
 }
-function avatarSrc(path) {
-    return path && String(path).trim() ? path : DEFAULT_AVATAR;
-}
-function setMyAvatar(src) {
-    const img = document.getElementById('myAvatar');
-    const currentUserAvatar = document.getElementById('currentUserAvatar');
-    const realSrc = avatarSrc(src);
-    if (img) img.src = realSrc;
-    if (currentUserAvatar) currentUserAvatar.src = realSrc;
-}
-function showAvatarBox(show) {
-    const box = document.getElementById('avatarBox');
-    if (!box) return;
-    box.style.display = show ? 'flex' : 'none';
-}
-async function uploadAvatar(file) {
-    if (emergencyBlocked()) return;
-    if (!file) return;
-
-    const allowTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
-    if (!allowTypes.includes(file.type)) {
-        alert('❌ 头像仅支持 png、jpg、jpeg、gif、webp 格式');
-        return;
-    }
-
-    const maxSize = 3 * 1024 * 1024;
-    if (file.size > maxSize) {
-        alert('❌ 头像大小不能超过 3MB');
-        return;
-    }
-
-    const fd = new FormData();
-    fd.append('avatar', file);
-
-    try {
-        showToast('头像上传中...');
-        const res = await fetch('/upload_avatar', {
-            method: 'POST',
-            body: fd
-        });
-
-        const data = await res.json();
-
-        if (res.status === 401) {
-            alert('❌ 请先登录后再上传头像');
-            return;
-        }
-
-        if (data.status === 'ok') {
-            myAvatarPath = data.avatar_path || '';
-            setMyAvatar(myAvatarPath);
-            showToast('头像更新成功');
-            await loadMessages();
-        } else {
-            alert('❌ ' + (data.message || '头像上传失败'));
-        }
-    } catch (e) {
-        alert('❌ 头像上传失败，请稍后重试');
-    }
-}
 
 // ========== 会员弹窗 ==========
 function openMemberModal() {
@@ -384,7 +370,6 @@ async function refreshMe() {
     const res = await fetch('/me');
     const data = await res.json();
     me = data.logged_in ? data.username : null;
-    myAvatarPath = data.avatar_path || '';
 
     const notLogin = document.getElementById('authNotLogin');
     const logged = document.getElementById('authLogged');
@@ -395,15 +380,11 @@ async function refreshMe() {
         logged.style.display = 'inline-flex';
         logged.style.alignItems = 'center';
         currentUser.innerText = me;
-        setMyAvatar(myAvatarPath);
-        showAvatarBox(true);
     } else {
         logged.style.display = 'none';
         notLogin.style.display = 'inline-flex';
         notLogin.style.gap = '8px';
         notLogin.style.alignItems = 'center';
-        setMyAvatar('');
-        showAvatarBox(false);
     }
 }
 
@@ -458,7 +439,6 @@ async function doLogout() {
     }
 }
 
-// 修改用户名
 async function doChangeUsername() {
     if (emergencyBlocked()) return;
     const newName = prompt('请输入新用户名（2-30字）：');
@@ -479,7 +459,6 @@ async function doChangeUsername() {
     }
 }
 
-// 注销账号
 async function doDeleteAccount() {
     if (emergencyBlocked()) return;
     const ok = confirm('确认注销账号？此操作不可恢复。');
@@ -521,6 +500,8 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
         if (data.status === 'ok') {
             this.reset();
             document.getElementById('memberCodeHidden').value = '';
+            const nameBox = document.getElementById('imageFileName');
+            if (nameBox) nameBox.innerText = '未选择图片';
             showToast('发送成功！系统已为您生成随机昵称');
             await loadMessages();
         } else {
@@ -618,7 +599,6 @@ async function loadMessages() {
         const replies = (m.replies || []).map(r => `
             <div class="reply ${premiumCls}">
                 <div class="reply-head">
-                    <img class="reply-avatar" src="${avatarSrc(r.avatar_path)}" alt="avatar">
                     <div class="reply-head-meta">
                         <div class="reply-content"><b>${esc(r.username || '匿名')}：</b>${esc(r.content || '')}</div>
                         <div class="reply-date">${esc(r.date || '')}</div>
@@ -630,7 +610,6 @@ async function loadMessages() {
         return `
             <div class="message ${premiumCls}">
                 <div class="message-head">
-                    <img class="message-avatar" src="${avatarSrc(m.avatar_path)}" alt="avatar">
                     <div class="message-head-meta">
                         <div class="date">#${m.id} · ${esc(m.username || '匿名')} · ${esc(m.date || '')}</div>
                     </div>
@@ -640,6 +619,14 @@ async function loadMessages() {
                 ${imageHtml}
 
                 <div class="message-actions">
+                    <button class="action-dev-btn pin-action" type="button" onclick="showComingSoon('置顶功能')">
+                        📌 置顶
+                    </button>
+
+                    <button class="action-dev-btn recall-action" type="button" onclick="showComingSoon('撤回功能')">
+                        ↩ 撤回
+                    </button>
+
                     <button class="like-btn ${likedCls}" type="button" onclick="toggleLike(${m.id}, this)">
                         ❤️ <span class="like-count">${likeCount}</span>
                     </button>
@@ -680,14 +667,28 @@ function toggleTheme() {
 
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
-const avatarInput = document.getElementById('avatarInput');
-if (avatarInput) {
-    avatarInput.addEventListener('change', function () {
+const imageInput = document.getElementById('imageInput');
+if (imageInput) {
+    imageInput.addEventListener('change', function () {
         const file = this.files && this.files[0];
-        uploadAvatar(file);
-        this.value = '';
+        const nameBox = document.getElementById('imageFileName');
+        if (nameBox) {
+            nameBox.innerText = file ? `已选择：${file.name}` : '未选择图片';
+        }
     });
 }
+
+window.addEventListener('click', function(e) {
+    const memberModal = document.getElementById('memberModal');
+    const comingSoonModal = document.getElementById('comingSoonModal');
+
+    if (e.target === memberModal) {
+        closeMemberModal();
+    }
+    if (e.target === comingSoonModal) {
+        closeComingSoon();
+    }
+});
 
 initTheme();
 
