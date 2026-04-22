@@ -147,14 +147,26 @@ body {
 }
 
 .guild-nav-link {
-    color: #fff8dc;
+    position: relative;
+    isolation: isolate;
+    color: #fff;
+    border: 2px solid rgba(255, 230, 120, .95);
     background:
-        radial-gradient(circle at top left, rgba(255,255,255,.32), transparent 34%),
-        linear-gradient(135deg, #16162a, #5d3ea8 48%, #ff914d);
+        radial-gradient(circle at 18% 18%, rgba(255,255,255,.55), transparent 22%),
+        linear-gradient(90deg, #ff2d55, #ff914d, #ffd60a, #7dff6a, #30d5ff, #9b5cff, #ff2d55);
+    background-size: 260% 100%;
+    animation: guildMegaFlow 3.2s linear infinite, guildPulse 1.8s ease-in-out infinite;
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.26),
-        0 10px 26px rgba(93,62,168,.34);
+        0 0 0 3px rgba(255, 214, 10, .18),
+        0 0 18px rgba(255, 214, 10, .65),
+        0 0 34px rgba(255, 45, 85, .45),
+        0 12px 32px rgba(93,62,168,.42),
+        inset 0 1px 0 rgba(255,255,255,.45);
+    text-shadow:
+        0 1px 2px rgba(0,0,0,.38),
+        0 0 10px rgba(255,255,255,.45);
 }
+
 
 .guild-nav-link span {
     margin-left: 8px;
@@ -165,13 +177,80 @@ body {
     opacity: .88;
 }
 
-.guild-nav-link:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.08);
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.34),
-        0 14px 32px rgba(93,62,168,.42);
+.guild-nav-link::before {
+    content: "";
+    position: absolute;
+    top: -60%;
+    left: -45%;
+    width: 42%;
+    height: 220%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.72), transparent);
+    transform: rotate(25deg);
+    animation: guildSweep 2.2s linear infinite;
+    pointer-events: none;
+    z-index: -1;
 }
+
+.guild-nav-link::after {
+    content: "HOT";
+    position: absolute;
+    top: -11px;
+    right: -12px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #ff003d;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .5px;
+    box-shadow: 0 0 12px rgba(255,0,61,.7);
+}
+
+
+.guild-nav-link:hover {
+    transform: translateY(-3px) scale(1.06);
+    filter: brightness(1.16) saturate(1.2);
+    box-shadow:
+        0 0 0 4px rgba(255, 214, 10, .24),
+        0 0 24px rgba(255, 214, 10, .85),
+        0 0 44px rgba(255, 45, 85, .6),
+        0 16px 38px rgba(93,62,168,.5),
+        inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+
+@keyframes guildMegaFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 260% 50%;
+    }
+}
+
+@keyframes guildPulse {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        filter: brightness(1);
+    }
+
+    50% {
+        transform: translateY(-1px) scale(1.035);
+        filter: brightness(1.12);
+    }
+}
+
+@keyframes guildSweep {
+    0% {
+        left: -55%;
+    }
+
+    100% {
+        left: 125%;
+    }
+}
+
 
 /* 主题按钮 */
 .theme-toggle {
@@ -1452,4 +1531,8 @@ form {
         padding: 10px 18px;
         font-size: 16px;
     }
+    .guild-nav-link::after {
+        display: none;
+    }
+
 }
