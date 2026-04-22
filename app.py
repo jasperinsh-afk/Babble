@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "replace-with-your-secret-key"
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 最大上传 5MB
 
 DB_PATH = "babble.db"
 
@@ -50,9 +51,11 @@ def get_current_user():
 
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE username = ?", (username,))
-    user = c.fetchone()
-    conn.close()
+    try:
+        c.execute("SELECT * FROM users WHERE username = ?", (username,))
+        user = c.fetchone()
+    finally:
+        conn.close()
     return user
 
 
@@ -105,16 +108,43 @@ def init_db():
     conn.close()
 
 
-def ensure_user_avatar_column():
+def ensure_db_columns():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute("PRAGMA table_info(users)")
-    columns = [row["name"] if isinstance(row, sqlite3.Row) else row[1] for row in c.fetchall()]
+    def get_columns(table):
+        c.execute(f"PRAGMA table_info({table})")
+        rows = c.fetchall()
+        return [row["name"] for row in rows]
 
-    if "avatar_path" not in columns:
+    # users 表兼容
+    user_cols = get_columns("users")
+    if "avatar_path" not in user_cols:
         c.execute("ALTER TABLE users ADD COLUMN avatar_path TEXT DEFAULT ''")
 
+    # messages 表兼容
+    msg_cols = get_columns("messages")
+    if "user_id" not in msg_cols:
+        c.execute("ALTER TABLE messages ADD COLUMN user_id INTEGER")
+    if "content" not in msg_cols:
+        c.execute("ALTER TABLE messages ADD COLUMN content TEXT")
+    if "image_path" not in msg_cols:
+        c.execute("ALTER TABLE messages ADD COLUMN image_path TEXT DEFAULT ''")
+    if "is_premium" not in msg_cols:
+        c.execute("ALTER TABLE messages ADD COLUMN is_premium INTEGER DEFAULT 0")
+    if "created_at" not in msg_cols:
+        c.execute("ALTER TABLE messages ADD COLUMN created_at TEXT DEFAULT ''")
+
+    # replies 表兼容
+    reply_cols = get_columns("replies")
+    if "user_id" not in reply_cols:
+        c.execute("ALTER TABLE replies ADD COLUMN user_id INTEGER")
+    if "content" not in reply_cols:
+        c.execute("ALTER TABLE replies ADD COLUMN content TEXT DEFAULT ''")
+    if "created_at" not in reply_cols:
+        c.execute("ALTER TABLE replies ADD COLUMN created_at TEXT DEFAULT ''")
+
+    # likes 表只确保存在即可，结构不随意改，避免唯一索引问题
     conn.commit()
     conn.close()
 
@@ -140,9 +170,11 @@ def me():
 
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT username, avatar_path FROM users WHERE username = ?", (username,))
-    user = c.fetchone()
-    conn.close()
+    try:
+        c.execute("SELECT username, avatar_path FROM users WHERE username = ?", (username,))
+        user = c.fetchone()
+    finally:
+        conn.close()
 
     if not user:
         session.clear()
@@ -173,17 +205,18 @@ def register():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute("SELECT id FROM users WHERE username = ?", (username,))
-    if c.fetchone():
-        conn.close()
-        return jsonify({"status": "error", "message": "用户名已存在"})
+    try:
+        c.execute("SELECT id FROM users WHERE username = ?", (username,))
+        if c.fetchone():
+            return jsonify({"status": "error", "message": "用户名已存在"})
 
-    c.execute(
-        "INSERT INTO users (username, password, avatar_path) VALUES (?, ?, ?)",
-        (username, password, "")
-    )
-    conn.commit()
-    conn.close()
+        c.execute(
+            "INSERT INTO users (username, password, avatar_path) VALUES (?, ?, ?)",
+            (username, password, "")
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
     return jsonify({"status": "ok"})
 
@@ -195,9 +228,12 @@ def login():
 
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
-    user = c.fetchone()
-    conn.close()
+
+    try:
+        c.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+        user = c.fetchone()
+    finally:
+        conn.close()
 
     if not user:
         return jsonify({"status": "error", "message": "用户名或密码错误"})
@@ -225,22 +261,22 @@ def change_username():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute("SELECT id FROM users WHERE username = ?", (new_username,))
-    existed = c.fetchone()
-    if existed:
+    try:
+        c.execute("SELECT id FROM users WHERE username = ?", (new_username,))
+        existed = c.fetchone()
+        if existed:
+            return jsonify({"status": "error", "message": "新用户名已存在"})
+
+        old_username = user["username"]
+
+        c.execute("UPDATE users SET username = ? WHERE id = ?", (new_username, user["id"]))
+        c.execute("UPDATE messages SET username = ? WHERE user_id = ?", (new_username, user["id"]))
+        c.execute("UPDATE replies SET username = ? WHERE user_id = ?", (new_username, user["id"]))
+        c.execute("UPDATE likes SET username = ? WHERE username = ?", (new_username, old_username))
+
+        conn.commit()
+    finally:
         conn.close()
-        return jsonify({"status": "error", "message": "新用户名已存在"})
-
-    old_username = user["username"]
-
-    # 如果有头像文件名里包含用户名，可按需保留原路径不改
-    c.execute("UPDATE users SET username = ? WHERE id = ?", (new_username, user["id"]))
-    c.execute("UPDATE messages SET username = ? WHERE user_id = ?", (new_username, user["id"]))
-    c.execute("UPDATE replies SET username = ? WHERE user_id = ?", (new_username, user["id"]))
-    c.execute("UPDATE likes SET username = ? WHERE username = ?", (new_username, old_username))
-
-    conn.commit()
-    conn.close()
 
     session["username"] = new_username
     return jsonify({"status": "ok"})
@@ -255,13 +291,14 @@ def delete_account():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute("DELETE FROM likes WHERE username = ?", (user["username"],))
-    c.execute("DELETE FROM replies WHERE user_id = ?", (user["id"],))
-    c.execute("DELETE FROM messages WHERE user_id = ?", (user["id"],))
-    c.execute("DELETE FROM users WHERE id = ?", (user["id"],))
-
-    conn.commit()
-    conn.close()
+    try:
+        c.execute("DELETE FROM likes WHERE username = ?", (user["username"],))
+        c.execute("DELETE FROM replies WHERE user_id = ?", (user["id"],))
+        c.execute("DELETE FROM messages WHERE user_id = ?", (user["id"],))
+        c.execute("DELETE FROM users WHERE id = ?", (user["id"],))
+        conn.commit()
+    finally:
+        conn.close()
 
     session.clear()
     return jsonify({"status": "ok"})
@@ -307,12 +344,14 @@ def upload_avatar():
 
     conn = get_conn()
     c = conn.cursor()
-    c.execute(
-        "UPDATE users SET avatar_path = ? WHERE id = ?",
-        (avatar_path, user["id"])
-    )
-    conn.commit()
-    conn.close()
+    try:
+        c.execute(
+            "UPDATE users SET avatar_path = ? WHERE id = ?",
+            (avatar_path, user["id"])
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
     return jsonify({
         "status": "ok",
@@ -355,12 +394,14 @@ def upload():
 
     conn = get_conn()
     c = conn.cursor()
-    c.execute("""
-        INSERT INTO messages (username, user_id, content, image_path, is_premium, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (username, user_id, content, image_path, is_premium, now_str()))
-    conn.commit()
-    conn.close()
+    try:
+        c.execute("""
+            INSERT INTO messages (username, user_id, content, image_path, is_premium, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (username, user_id, content, image_path, is_premium, now_str()))
+        conn.commit()
+    finally:
+        conn.close()
 
     return jsonify({"status": "ok"})
 
@@ -386,12 +427,14 @@ def reply():
 
     conn = get_conn()
     c = conn.cursor()
-    c.execute("""
-        INSERT INTO replies (message_id, username, user_id, content, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    """, (int(message_id), username, user_id, reply_content, now_str()))
-    conn.commit()
-    conn.close()
+    try:
+        c.execute("""
+            INSERT INTO replies (message_id, username, user_id, content, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (int(message_id), username, user_id, reply_content, now_str()))
+        conn.commit()
+    finally:
+        conn.close()
 
     return jsonify({"status": "ok"})
 
@@ -412,31 +455,32 @@ def toggle_like():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute(
-        "SELECT id FROM likes WHERE message_id = ? AND username = ?",
-        (message_id, user["username"])
-    )
-    existed = c.fetchone()
-
-    if existed:
+    try:
         c.execute(
-            "DELETE FROM likes WHERE message_id = ? AND username = ?",
+            "SELECT id FROM likes WHERE message_id = ? AND username = ?",
             (message_id, user["username"])
         )
-        liked = False
-    else:
-        c.execute(
-            "INSERT OR IGNORE INTO likes (message_id, username) VALUES (?, ?)",
-            (message_id, user["username"])
-        )
-        liked = True
+        existed = c.fetchone()
 
-    conn.commit()
+        if existed:
+            c.execute(
+                "DELETE FROM likes WHERE message_id = ? AND username = ?",
+                (message_id, user["username"])
+            )
+            liked = False
+        else:
+            c.execute(
+                "INSERT OR IGNORE INTO likes (message_id, username) VALUES (?, ?)",
+                (message_id, user["username"])
+            )
+            liked = True
 
-    c.execute("SELECT COUNT(*) AS cnt FROM likes WHERE message_id = ?", (message_id,))
-    like_count = c.fetchone()["cnt"]
+        conn.commit()
 
-    conn.close()
+        c.execute("SELECT COUNT(*) AS cnt FROM likes WHERE message_id = ?", (message_id,))
+        like_count = c.fetchone()["cnt"]
+    finally:
+        conn.close()
 
     return jsonify({
         "status": "ok",
@@ -454,71 +498,72 @@ def messages():
     conn = get_conn()
     c = conn.cursor()
 
-    c.execute("""
-        SELECT
-            m.id,
-            m.username,
-            m.user_id,
-            m.content,
-            m.image_path,
-            m.is_premium,
-            m.created_at,
-            u.avatar_path,
-            (SELECT COUNT(*) FROM likes l WHERE l.message_id = m.id) AS like_count
-        FROM messages m
-        LEFT JOIN users u ON m.user_id = u.id
-        ORDER BY m.id DESC
-    """)
-    message_rows = c.fetchall()
-
-    result = []
-    for m in message_rows:
+    try:
         c.execute("""
             SELECT
-                r.id,
-                r.username,
-                r.user_id,
-                r.content,
-                r.created_at,
-                u.avatar_path
-            FROM replies r
-            LEFT JOIN users u ON r.user_id = u.id
-            WHERE r.message_id = ?
-            ORDER BY r.id ASC
-        """, (m["id"],))
-        reply_rows = c.fetchall()
+                m.id,
+                m.username,
+                m.user_id,
+                m.content,
+                m.image_path,
+                m.is_premium,
+                m.created_at,
+                u.avatar_path,
+                (SELECT COUNT(*) FROM likes l WHERE l.message_id = m.id) AS like_count
+            FROM messages m
+            LEFT JOIN users u ON m.user_id = u.id
+            ORDER BY m.id DESC
+        """)
+        message_rows = c.fetchall()
 
-        liked_by_me = False
-        if current_username:
-            c.execute(
-                "SELECT 1 FROM likes WHERE message_id = ? AND username = ?",
-                (m["id"], current_username)
-            )
-            liked_by_me = c.fetchone() is not None
+        result = []
+        for m in message_rows:
+            c.execute("""
+                SELECT
+                    r.id,
+                    r.username,
+                    r.user_id,
+                    r.content,
+                    r.created_at,
+                    u.avatar_path
+                FROM replies r
+                LEFT JOIN users u ON r.user_id = u.id
+                WHERE r.message_id = ?
+                ORDER BY r.id ASC
+            """, (m["id"],))
+            reply_rows = c.fetchall()
 
-        result.append({
-            "id": m["id"],
-            "username": m["username"],
-            "content": m["content"] or "",
-            "image_path": m["image_path"] or "",
-            "is_premium": m["is_premium"],
-            "date": m["created_at"],
-            "avatar_path": m["avatar_path"] or "",
-            "like_count": m["like_count"],
-            "liked_by_me": liked_by_me,
-            "replies": [
-                {
-                    "id": r["id"],
-                    "username": r["username"],
-                    "content": r["content"],
-                    "date": r["created_at"],
-                    "avatar_path": r["avatar_path"] or ""
-                }
-                for r in reply_rows
-            ]
-        })
+            liked_by_me = False
+            if current_username:
+                c.execute(
+                    "SELECT 1 FROM likes WHERE message_id = ? AND username = ?",
+                    (m["id"], current_username)
+                )
+                liked_by_me = c.fetchone() is not None
 
-    conn.close()
+            result.append({
+                "id": m["id"],
+                "username": m["username"],
+                "content": m["content"] or "",
+                "image_path": m["image_path"] or "",
+                "is_premium": m["is_premium"],
+                "date": m["created_at"] or "",
+                "avatar_path": m["avatar_path"] or "",
+                "like_count": m["like_count"] or 0,
+                "liked_by_me": liked_by_me,
+                "replies": [
+                    {
+                        "id": r["id"],
+                        "username": r["username"],
+                        "content": r["content"] or "",
+                        "date": r["created_at"] or "",
+                        "avatar_path": r["avatar_path"] or ""
+                    }
+                    for r in reply_rows
+                ]
+            })
+    finally:
+        conn.close()
 
     return jsonify({
         "status": "ok",
@@ -526,7 +571,18 @@ def messages():
     })
 
 
+# ========= 上传过大处理 =========
+@app.errorhandler(413)
+def too_large(e):
+    return jsonify({
+        "status": "error",
+        "message": "上传文件过大"
+    }), 413
+
+
+# ========= 启动时初始化 =========
+init_db()
+ensure_db_columns()
+
 if __name__ == "__main__":
-    init_db()
-    ensure_user_avatar_column()
     app.run(host="0.0.0.0", port=5000, debug=True)
