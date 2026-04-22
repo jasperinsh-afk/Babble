@@ -227,8 +227,9 @@
 
         <!-- 匿名发帖说明 -->
         <div class="anonymous-info">
-            💬 需完成超级会员验证后发布，系统将为您生成随机昵称
+            💬 无需登录即可匿名发帖；上传图片需完成超级会员验证
         </div>
+
 
         <!-- 发帖表单 -->
         <form id="mainForm" enctype="multipart/form-data">
@@ -484,14 +485,19 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
 
     if (emergencyBlocked()) return;
 
+    const imageInput = document.getElementById('imageInput');
+    const hasImage = imageInput && imageInput.files && imageInput.files.length > 0;
+
     const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
-    if (!memberCode) {
+
+    if (hasImage && !memberCode) {
         openMemberModal();
-        alert('请先完成超级会员验证后再发布');
+        alert('上传图片需要先完成超级会员验证');
         return;
     }
 
     const fd = new FormData(this);
+
 
     const submitBtn = this.querySelector('.main-submit-btn');
     const originalText = submitBtn.textContent;
@@ -516,7 +522,7 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
             const nameBox = document.getElementById('imageFileName');
             if (nameBox) nameBox.innerText = '未选择图片';
 
-            showToast('发送成功！已发布炫彩会员帖');
+            showToast(hasImage ? '发送成功！已发布会员图片帖' : '发送成功！系统已为您生成随机昵称');
             await loadMessages();
         } else {
             alert('❌ ' + (data.message || '发送失败'));
