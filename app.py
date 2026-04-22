@@ -2,14 +2,17 @@ import os
 import time
 import traceback
 from datetime import datetime
+from urllib.parse import urlparse, unquote
 
 import pymysql
 from flask import Flask, render_template, request, jsonify, session
 from werkzeug.utils import secure_filename
 
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "replace-with-your-secret-key")
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 最大上传 5MB
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+
 
 # ========= 路径配置 =========
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,21 +21,104 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
-# ========= Railway MySQL 配置 =========
-MYSQL_HOST = os.environ.get("MYSQLHOST") or os.environ.get("MYSQL_HOST")
-MYSQL_PORT_RAW = os.environ.get("MYSQLPORT") or os.environ.get("MYSQL_PORT")
-MYSQL_USER = os.environ.get("MYSQLUSER") or os.environ.get("MYSQL_USER")
-MYSQL_PASSWORD = (
-    os.environ.get("MYSQLPASSWORD")
-    or os.environ.get("MYSQL_PASSWORD")
-    or os.environ.get("MYSQL_ROOT_PASSWORD")
-)
-MYSQL_DATABASE = os.environ.get("MYSQLDATABASE") or os.environ.get("MYSQL_DATABASE")
 
-try:
-    MYSQL_PORT = int(MYSQL_PORT_RAW) if MYSQL_PORT_RAW else 3306
-except ValueError:
-    MYSQL_PORT = 3306
+# ========= 数据库配置解析 =========
+def parse_mysql_uri(uri):
+    """
+    支持解析：
+    mysql://user:pass@host:3306/db
+    mysql+pymysql://user:pass@host:3306/db
+    mysql2://user:pass@host:3306/db
+    """
+    if not uri:
+        return {}
+
+    parsed = urlparse(uri)
+
+    scheme = (parsed.scheme or "").lower()
+    if not scheme.startswith("mysql"):
+        return {}
+
+    database = parsed.path.lstrip("/") if parsed.path else None
+
+    return {
+        "host": parsed.hostname,
+        "port": parsed.port or 3306,
+        "user": unquote(parsed.username) if parsed.username else None,
+        "password": unquote(parsed.password) if parsed.password else "",
+        "database": unquote(database) if database else None,
+        "source_uri": uri
+    }
+
+
+def load_mysql_config():
+    """
+    优先级：
+    1. MYSQLHOST / MYSQL_HOST 变量
+    2. SQLALCHEMY_DATABASE_URI
+    3. DATABASE_URL
+    4. MYSQL_URL
+    """
+
+    config = {
+        "host": os.environ.get("MYSQLHOST") or os.environ.get("MYSQL_HOST"),
+        "port": os.environ.get("MYSQLPORT") or os.environ.get("MYSQL_PORT"),
+        "user": os.environ.get("MYSQLUSER") or os.environ.get("MYSQL_USER"),
+        "password": (
+            os.environ.get("MYSQLPASSWORD")
+            or os.environ.get("MYSQL_PASSWORD")
+            or os.environ.get("MYSQL_ROOT_PASSWORD")
+        ),
+        "database": os.environ.get("MYSQLDATABASE") or os.environ.get("MYSQL_DATABASE"),
+        "source": "MYSQLHOST"
+    }
+
+    has_direct_config = bool(config["host"] and config["user"] and config["database"])
+
+    if has_direct_config:
+        try:
+            config["port"] = int(config["port"] or 3306)
+        except ValueError:
+            config["port"] = 3306
+
+        return config
+
+    uri_keys = [
+        "SQLALCHEMY_DATABASE_URI",
+        "DATABASE_URL",
+        "MYSQL_URL"
+    ]
+
+    for key in uri_keys:
+        uri = os.environ.get(key)
+        parsed = parse_mysql_uri(uri)
+
+        if parsed.get("host") and parsed.get("user") and parsed.get("database"):
+            return {
+                "host": parsed.get("host"),
+                "port": parsed.get("port") or 3306,
+                "user": parsed.get("user"),
+                "password": parsed.get("password") or "",
+                "database": parsed.get("database"),
+                "source": key
+            }
+
+    try:
+        config["port"] = int(config["port"] or 3306)
+    except ValueError:
+        config["port"] = 3306
+
+    return config
+
+
+MYSQL_CONFIG = load_mysql_config()
+
+MYSQL_HOST = MYSQL_CONFIG.get("host")
+MYSQL_PORT = MYSQL_CONFIG.get("port") or 3306
+MYSQL_USER = MYSQL_CONFIG.get("user")
+MYSQL_PASSWORD = MYSQL_CONFIG.get("password") or ""
+MYSQL_DATABASE = MYSQL_CONFIG.get("database")
+MYSQL_SOURCE = MYSQL_CONFIG.get("source")
 
 
 # ========= 工具 =========
@@ -40,14 +126,26 @@ def validate_mysql_env():
     problems = []
 
     if not MYSQL_HOST:
-        problems.append("缺少 MYSQLHOST / MYSQL_HOST")
+        problems.append("缺少 MYSQLHOST / MYSQL_HOST，且没有可解析的 SQLALCHEMY_DATABASE_URI / DATABASE_URL / MYSQL_URL")
     if not MYSQL_USER:
-        problems.append("缺少 MYSQLUSER / MYSQL_USER")
+        problems.append("缺少 MYSQLUSER / MYSQL_USER，且连接串里没有用户名")
     if not MYSQL_DATABASE:
-        problems.append("缺少 MYSQLDATABASE / MYSQL_DATABASE")
+        problems.append("缺少 MYSQLDATABASE / MYSQL_DATABASE，且连接串里没有数据库名")
 
-    if MYSQL_HOST and MYSQL_HOST.strip().lower() in {"localhost", "127.0.0.1"}:
-        problems.append("检测到非法数据库主机 localhost/127.0.0.1，已拒绝连接（请绑定 Railway MySQL 变量）")
+    if MYSQL_HOST:
+        normalized_host = MYSQL_HOST.strip().lower()
+        blocked_hosts = {
+            "localhost",
+            "127.0.0.1",
+            "::1",
+            "0.0.0.0"
+        }
+
+        if normalized_host in blocked_hosts:
+            problems.append(
+                f"检测到非法数据库主机 {MYSQL_HOST}，已拒绝连接。"
+                f"Railway MySQL 不应使用 localhost，请检查 Variables。"
+            )
 
     if problems:
         raise RuntimeError(" | ".join(problems))
@@ -58,7 +156,7 @@ def get_conn():
 
     return pymysql.connect(
         host=MYSQL_HOST,
-        port=MYSQL_PORT,
+        port=int(MYSQL_PORT),
         user=MYSQL_USER,
         password=MYSQL_PASSWORD or "",
         database=MYSQL_DATABASE,
@@ -167,6 +265,7 @@ def column_exists(cursor, table_name, column_name):
           AND TABLE_NAME = %s
           AND COLUMN_NAME = %s
     """, (MYSQL_DATABASE, table_name, column_name))
+
     row = cursor.fetchone()
     return bool(row and row["cnt"] > 0)
 
@@ -221,10 +320,12 @@ def message_page():
 def debug_db():
     info = {
         "db_type": "mysql",
+        "config_source": MYSQL_SOURCE,
         "mysql_host": MYSQL_HOST,
         "mysql_port": MYSQL_PORT,
         "mysql_user": MYSQL_USER,
         "mysql_database": MYSQL_DATABASE,
+        "has_password": bool(MYSQL_PASSWORD),
         "connection": "unknown",
         "tables": [],
         "counts": {},
@@ -232,6 +333,7 @@ def debug_db():
     }
 
     conn = None
+
     try:
         validate_mysql_env()
         conn = get_conn()
@@ -239,10 +341,19 @@ def debug_db():
 
         with conn.cursor() as c:
             c.execute("""
+                SELECT DATABASE() AS db_name,
+                       VERSION() AS mysql_version
+            """)
+            server_info = c.fetchone()
+            info["server"] = server_info
+
+            c.execute("""
                 SELECT TABLE_NAME
                 FROM INFORMATION_SCHEMA.TABLES
                 WHERE TABLE_SCHEMA = %s
+                ORDER BY TABLE_NAME
             """, (MYSQL_DATABASE,))
+
             tables = [row["TABLE_NAME"] for row in c.fetchall()]
             info["tables"] = tables
 
@@ -261,6 +372,7 @@ def debug_db():
                           AND TABLE_NAME = %s
                         ORDER BY ORDINAL_POSITION
                     """, (MYSQL_DATABASE, table))
+
                     info["columns"][table] = [row["COLUMN_NAME"] for row in c.fetchall()]
                 except Exception as e:
                     info["columns"][table] = f"error: {repr(e)}"
@@ -305,6 +417,7 @@ def me():
             "logged_in": True,
             "username": user["username"]
         })
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({
@@ -338,11 +451,13 @@ def register():
                     "INSERT INTO users (username, password) VALUES (%s, %s)",
                     (username, password)
                 )
+
             conn.commit()
         finally:
             conn.close()
 
         return jsonify({"status": "ok"})
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": "注册失败", "detail": repr(e)}), 500
@@ -374,6 +489,7 @@ def login():
             "status": "ok",
             "username": user["username"]
         })
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": "登录失败", "detail": repr(e)}), 500
@@ -402,6 +518,7 @@ def change_username():
             with conn.cursor() as c:
                 c.execute("SELECT id FROM users WHERE username = %s", (new_username,))
                 existed = c.fetchone()
+
                 if existed:
                     return jsonify({"status": "error", "message": "新用户名已存在"})
 
@@ -419,6 +536,7 @@ def change_username():
         session["username"] = new_username
 
         return jsonify({"status": "ok"})
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": "修改用户名失败", "detail": repr(e)}), 500
@@ -438,12 +556,14 @@ def delete_account():
                 c.execute("DELETE FROM replies WHERE user_id = %s", (user["id"],))
                 c.execute("DELETE FROM messages WHERE user_id = %s", (user["id"],))
                 c.execute("DELETE FROM users WHERE id = %s", (user["id"],))
+
             conn.commit()
         finally:
             conn.close()
 
         session.clear()
         return jsonify({"status": "ok"})
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": "注销失败", "detail": repr(e)}), 500
@@ -507,11 +627,13 @@ def upload():
                     is_premium,
                     now_str()
                 ))
+
             conn.commit()
         finally:
             conn.close()
 
         return jsonify({"status": "ok"})
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": "发帖失败", "detail": repr(e)}), 500
@@ -530,11 +652,14 @@ def reply():
         if not reply_content:
             return jsonify({"status": "error", "message": "回复内容不能为空"})
 
+        message_id = int(message_id)
+
         conn = get_conn()
         try:
             with conn.cursor() as c:
-                c.execute("SELECT id FROM messages WHERE id = %s", (int(message_id),))
+                c.execute("SELECT id FROM messages WHERE id = %s", (message_id,))
                 msg = c.fetchone()
+
                 if not msg:
                     return jsonify({"status": "error", "message": "留言不存在"})
 
@@ -557,7 +682,7 @@ def reply():
                     )
                     VALUES (%s, %s, %s, %s, %s)
                 """, (
-                    int(message_id),
+                    message_id,
                     username,
                     user_id,
                     reply_content,
@@ -569,6 +694,7 @@ def reply():
             conn.close()
 
         return jsonify({"status": "ok"})
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": "回复失败", "detail": repr(e)}), 500
@@ -579,6 +705,7 @@ def reply():
 def toggle_like():
     try:
         user = get_current_user()
+
         if not user:
             return jsonify({"status": "error", "message": "请先登录"}), 401
 
@@ -594,6 +721,7 @@ def toggle_like():
             with conn.cursor() as c:
                 c.execute("SELECT id FROM messages WHERE id = %s", (message_id,))
                 msg = c.fetchone()
+
                 if not msg:
                     return jsonify({"status": "error", "message": "留言不存在"})
 
@@ -628,6 +756,7 @@ def toggle_like():
             "liked": liked,
             "like_count": like_count
         })
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": "点赞失败", "detail": repr(e)}), 500
@@ -680,6 +809,7 @@ def messages():
                     reply_rows = c.fetchall()
 
                     liked_by_me = False
+
                     if current_username:
                         c.execute(
                             "SELECT 1 FROM likes WHERE message_id = %s AND username = %s",
@@ -713,12 +843,14 @@ def messages():
             "status": "ok",
             "messages": result
         })
+
     except Exception as e:
         traceback.print_exc()
         return jsonify({
             "status": "error",
             "message": "messages 接口异常",
             "detail": repr(e),
+            "config_source": MYSQL_SOURCE,
             "mysql_host": MYSQL_HOST,
             "mysql_port": MYSQL_PORT,
             "mysql_user": MYSQL_USER,
@@ -749,10 +881,12 @@ def internal_error(e):
 print("====================================")
 print("BABBLE Flask app starting...")
 print("DB_TYPE: MySQL")
+print("CONFIG_SOURCE:", MYSQL_SOURCE)
 print("MYSQL_HOST:", MYSQL_HOST)
 print("MYSQL_PORT:", MYSQL_PORT)
 print("MYSQL_USER:", MYSQL_USER)
 print("MYSQL_DATABASE:", MYSQL_DATABASE)
+print("HAS_PASSWORD:", bool(MYSQL_PASSWORD))
 print("UPLOAD_FOLDER:", UPLOAD_FOLDER)
 print("====================================")
 
@@ -765,6 +899,7 @@ except Exception:
     print("========== DB INIT ERROR ==========")
     traceback.print_exc()
     print("===================================")
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
