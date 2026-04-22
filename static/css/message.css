@@ -64,133 +64,113 @@
     box-sizing: border-box;
 }
 
+html {
+    overflow-x: hidden;
+}
+
 body {
     background-color: var(--bg-body);
-    font-family: "Alibaba Sans Medium", sans-serif;
+    font-family: "Alibaba Sans Medium", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     color: var(--text-main);
     transition: background-color .25s ease, color .25s ease;
+    overflow-x: hidden;
 }
 
-.header {
-    padding: 20px;
-    text-align: center;
-    background-color: var(--header-bg);
-    position: relative;
-    min-height: 150px;
-}
-
-.header a {
-    text-decoration: none;
-    font-size: 36px;
-    font-weight: bold;
-    color: var(--header-text);
-}
-.header a:hover { color: #fff; }
-
-/* ========= 顶部高级按钮与运行状态 ========= */
-.header-top-actions {
-    position: absolute;
-    top: 18px;
-    right: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    z-index: 5;
-}
-
-.brand-title {
-    display: inline-block;
-    margin-top: 18px;
-}
-
-.portal-btn,
-.guild-btn {
-    border: 1px solid rgba(255,255,255,.45);
-    border-radius: 999px;
-    padding: 8px 14px;
-    font-size: 14px;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all .22s ease;
-    white-space: nowrap;
-}
-
-.portal-btn {
-    color: #fff7dc;
+/* ========= 顶部导航栏 ========= */
+.top-nav {
+    width: 100%;
+    min-height: 74px;
+    padding: 0 28px;
     background:
-        linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.05)),
-        linear-gradient(135deg, #4b2a8f, #241344);
+        radial-gradient(circle at 12% 0%, rgba(255,145,77,.28), transparent 34%),
+        linear-gradient(135deg, var(--header-bg), #241344);
+    color: var(--header-text);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 18px;
     box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.28),
-        0 8px 20px rgba(0,0,0,.24);
+        0 10px 26px rgba(0,0,0,.18),
+        inset 0 -1px 0 rgba(255,255,255,.12);
+    position: sticky;
+    top: 0;
+    z-index: 9000;
 }
 
-.portal-btn:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.35),
-        0 12px 28px rgba(0,0,0,.32);
+.nav-brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 9px;
+    text-decoration: none;
+    white-space: nowrap;
+    color: var(--header-text);
+    font-weight: 900;
 }
 
-.guild-btn {
-    color: #efe8ff;
+.nav-brand-main {
+    font-size: 28px;
+    letter-spacing: 1px;
+}
+
+.nav-brand-sub {
+    font-size: 13px;
+    letter-spacing: 2px;
+    opacity: .82;
+}
+
+.nav-brand:hover {
+    color: #fff;
+}
+
+.nav-center {
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+}
+
+.nav-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.nav-link {
+    border: 1px solid rgba(255,255,255,.32);
+    border-radius: 999px;
+    padding: 9px 18px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 900;
+    white-space: nowrap;
+    transition: all .22s ease;
+}
+
+.guild-nav-link {
+    color: #fff8dc;
     background:
         radial-gradient(circle at top left, rgba(255,255,255,.32), transparent 34%),
-        linear-gradient(135deg, #16162a, #5d3ea8 50%, #1f123a);
+        linear-gradient(135deg, #16162a, #5d3ea8 48%, #ff914d);
     box-shadow:
-        0 0 0 1px rgba(255,255,255,.16),
-        0 10px 26px rgba(93,62,168,.38);
-    letter-spacing: .5px;
+        inset 0 1px 0 rgba(255,255,255,.26),
+        0 10px 26px rgba(93,62,168,.34);
 }
 
-.guild-btn:hover {
-    transform: translateY(-2px) scale(1.02);
-    filter: brightness(1.1);
-}
-
-.status-bar {
-    width: min(92%, 980px);
-    margin: 18px auto 0;
-    padding: 8px 14px;
-    border-radius: 999px;
-    background: rgba(0,0,0,.18);
-    border: 1px solid rgba(255,255,255,.18);
-    color: rgba(255,255,255,.9);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+.guild-nav-link span {
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 1px solid rgba(255,255,255,.32);
     font-size: 13px;
-    backdrop-filter: blur(6px);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+    font-weight: 700;
+    opacity: .88;
 }
 
-.status-left,
-.status-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.status-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: #32d74b;
-    box-shadow: 0 0 0 4px rgba(50,215,75,.16), 0 0 14px rgba(50,215,75,.9);
-    animation: statusPulse 1.8s ease infinite;
-}
-
-@keyframes statusPulse {
-    0%, 100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(.78);
-        opacity: .65;
-    }
+.guild-nav-link:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.34),
+        0 14px 32px rgba(93,62,168,.42);
 }
 
 /* 主题按钮 */
@@ -204,9 +184,14 @@ body {
     font-weight: bold;
     cursor: pointer;
     transition: .2s ease;
+    white-space: nowrap;
 }
-.theme-toggle:hover { filter: brightness(1.08); }
 
+.theme-toggle:hover {
+    filter: brightness(1.08);
+}
+
+/* ========= 主体 ========= */
 .main {
     width: 90%;
     max-width: 1200px;
@@ -225,10 +210,22 @@ body {
     color: var(--text-secondary);
 }
 
+.anonymous-info {
+    background-color: var(--bg-message);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 15px auto;
+    max-width: 800px;
+    text-align: center;
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+
 /* ========= 提示条 ========= */
 .success-toast {
     position: fixed;
-    top: -60px;
+    top: -70px;
     left: 50%;
     transform: translateX(-50%);
     background-color: #4caf50;
@@ -243,8 +240,13 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    max-width: calc(100vw - 24px);
 }
-.success-toast.show { top: 20px; }
+
+.success-toast.show {
+    top: 88px;
+}
+
 .success-toast .close-btn {
     background: none;
     border: none;
@@ -264,6 +266,7 @@ body {
     z-index: 10000;
     justify-content: center;
     align-items: center;
+    padding: 18px;
 }
 
 .modal-content {
@@ -277,20 +280,31 @@ body {
     box-shadow: 0 10px 30px rgba(0,0,0,.3);
     animation: modalFadeIn .3s ease;
 }
+
 @keyframes modalFadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
+
 .modal-content h3 {
     color: #ff4444;
     font-size: 28px;
     margin-bottom: 10px;
 }
+
 .modal-content p {
     font-size: 18px;
     color: var(--text-muted);
     margin-bottom: 20px;
 }
+
 .modal-content input {
     width: 100%;
     padding: 12px;
@@ -304,15 +318,18 @@ body {
     background: var(--input-bg);
     color: var(--text-main);
 }
+
 .modal-content input:focus {
     border-color: #ff4444;
     box-shadow: 0 0 10px rgba(255,68,68,.3);
 }
+
 .modal-buttons {
     display: flex;
     gap: 15px;
     justify-content: center;
 }
+
 .modal-btn {
     padding: 12px 24px;
     font-size: 18px;
@@ -321,10 +338,25 @@ body {
     border-radius: 8px;
     cursor: pointer;
 }
-.modal-btn.confirm { background-color: #ff4444; color: #fff; }
-.modal-btn.confirm:hover { background-color: #ff0000; }
-.modal-btn.cancel { background-color: #444; color: #fff; }
-.modal-btn.cancel:hover { background-color: #555; }
+
+.modal-btn.confirm {
+    background-color: #ff4444;
+    color: #fff;
+}
+
+.modal-btn.confirm:hover {
+    background-color: #ff0000;
+}
+
+.modal-btn.cancel {
+    background-color: #444;
+    color: #fff;
+}
+
+.modal-btn.cancel:hover {
+    background-color: #555;
+}
+
 .hint {
     margin-top: 15px;
     font-size: 16px;
@@ -341,14 +373,18 @@ body {
     margin: 18px auto 26px !important;
     text-align: center;
 }
-#authNotLogin, #authLogged {
+
+#authNotLogin,
+#authLogged {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
     flex-wrap: wrap;
 }
-#loginUsername, #loginPassword {
+
+#loginUsername,
+#loginPassword {
     width: 220px;
     max-width: 42vw;
     height: 46px;
@@ -361,10 +397,13 @@ body {
     text-align: center;
     background: var(--input-bg);
 }
-#loginUsername:focus, #loginPassword:focus {
+
+#loginUsername:focus,
+#loginPassword:focus {
     border-color: #ff4444;
     box-shadow: 0 0 8px rgba(255,68,68,0.25);
 }
+
 #authLogged {
     font-size: 22px !important;
     color: var(--text-secondary);
@@ -378,9 +417,13 @@ body {
 }
 
 /* ========= 发帖输入 ========= */
-form { text-align: center; padding: 10px; }
+form {
+    text-align: center;
+    padding: 10px;
+}
 
-.todo, .todo_new {
+.todo,
+.todo_new {
     width: 90%;
     max-width: 800px;
     height: 120px;
@@ -399,14 +442,31 @@ form { text-align: center; padding: 10px; }
 
 /* 会员输入框边框 */
 @keyframes holo-spectrum {
-    0%   { background-position: 0% 50%; }
-    100% { background-position: 300% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 300% 50%;
+    }
 }
+
 @keyframes holo-scan {
-    0%   { transform: translateX(-60%); opacity: 0; }
-    50%  { opacity: .6; }
-    100% { transform: translateX(60%); opacity: 0; }
+    0% {
+        transform: translateX(-60%);
+        opacity: 0;
+    }
+
+    50% {
+        opacity: .6;
+    }
+
+    100% {
+        transform: translateX(60%);
+        opacity: 0;
+    }
 }
+
 .todo.premium-border,
 .todo_new.premium-border {
     position: relative;
@@ -418,6 +478,7 @@ form { text-align: center; padding: 10px; }
     animation: holo-spectrum 6s ease infinite;
     border-radius: 10px;
 }
+
 .todo.premium-border::after,
 .todo_new.premium-border::after {
     content: "";
@@ -437,57 +498,33 @@ form { text-align: center; padding: 10px; }
     align-items: center;
     margin: 20px auto;
     max-width: 800px;
-    flex-wrap: wrap;
-}
-
-.submit,
-.member-btn {
-    padding: 6px 12px;
-    font-size: 16px;
-    border-radius: 6px;
+    flex-wrap: nowrap;
 }
 
 .submit {
     position: relative;
     overflow: hidden;
     min-width: 90px;
-    max-width: 150px;
+    max-width: 180px;
+    padding: 8px 14px;
+    font-size: 16px;
+    border-radius: 6px;
     background-color: var(--btn-bg);
     color: var(--btn-text);
     border: 2px solid var(--btn-border);
     font-weight: bold;
     cursor: pointer;
     transition: .2s;
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
+    white-space: nowrap;
 }
+
 .submit:hover {
     background-color: var(--btn-hover-bg);
     color: var(--btn-hover-text);
-}
-
-.member-btn {
-    position: relative;
-    overflow: hidden;
-    background: linear-gradient(135deg, #ffde59, #ff9900, #ffde59);
-    border: 2px solid #cc0000;
-    color: #cc0000;
-    font-weight: bold;
-    cursor: pointer;
-    max-width: 180px;
-    transition: .2s;
-}
-.member-btn:hover {
-    background: linear-gradient(135deg, #ff9900, #ff6600, #ff9900);
-    color: #fff;
-    border-color: #ff0000;
-}
-.member-tag {
-    font-size: 12px;
-    display: block;
-    margin-top: 3px;
-    color: #990000;
-    font-weight: normal;
 }
 
 /* 发图按钮 */
@@ -500,10 +537,14 @@ form { text-align: center; padding: 10px; }
     width: 90%;
     max-width: 400px;
 }
+
 .upload-wrapper label {
     cursor: pointer;
 }
-#imageInput { display: none; }
+
+#imageInput {
+    display: none;
+}
 
 .image-upload-btn {
     font-size: 20px !important;
@@ -521,6 +562,7 @@ form { text-align: center; padding: 10px; }
         0 8px 20px rgba(93,62,168,.28);
     transition: all .22s ease;
 }
+
 .image-upload-btn:hover {
     transform: translateY(-2px);
     filter: brightness(1.08);
@@ -528,16 +570,17 @@ form { text-align: center; padding: 10px; }
         inset 0 1px 0 rgba(255,255,255,.45),
         0 12px 28px rgba(93,62,168,.34);
 }
+
 .image-file-name {
     color: var(--text-muted);
     font-size: 14px;
 }
 
-/* 超级会员鎏金按钮 */
+/* 超级会员 + 炫彩背景合并按钮 */
 .super-member-btn {
     position: relative;
     overflow: hidden;
-    min-width: 150px;
+    min-width: 180px;
     padding: 8px 16px;
     border-radius: 999px;
     border: 1px solid rgba(255,255,255,.72);
@@ -555,7 +598,10 @@ form { text-align: center; padding: 10px; }
         0 10px 26px rgba(184,126,26,.36),
         0 0 18px rgba(255,215,106,.35);
     transition: all .22s ease;
+    white-space: nowrap;
+    flex: 0 1 auto;
 }
+
 .super-member-btn:hover {
     transform: translateY(-2px) scale(1.03);
     box-shadow:
@@ -564,13 +610,16 @@ form { text-align: center; padding: 10px; }
         0 14px 34px rgba(184,126,26,.48),
         0 0 26px rgba(255,215,106,.6);
 }
+
 .super-member-tag {
     display: block;
     font-size: 11px;
     font-weight: 700;
     color: rgba(74,37,0,.78);
     margin-top: 2px;
+    white-space: nowrap;
 }
+
 .super-shine {
     position: absolute;
     top: -40%;
@@ -582,18 +631,34 @@ form { text-align: center; padding: 10px; }
     animation: superShine 2.4s linear infinite;
     pointer-events: none;
 }
+
 @keyframes goldFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
+
 @keyframes superShine {
-    0% { left: -70%; }
-    100% { left: 130%; }
+    0% {
+        left: -70%;
+    }
+
+    100% {
+        left: 130%;
+    }
 }
 
 /* 波纹 */
-.submit .ripple, .member-btn .ripple {
+.submit .ripple,
+.member-btn .ripple {
     position: absolute;
     border-radius: 50%;
     background: rgba(255,255,255,.5);
@@ -601,8 +666,12 @@ form { text-align: center; padding: 10px; }
     animation: ripple-animation .6s linear;
     pointer-events: none;
 }
+
 @keyframes ripple-animation {
-    to { transform: scale(4); opacity: 0; }
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
 }
 
 /* ========= 留言卡片 ========= */
@@ -633,12 +702,14 @@ form { text-align: center; padding: 10px; }
     word-wrap: break-word;
     white-space: pre-wrap;
 }
+
 .content img {
     max-width: 100%;
     border-radius: 8px;
     margin: 10px 0;
     display: block;
 }
+
 .date {
     text-align: right;
     padding: 8px 12px;
@@ -667,10 +738,12 @@ form { text-align: center; padding: 10px; }
     cursor: pointer;
     transition: all .2s ease;
 }
+
 .like-btn:hover {
     transform: translateY(-1px);
     filter: brightness(1.05);
 }
+
 .like-btn.liked {
     background: #ff4d6d;
     color: #fff;
@@ -690,16 +763,19 @@ form { text-align: center; padding: 10px; }
     cursor: pointer;
     transition: all .2s ease;
 }
+
 .action-dev-btn:hover {
     transform: translateY(-1px);
     filter: brightness(1.06);
 }
+
 .pin-action {
     color: #7a4b00;
     border-color: rgba(255,190,80,.7);
     background:
         linear-gradient(135deg, rgba(255,232,174,.88), rgba(255,255,255,.45));
 }
+
 .recall-action {
     color: #7d2634;
     border-color: rgba(255,77,109,.45);
@@ -713,6 +789,7 @@ form { text-align: center; padding: 10px; }
     margin: 10px 15px;
     border-radius: 8px;
 }
+
 .reply {
     background-color: var(--bg-reply);
     color: var(--text-main);
@@ -721,36 +798,74 @@ form { text-align: center; padding: 10px; }
     margin-bottom: 8px;
     animation: fadeInUp .4s ease forwards;
 }
+
 .reply-head {
     display: flex;
     align-items: flex-start;
     gap: 10px;
 }
+
 .reply-head-meta {
     flex: 1;
     min-width: 0;
 }
+
 .reply-content {
     white-space: pre-wrap;
     word-wrap: break-word;
     font-size: 24px;
     padding: 5px 0;
 }
+
 .reply-date {
     font-size: 14px;
     color: var(--text-muted);
 }
-.reply-form { padding: 5px; }
+
+.reply-form {
+    display: flex;
+    gap: 8px;
+    padding: 0 12px 12px;
+}
+
+.reply-form input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    outline: none;
+    color: var(--text-main);
+    background: var(--input-bg);
+}
+
+.reply-submit-btn {
+    min-width: 72px;
+    max-width: 90px;
+}
 
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ========= 会员帖彩虹背景 ========= */
 @keyframes plus-rainbow-flow {
-    0%   { background-position: 0% 50%; }
-    100% { background-position: 300% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 300% 50%;
+    }
 }
 
 .message.premium-bg {
@@ -765,18 +880,34 @@ form { text-align: center; padding: 10px; }
     background-size: 300% 100%;
     animation: plus-rainbow-flow 3.5s linear infinite;
 }
+
 .message.premium-bg .content,
 .message.premium-bg .date,
 .message.premium-bg .reply-box,
 .message.premium-bg .reply-form,
-.message.premium-bg .message-head {
+.message.premium-bg .message-head,
+.message.premium-bg .message-actions {
     position: relative;
     background: rgba(255,255,255,.88);
     border-radius: 8px;
 }
-.message.premium-bg .content { margin: 12px; }
-.message.premium-bg .date { margin: 0 12px 12px; }
-.message.premium-bg .message-head { margin: 12px 12px 0; }
+
+.message.premium-bg .content {
+    margin: 12px;
+}
+
+.message.premium-bg .date {
+    margin: 0 12px 12px;
+}
+
+.message.premium-bg .message-head {
+    margin: 12px 12px 0;
+}
+
+.message.premium-bg .message-actions {
+    margin: 0 12px 12px;
+    padding-top: 8px;
+}
 
 .reply.premium-bg {
     position: relative;
@@ -807,7 +938,10 @@ form { text-align: center; padding: 10px; }
     );
     background-size: 300% 100%;
     animation: plus-rainbow-flow 3s linear infinite;
-    box-shadow: 0 0 6px rgba(255,0,0,.9), 0 0 12px rgba(255,153,0,.8), 0 0 18px rgba(0,153,255,.6);
+    box-shadow:
+        0 0 6px rgba(255,0,0,.9),
+        0 0 12px rgba(255,153,0,.8),
+        0 0 18px rgba(0,153,255,.6);
     vertical-align: middle;
 }
 
@@ -821,8 +955,18 @@ form { text-align: center; padding: 10px; }
     border: 2px dashed #ff4444;
     color: #fff;
 }
-.error-message h3 { color: #ff4444; font-size: 28px; margin-bottom: 15px; }
-.error-message p { color: #ccc; font-size: 20px; margin-bottom: 20px; }
+
+.error-message h3 {
+    color: #ff4444;
+    font-size: 28px;
+    margin-bottom: 15px;
+}
+
+.error-message p {
+    color: #ccc;
+    font-size: 20px;
+    margin-bottom: 20px;
+}
 
 .no-messages {
     text-align: center;
@@ -896,6 +1040,7 @@ form { text-align: center; padding: 10px; }
     cursor: pointer;
     z-index: 2;
 }
+
 .coming-soon-close:hover {
     background: rgba(255,255,255,.16);
 }
@@ -988,6 +1133,7 @@ form { text-align: center; padding: 10px; }
         inset 0 1px 0 rgba(255,255,255,.75),
         0 10px 24px rgba(255,145,77,.28);
 }
+
 .coming-soon-ok:hover {
     filter: brightness(1.06);
     transform: translateY(-1px);
@@ -998,65 +1144,88 @@ form { text-align: center; padding: 10px; }
         opacity: 0;
         transform: translateY(10px) scale(.96);
     }
+
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
     }
 }
+
 @keyframes modalSweep {
-    0% { transform: translateX(-80%); }
-    100% { transform: translateX(80%); }
+    0% {
+        transform: translateX(-80%);
+    }
+
+    100% {
+        transform: translateX(80%);
+    }
 }
+
 @keyframes orbitRotate {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
+
 @keyframes progressMove {
-    0% { transform: translateX(-120%); }
-    50% { transform: translateX(90%); }
-    100% { transform: translateX(230%); }
+    0% {
+        transform: translateX(-120%);
+    }
+
+    50% {
+        transform: translateX(90%);
+    }
+
+    100% {
+        transform: translateX(230%);
+    }
 }
 
 /* ========= 移动端 ========= */
 @media (max-width: 768px) {
-    .header {
-        min-height: 190px;
-        padding-top: 18px;
-    }
-
-    .header a { font-size: 28px; }
-
-    .header-top-actions {
-        position: static;
-        justify-content: center;
-        flex-wrap: wrap;
-        margin-bottom: 10px;
-    }
-
-    .brand-title {
-        margin-top: 4px;
-    }
-
-    .status-bar {
-        border-radius: 14px;
-        flex-direction: column;
-        align-items: flex-start;
-        font-size: 12px;
-        margin-top: 14px;
-    }
-
-    .status-right {
+    .top-nav {
+        min-height: 64px;
+        padding: 0 10px;
+        grid-template-columns: auto 1fr auto;
         gap: 8px;
     }
 
-    .portal-btn,
-    .guild-btn {
+    .nav-brand {
+        gap: 5px;
+    }
+
+    .nav-brand-main {
+        font-size: 20px;
+    }
+
+    .nav-brand-sub {
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    .nav-link {
+        padding: 7px 9px;
         font-size: 12px;
-        padding: 6px 10px;
+    }
+
+    .guild-nav-link span {
+        margin-left: 4px;
+        padding-left: 4px;
+        font-size: 10px;
     }
 
     .theme-toggle {
-        font-size: 12px;
-        padding: 6px 10px;
+        font-size: 11px;
+        padding: 7px 9px;
+    }
+
+    .success-toast {
+        font-size: 16px;
+        padding: 12px 16px;
+    }
+
+    .success-toast.show {
+        top: 74px;
     }
 
     .main {
@@ -1064,33 +1233,54 @@ form { text-align: center; padding: 10px; }
         padding: 15px;
         margin: 20px auto;
     }
-    .title { font-size: 28px; }
 
-    .todo, .todo_new {
+    .title {
+        font-size: 28px;
+    }
+
+    .anonymous-info {
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    .todo,
+    .todo_new {
         width: 95%;
         height: 100px;
         font-size: 18px;
     }
 
     .button-group {
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
+        justify-content: center;
+        flex-wrap: nowrap;
         gap: 8px;
+        width: 100%;
+        max-width: 100%;
+        overflow: visible;
     }
 
-    .submit, .member-btn {
-        width: auto;
+    .button-group .submit {
+        flex: 0 0 auto;
+        min-width: 88px;
         max-width: none;
-        padding: 6px 12px;
+        padding: 8px 12px;
         font-size: 14px;
-        border-radius: 6px;
+        white-space: nowrap;
     }
-    .member-tag { font-size: 11px; margin-top: 2px; }
 
-    .super-member-btn {
-        min-width: 145px;
+    .button-group .super-member-btn {
+        flex: 0 1 auto;
+        min-width: 150px;
+        max-width: calc(100vw - 150px);
+        padding: 8px 12px;
         font-size: 14px;
-        padding: 8px 14px;
+        white-space: nowrap;
+    }
+
+    .super-member-tag {
+        font-size: 10px;
     }
 
     .image-upload-btn {
@@ -1098,27 +1288,50 @@ form { text-align: center; padding: 10px; }
         padding: 9px 16px !important;
     }
 
-    .content { font-size: 20px; padding: 12px; }
-    .date { font-size: 16px; padding: 6px 8px; }
-    .reply-content { font-size: 18px; }
-    .reply-date { font-size: 12px; }
+    .content {
+        font-size: 20px;
+        padding: 12px;
+    }
 
-    #authNotLogin, #authLogged {
-        flex-direction: column;
-        gap: 10px;
+    .date {
+        font-size: 16px;
+        padding: 6px 8px;
+        text-align: left;
     }
-    #loginUsername, #loginPassword {
-        width: 88vw;
-        max-width: 360px;
-        height: 44px;
-        font-size: 17px;
+
+    .reply-content {
+        font-size: 18px;
     }
-    #authPanel .submit {
+
+    .reply-date {
+        font-size: 12px;
+    }
+
+    #authNotLogin,
+    #authLogged {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    #loginUsername,
+    #loginPassword {
+        width: 40vw;
+        max-width: 170px;
         min-width: 130px;
-        padding: 9px 18px;
+        height: 42px;
         font-size: 16px;
     }
-    #authLogged { font-size: 18px !important; }
+
+    #authPanel .submit {
+        min-width: 72px;
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    #authLogged {
+        font-size: 17px !important;
+    }
 
     .plus-badge {
         font-size: 12px;
@@ -1135,11 +1348,108 @@ form { text-align: center; padding: 10px; }
         font-size: 13px;
     }
 
+    .reply-form {
+        gap: 6px;
+        padding: 0 10px 10px;
+    }
+
+    .reply-form input {
+        font-size: 15px;
+    }
+
+    .reply-submit-btn {
+        min-width: 62px;
+    }
+
     .coming-soon-card h3 {
         font-size: 26px;
     }
 
     .coming-soon-card p {
+        font-size: 16px;
+    }
+}
+
+/* 超小屏优化，保证按钮不丑叠 */
+@media (max-width: 420px) {
+    .top-nav {
+        grid-template-columns: auto 1fr auto;
+        padding: 0 8px;
+        gap: 6px;
+    }
+
+    .nav-brand-main {
+        font-size: 18px;
+    }
+
+    .nav-brand-sub {
+        display: none;
+    }
+
+    .guild-nav-link {
+        padding: 7px 8px;
+        font-size: 12px;
+    }
+
+    .guild-nav-link span {
+        display: none;
+    }
+
+    .theme-toggle {
+        font-size: 0;
+        width: 38px;
+        height: 34px;
+        padding: 0;
+    }
+
+    .theme-toggle::before {
+        content: "🌙";
+        font-size: 16px;
+    }
+
+    [data-theme="dark"] .theme-toggle::before {
+        content: "🎨";
+    }
+
+    .button-group {
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+
+    .button-group .submit {
+        min-width: 82px;
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .button-group .super-member-btn {
+        min-width: 142px;
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .super-member-tag {
+        font-size: 9px;
+    }
+
+    .modal-content {
+        padding: 24px 18px;
+    }
+
+    .modal-content h3 {
+        font-size: 24px;
+    }
+
+    .modal-content p {
+        font-size: 16px;
+    }
+
+    .modal-buttons {
+        gap: 10px;
+    }
+
+    .modal-btn {
+        padding: 10px 18px;
         font-size: 16px;
     }
 }
