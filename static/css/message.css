@@ -76,7 +76,7 @@ body {
     text-align: center;
     background-color: var(--header-bg);
     position: relative;
-    min-height: 110px;
+    min-height: 150px;
 }
 
 .header a {
@@ -87,80 +87,119 @@ body {
 }
 .header a:hover { color: #fff; }
 
-/* 右上角头像 */
-.avatar-box {
+/* ========= 顶部高级按钮与运行状态 ========= */
+.header-top-actions {
     position: absolute;
-    top: 14px;
-    right: 170px;
+    top: 18px;
+    right: 20px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    z-index: 3;
+    gap: 10px;
+    z-index: 5;
 }
 
-.avatar-upload-tip {
-    font-size: 12px;
-    color: #fff5d6;
-    font-weight: bold;
-    letter-spacing: .5px;
-    text-shadow: 0 2px 6px rgba(0,0,0,.35);
-    background: rgba(0,0,0,.18);
-    padding: 3px 8px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,.2);
-}
-
-.avatar-label {
-    position: relative;
+.brand-title {
     display: inline-block;
+    margin-top: 18px;
+}
+
+.portal-btn,
+.guild-btn {
+    border: 1px solid rgba(255,255,255,.45);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 800;
     cursor: pointer;
+    transition: all .22s ease;
+    white-space: nowrap;
 }
 
-.my-avatar {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    object-fit: cover;
-    display: block;
-    border: 3px solid #fff;
+.portal-btn {
+    color: #fff7dc;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.05)),
+        linear-gradient(135deg, #4b2a8f, #241344);
     box-shadow:
-        0 0 0 4px rgba(255,145,77,.45),
-        0 10px 24px rgba(0,0,0,.28);
-    background: #fff;
-    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+        inset 0 1px 0 rgba(255,255,255,.28),
+        0 8px 20px rgba(0,0,0,.24);
 }
 
-.avatar-label:hover .my-avatar {
-    transform: scale(1.06);
-    filter: brightness(1.04);
+.portal-btn:hover {
+    transform: translateY(-2px);
     box-shadow:
-        0 0 0 5px rgba(255,145,77,.6),
-        0 12px 28px rgba(0,0,0,.35);
+        inset 0 1px 0 rgba(255,255,255,.35),
+        0 12px 28px rgba(0,0,0,.32);
 }
 
-.avatar-online-dot {
-    position: absolute;
-    right: 4px;
-    bottom: 4px;
-    width: 16px;
-    height: 16px;
+.guild-btn {
+    color: #efe8ff;
+    background:
+        radial-gradient(circle at top left, rgba(255,255,255,.32), transparent 34%),
+        linear-gradient(135deg, #16162a, #5d3ea8 50%, #1f123a);
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,.16),
+        0 10px 26px rgba(93,62,168,.38);
+    letter-spacing: .5px;
+}
+
+.guild-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    filter: brightness(1.1);
+}
+
+.status-bar {
+    width: min(92%, 980px);
+    margin: 18px auto 0;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.18);
+    border: 1px solid rgba(255,255,255,.18);
+    color: rgba(255,255,255,.9);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    backdrop-filter: blur(6px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+.status-left,
+.status-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.status-dot {
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
-    background: #31d158;
-    border: 2px solid #fff;
-    box-shadow: 0 0 10px rgba(49,209,88,.7);
+    background: #32d74b;
+    box-shadow: 0 0 0 4px rgba(50,215,75,.16), 0 0 14px rgba(50,215,75,.9);
+    animation: statusPulse 1.8s ease infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(.78);
+        opacity: .65;
+    }
 }
 
 /* 主题按钮 */
 .theme-toggle {
-    position: absolute;
-    top: 24px;
-    right: 20px;
     background: var(--toggle-bg);
     color: var(--toggle-text);
     border: 1px solid var(--btn-border);
-    padding: 6px 12px;
-    border-radius: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
@@ -338,15 +377,6 @@ body {
     gap: 8px;
 }
 
-.inline-user-avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--border-color);
-    background: #fff;
-}
-
 /* ========= 发帖输入 ========= */
 form { text-align: center; padding: 10px; }
 
@@ -407,6 +437,7 @@ form { text-align: center; padding: 10px; }
     align-items: center;
     margin: 20px auto;
     max-width: 800px;
+    flex-wrap: wrap;
 }
 
 .submit,
@@ -459,6 +490,108 @@ form { text-align: center; padding: 10px; }
     font-weight: normal;
 }
 
+/* 发图按钮 */
+.upload-wrapper {
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 90%;
+    max-width: 400px;
+}
+.upload-wrapper label {
+    cursor: pointer;
+}
+#imageInput { display: none; }
+
+.image-upload-btn {
+    font-size: 20px !important;
+    color: #fff !important;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 10px 20px !important;
+    border: none !important;
+    border-radius: 999px !important;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.04)),
+        linear-gradient(135deg, #ff914d, #5d3ea8) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.35),
+        0 8px 20px rgba(93,62,168,.28);
+    transition: all .22s ease;
+}
+.image-upload-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.45),
+        0 12px 28px rgba(93,62,168,.34);
+}
+.image-file-name {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* 超级会员鎏金按钮 */
+.super-member-btn {
+    position: relative;
+    overflow: hidden;
+    min-width: 150px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.72);
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 900;
+    color: #4a2500;
+    background:
+        linear-gradient(135deg, #fff7c2 0%, #ffd76a 20%, #b7791f 42%, #fff1a8 58%, #d89b22 76%, #fff8d5 100%);
+    background-size: 220% 220%;
+    animation: goldFlow 3.2s ease infinite;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.8),
+        inset 0 -2px 0 rgba(94,49,0,.22),
+        0 10px 26px rgba(184,126,26,.36),
+        0 0 18px rgba(255,215,106,.35);
+    transition: all .22s ease;
+}
+.super-member-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.9),
+        inset 0 -2px 0 rgba(94,49,0,.25),
+        0 14px 34px rgba(184,126,26,.48),
+        0 0 26px rgba(255,215,106,.6);
+}
+.super-member-tag {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(74,37,0,.78);
+    margin-top: 2px;
+}
+.super-shine {
+    position: absolute;
+    top: -40%;
+    left: -70%;
+    width: 46%;
+    height: 180%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
+    transform: rotate(24deg);
+    animation: superShine 2.4s linear infinite;
+    pointer-events: none;
+}
+@keyframes goldFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@keyframes superShine {
+    0% { left: -70%; }
+    100% { left: 130%; }
+}
+
 /* 波纹 */
 .submit .ripple, .member-btn .ripple {
     position: absolute;
@@ -489,16 +622,6 @@ form { text-align: center; padding: 10px; }
     padding: 12px 14px 0;
 }
 
-.message-avatar {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--border-color);
-    background: #fff;
-    flex: 0 0 auto;
-}
-
 .message-head-meta {
     min-width: 0;
     flex: 1;
@@ -524,12 +647,16 @@ form { text-align: center; padding: 10px; }
     font-weight: bold;
 }
 
-/* 点赞区 */
+/* 点赞区 + 开发中按钮 */
 .message-actions {
     padding: 0 12px 10px;
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
 }
+
 .like-btn {
     border: 1px solid var(--border-color);
     background: var(--bg-reply);
@@ -550,6 +677,36 @@ form { text-align: center; padding: 10px; }
     border-color: #ff4d6d;
 }
 
+.action-dev-btn {
+    border: 1px solid var(--border-color);
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.7), rgba(255,255,255,.22)),
+        var(--bg-reply);
+    color: var(--text-main);
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+.action-dev-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+}
+.pin-action {
+    color: #7a4b00;
+    border-color: rgba(255,190,80,.7);
+    background:
+        linear-gradient(135deg, rgba(255,232,174,.88), rgba(255,255,255,.45));
+}
+.recall-action {
+    color: #7d2634;
+    border-color: rgba(255,77,109,.45);
+    background:
+        linear-gradient(135deg, rgba(255,220,226,.88), rgba(255,255,255,.45));
+}
+
 .reply-box {
     background-color: var(--bg-reply-box);
     padding: 10px;
@@ -568,15 +725,6 @@ form { text-align: center; padding: 10px; }
     display: flex;
     align-items: flex-start;
     gap: 10px;
-}
-.reply-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--border-color);
-    background: #fff;
-    flex: 0 0 auto;
 }
 .reply-head-meta {
     flex: 1;
@@ -663,27 +811,7 @@ form { text-align: center; padding: 10px; }
     vertical-align: middle;
 }
 
-/* ========= 其他 ========= */
-.upload-wrapper {
-    margin: 20px auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    width: 90%;
-    max-width: 400px;
-}
-.upload-wrapper label {
-    font-size: 24px;
-    color: #ff4444;
-    cursor: pointer;
-    font-weight: bold;
-    padding: 10px 20px;
-    border: 2px dashed #ff4444;
-    border-radius: 8px;
-}
-#imageInput { display: none; }
-
+/* ========= 错误/空状态 ========= */
 .error-message {
     text-align: center;
     padding: 40px;
@@ -707,35 +835,228 @@ form { text-align: center; padding: 10px; }
     border: 2px dashed var(--border-color);
 }
 
+/* ========= 统一开发中浮窗 ========= */
+.coming-soon-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255,145,77,.22), transparent 32%),
+        radial-gradient(circle at 80% 18%, rgba(93,62,168,.28), transparent 34%),
+        rgba(8, 7, 18, .72);
+    backdrop-filter: blur(10px);
+}
+
+.coming-soon-card {
+    position: relative;
+    width: min(92vw, 440px);
+    padding: 34px 26px 28px;
+    border-radius: 22px;
+    text-align: center;
+    color: #fff;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.06)),
+        linear-gradient(135deg, rgba(48,31,88,.92), rgba(20,16,36,.96));
+    border: 1px solid rgba(255,255,255,.22);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.22),
+        0 30px 80px rgba(0,0,0,.46),
+        0 0 40px rgba(255,145,77,.18);
+    overflow: hidden;
+    animation: modalPop .24s ease;
+}
+
+.coming-soon-card::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    background:
+        linear-gradient(120deg, transparent, rgba(255,214,120,.28), transparent);
+    transform: translateX(-80%);
+    animation: modalSweep 3s linear infinite;
+    pointer-events: none;
+}
+
+.coming-soon-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.24);
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+}
+.coming-soon-close:hover {
+    background: rgba(255,255,255,.16);
+}
+
+.coming-soon-orbit {
+    width: 86px;
+    height: 86px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background:
+        conic-gradient(from 0deg, #ff914d, #ffd76a, #5d3ea8, #9a7cff, #ff914d);
+    animation: orbitRotate 4s linear infinite;
+    box-shadow:
+        0 0 24px rgba(255,145,77,.46),
+        0 0 42px rgba(93,62,168,.34);
+}
+
+.coming-soon-core {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(14,10,29,.92);
+    color: #ffd76a;
+    font-size: 34px;
+    font-weight: 900;
+    border: 1px solid rgba(255,255,255,.18);
+}
+
+.coming-soon-kicker {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 8px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,.62);
+    font-weight: 800;
+}
+
+.coming-soon-card h3 {
+    position: relative;
+    z-index: 1;
+    font-size: 30px;
+    margin-bottom: 10px;
+    color: #fff4c2;
+}
+
+.coming-soon-card p {
+    position: relative;
+    z-index: 1;
+    font-size: 18px;
+    color: rgba(255,255,255,.84);
+    margin-bottom: 22px;
+}
+
+.coming-soon-progress {
+    position: relative;
+    z-index: 1;
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255,255,255,.12);
+    margin: 0 auto 22px;
+}
+
+.coming-soon-progress span {
+    display: block;
+    width: 42%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ff914d, #ffd76a, #9a7cff);
+    animation: progressMove 1.8s ease-in-out infinite;
+}
+
+.coming-soon-ok {
+    position: relative;
+    z-index: 1;
+    border: none;
+    border-radius: 999px;
+    padding: 10px 24px;
+    font-size: 16px;
+    font-weight: 900;
+    color: #321b00;
+    cursor: pointer;
+    background: linear-gradient(135deg, #fff4bf, #ffbd59, #ffd76a);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.75),
+        0 10px 24px rgba(255,145,77,.28);
+}
+.coming-soon-ok:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+}
+
+@keyframes modalPop {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes modalSweep {
+    0% { transform: translateX(-80%); }
+    100% { transform: translateX(80%); }
+}
+@keyframes orbitRotate {
+    to { transform: rotate(360deg); }
+}
+@keyframes progressMove {
+    0% { transform: translateX(-120%); }
+    50% { transform: translateX(90%); }
+    100% { transform: translateX(230%); }
+}
+
 /* ========= 移动端 ========= */
 @media (max-width: 768px) {
     .header {
-        min-height: 130px;
+        min-height: 190px;
         padding-top: 18px;
     }
 
     .header a { font-size: 28px; }
 
-    .avatar-box {
-        top: 56px;
-        right: 12px;
+    .header-top-actions {
+        position: static;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
     }
 
-    .my-avatar {
-        width: 58px;
-        height: 58px;
+    .brand-title {
+        margin-top: 4px;
     }
 
-    .avatar-upload-tip {
-        font-size: 11px;
-        padding: 2px 6px;
+    .status-bar {
+        border-radius: 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        font-size: 12px;
+        margin-top: 14px;
+    }
+
+    .status-right {
+        gap: 8px;
+    }
+
+    .portal-btn,
+    .guild-btn {
+        font-size: 12px;
+        padding: 6px 10px;
     }
 
     .theme-toggle {
-        top: 14px;
-        right: 12px;
         font-size: 12px;
-        padding: 5px 10px;
+        padding: 6px 10px;
     }
 
     .main {
@@ -766,6 +1087,17 @@ form { text-align: center; padding: 10px; }
     }
     .member-tag { font-size: 11px; margin-top: 2px; }
 
+    .super-member-btn {
+        min-width: 145px;
+        font-size: 14px;
+        padding: 8px 14px;
+    }
+
+    .image-upload-btn {
+        font-size: 16px !important;
+        padding: 9px 16px !important;
+    }
+
     .content { font-size: 20px; padding: 12px; }
     .date { font-size: 16px; padding: 6px 8px; }
     .reply-content { font-size: 18px; }
@@ -793,18 +1125,21 @@ form { text-align: center; padding: 10px; }
         padding: 2px 6px;
     }
 
-    .message-avatar {
-        width: 42px;
-        height: 42px;
+    .message-actions {
+        justify-content: flex-end;
+        flex-wrap: wrap;
     }
 
-    .reply-avatar {
-        width: 30px;
-        height: 30px;
+    .action-dev-btn,
+    .like-btn {
+        font-size: 13px;
     }
 
-    .inline-user-avatar {
-        width: 28px;
-        height: 28px;
+    .coming-soon-card h3 {
+        font-size: 26px;
+    }
+
+    .coming-soon-card p {
+        font-size: 16px;
     }
 }
