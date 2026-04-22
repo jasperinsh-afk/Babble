@@ -122,6 +122,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- 红屏预留页 -->
     <div id="emergencyOverlay" class="emergency-overlay">
@@ -158,49 +159,40 @@
         </div>
     </div>
 
-    <div class="header">
-        <div class="header-top-actions">
-            <button class="portal-btn" type="button" onclick="showComingSoon('匿语阁门户')">
-                🏛 匿语阁门户
-            </button>
+    <!-- 顶部导航栏 -->
+    <nav class="top-nav">
+        <a href="/message" class="nav-brand">
+            <span class="nav-brand-main">匿语阁</span>
+            <span class="nav-brand-sub">BABBLE</span>
+        </a>
 
-            <button class="guild-btn" type="button" onclick="showComingSoon('匿语荟')">
+        <div class="nav-center">
+            <button class="nav-link guild-nav-link" type="button" onclick="showComingSoon('匿语荟 · 交流新方式')">
                 ✦ 匿语荟
+                <span>交流新方式</span>
             </button>
-
-            <button id="themeToggle" class="theme-toggle">🌙 暗色主题</button>
         </div>
 
-        <a href="/message" class="brand-title">匿语阁 | BABBLE</a>
-
-        <div class="status-bar">
-            <div class="status-left">
-                <span class="status-dot"></span>
-                <span>运行状态：稳定运行中</span>
-            </div>
-            <div class="status-right">
-                <span>节点：BABBLE-CN-01</span>
-                <span>延迟：24ms</span>
-                <span>版本：Beta</span>
-            </div>
+        <div class="nav-actions">
+            <button id="themeToggle" class="theme-toggle" type="button">🌙 暗色主题</button>
         </div>
-    </div>
+    </nav>
 
     <!-- 顶部提示 -->
     <div id="toast" class="success-toast">
         <span id="toastText">发送成功</span>
-        <button class="close-btn" onclick="hideToast()">×</button>
+        <button class="close-btn" type="button" onclick="hideToast()">×</button>
     </div>
 
     <!-- 会员码弹窗 -->
     <div id="memberModal" class="member-modal">
         <div class="modal-content">
-            <h3>会员验证</h3>
-            <p>输入会员码可发布炫彩会员帖</p>
+            <h3>超级会员验证</h3>
+            <p>输入会员码后可发布炫彩背景会员帖</p>
             <input type="text" id="memberCodeInput" placeholder="请输入会员码">
             <div class="modal-buttons">
-                <button class="modal-btn confirm" onclick="confirmMemberCode()">确认</button>
-                <button class="modal-btn cancel" onclick="closeMemberModal()">取消</button>
+                <button class="modal-btn confirm" type="button" onclick="confirmMemberCode()">确认</button>
+                <button class="modal-btn cancel" type="button" onclick="closeMemberModal()">取消</button>
             </div>
             <div class="hint">提示：会员码区分大小写已关闭（自动转大写）</div>
         </div>
@@ -234,18 +226,8 @@
         </div>
 
         <!-- 匿名发帖说明 -->
-        <div class="anonymous-info" style="
-            background-color: var(--bg-message);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
-            margin: 15px auto;
-            max-width: 800px;
-            text-align: center;
-            font-size: 16px;
-            color: var(--text-secondary);
-        ">
-            💬 无需登录即可匿名发帖，系统将为您生成随机昵称
+        <div class="anonymous-info">
+            💬 需完成超级会员验证后发布，系统将为您生成随机昵称
         </div>
 
         <!-- 发帖表单 -->
@@ -253,7 +235,7 @@
             <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
 
             <div class="upload-wrapper">
-                <label for="imageInput" class="image-upload-btn">📷 上传图片（可选）</label>
+                <label for="imageInput" class="image-upload-btn">📷 上传图片</label>
                 <input id="imageInput" type="file" name="image" accept="image/*">
                 <div id="imageFileName" class="image-file-name">未选择图片</div>
             </div>
@@ -261,17 +243,12 @@
             <input type="hidden" name="member_code" id="memberCodeHidden" value="">
 
             <div class="button-group">
-                <button class="submit" type="submit">匿名发帖</button>
+                <button class="submit main-submit-btn" type="submit">匿名发帖</button>
 
-                <button class="super-member-btn" type="button" onclick="showComingSoon('超级会员')">
+                <button class="super-member-btn" type="button" onclick="openMemberModal()">
                     <span class="super-shine"></span>
                     👑 超级会员
-                    <span class="super-member-tag">鎏金特权</span>
-                </button>
-
-                <button class="member-btn" type="button" onclick="openMemberModal()">
-                    炫彩背景
-                    <span class="member-tag">会员专享</span>
+                    <span class="super-member-tag">炫彩背景 · 会员专享</span>
                 </button>
             </div>
         </form>
@@ -338,9 +315,11 @@ function showToast(msg) {
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 1800);
 }
+
 function hideToast() {
     document.getElementById('toast').classList.remove('show');
 }
+
 function esc(s='') {
     return String(s).replace(/[&<>"']/g, c => (
         {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
@@ -351,16 +330,29 @@ function esc(s='') {
 function openMemberModal() {
     if (emergencyBlocked()) return;
     document.getElementById('memberModal').style.display = 'flex';
+    const input = document.getElementById('memberCodeInput');
+    if (input) {
+        setTimeout(() => input.focus(), 50);
+    }
 }
+
 function closeMemberModal() {
     document.getElementById('memberModal').style.display = 'none';
 }
+
 function confirmMemberCode() {
     if (emergencyBlocked()) return;
+
     const code = (document.getElementById('memberCodeInput').value || '').trim().toUpperCase();
+
+    if (!code) {
+        alert('请输入会员码');
+        return;
+    }
+
     document.getElementById('memberCodeHidden').value = code;
     closeMemberModal();
-    if (code) showToast('会员码已设置');
+    showToast('超级会员验证已设置');
 }
 
 // ========== 登录态 ==========
@@ -390,8 +382,10 @@ async function refreshMe() {
 
 async function doRegister() {
     if (emergencyBlocked()) return;
+
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
+
     if (!username || !password) return alert('请输入用户名和密码');
 
     const fd = new FormData();
@@ -400,6 +394,7 @@ async function doRegister() {
 
     const res = await fetch('/register', { method: 'POST', body: fd });
     const data = await res.json();
+
     if (data.status === 'ok') {
         showToast('注册成功，请登录');
     } else {
@@ -409,8 +404,10 @@ async function doRegister() {
 
 async function doLogin() {
     if (emergencyBlocked()) return;
+
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
+
     if (!username || !password) return alert('请输入用户名和密码');
 
     const fd = new FormData();
@@ -419,6 +416,7 @@ async function doLogin() {
 
     const res = await fetch('/login', { method: 'POST', body: fd });
     const data = await res.json();
+
     if (data.status === 'ok') {
         showToast('登录成功');
         await refreshMe();
@@ -430,8 +428,10 @@ async function doLogin() {
 
 async function doLogout() {
     if (emergencyBlocked()) return;
+
     const res = await fetch('/logout', { method: 'POST' });
     const data = await res.json();
+
     if (data.status === 'ok') {
         showToast('已退出');
         await refreshMe();
@@ -441,6 +441,7 @@ async function doLogout() {
 
 async function doChangeUsername() {
     if (emergencyBlocked()) return;
+
     const newName = prompt('请输入新用户名（2-30字）：');
     if (!newName) return;
 
@@ -461,6 +462,7 @@ async function doChangeUsername() {
 
 async function doDeleteAccount() {
     if (emergencyBlocked()) return;
+
     const ok = confirm('确认注销账号？此操作不可恢复。');
     if (!ok) return;
 
@@ -479,12 +481,21 @@ async function doDeleteAccount() {
 // ========== 发帖 ==========
 document.getElementById('mainForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+
     if (emergencyBlocked()) return;
+
+    const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
+    if (!memberCode) {
+        openMemberModal();
+        alert('请先完成超级会员验证后再发布');
+        return;
+    }
 
     const fd = new FormData(this);
 
-    const submitBtn = this.querySelector('.submit');
+    const submitBtn = this.querySelector('.main-submit-btn');
     const originalText = submitBtn.textContent;
+
     submitBtn.textContent = '发送中...';
     submitBtn.disabled = true;
 
@@ -500,9 +511,12 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
         if (data.status === 'ok') {
             this.reset();
             document.getElementById('memberCodeHidden').value = '';
+            document.getElementById('memberCodeInput').value = '';
+
             const nameBox = document.getElementById('imageFileName');
             if (nameBox) nameBox.innerText = '未选择图片';
-            showToast('发送成功！系统已为您生成随机昵称');
+
+            showToast('发送成功！已发布炫彩会员帖');
             await loadMessages();
         } else {
             alert('❌ ' + (data.message || '发送失败'));
@@ -517,6 +531,7 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
 // ========== 点赞 ==========
 async function toggleLike(messageId, btnEl) {
     if (emergencyBlocked()) return;
+
     const fd = new FormData();
     fd.append('message_id', String(messageId));
 
@@ -527,6 +542,7 @@ async function toggleLike(messageId, btnEl) {
     if (data.status !== 'ok') return alert('❌ ' + (data.message || '点赞失败'));
 
     btnEl.classList.toggle('liked', !!data.liked);
+
     const c = btnEl.querySelector('.like-count');
     if (c) c.innerText = Number(data.like_count || 0);
 }
@@ -534,8 +550,10 @@ async function toggleLike(messageId, btnEl) {
 // ========== 回复 ==========
 async function submitReply(messageId) {
     if (emergencyBlocked()) return;
+
     const input = document.getElementById('reply_input_' + messageId);
     const content = input.value.trim();
+
     if (!content) return alert('回复内容不能为空');
 
     const fd = new FormData();
@@ -544,6 +562,7 @@ async function submitReply(messageId) {
 
     const replyBtn = input.nextElementSibling;
     const originalText = replyBtn.textContent;
+
     replyBtn.textContent = '回复中...';
     replyBtn.disabled = true;
 
@@ -584,6 +603,7 @@ async function loadMessages() {
     }
 
     const list = data.messages || [];
+
     if (!list.length) {
         container.innerHTML = `<div class="no-messages">还没有留言，快来发布第一条吧～</div>`;
         return;
@@ -591,8 +611,11 @@ async function loadMessages() {
 
     container.innerHTML = list.map(m => {
         const premiumCls = Number(m.is_premium) ? 'premium-bg' : '';
+        const premiumBadge = Number(m.is_premium) ? '<span class="plus-badge">超级会员</span>' : '';
+
         const contentHtml = m.content ? `<div class="content">${esc(m.content)}</div>` : '';
-        const imageHtml = m.image_path ? `<div class="content"><img src="${m.image_path}" alt="img"></div>` : '';
+        const imageHtml = m.image_path ? `<div class="content"><img src="${esc(m.image_path)}" alt="img"></div>` : '';
+
         const likeCount = Number(m.like_count || 0);
         const likedCls = m.liked_by_me ? 'liked' : '';
 
@@ -611,7 +634,7 @@ async function loadMessages() {
             <div class="message ${premiumCls}">
                 <div class="message-head">
                     <div class="message-head-meta">
-                        <div class="date">#${m.id} · ${esc(m.username || '匿名')} · ${esc(m.date || '')}</div>
+                        <div class="date">#${m.id} · ${esc(m.username || '匿名')} ${premiumBadge} · ${esc(m.date || '')}</div>
                     </div>
                 </div>
 
@@ -636,10 +659,9 @@ async function loadMessages() {
                     ${replies || '<div style="color:#777;">暂无回复</div>'}
                 </div>
 
-                <div class="reply-form" style="display:flex; gap:8px; padding:0 12px 12px;">
-                    <input id="reply_input_${m.id}" type="text" placeholder="写下回复..."
-                        style="flex:1; padding:8px; font-size:16px; border:1px solid #ccc; border-radius:6px;">
-                    <button class="submit" type="button" onclick="submitReply(${m.id})">回复</button>
+                <div class="reply-form">
+                    <input id="reply_input_${m.id}" type="text" placeholder="写下回复...">
+                    <button class="submit reply-submit-btn" type="button" onclick="submitReply(${m.id})">回复</button>
                 </div>
             </div>
         `;
@@ -652,14 +674,18 @@ function initTheme() {
     document.documentElement.setAttribute('data-theme', saved);
     syncThemeBtnText(saved);
 }
+
 function syncThemeBtnText(theme) {
     const btn = document.getElementById('themeToggle');
-    btn.innerText = theme === 'dark' ? '🎨 原本主题（紫橙）' : '🌙 暗色主题';
+    btn.innerText = theme === 'dark' ? '🎨 原本主题' : '🌙 暗色主题';
 }
+
 function toggleTheme() {
     if (emergencyBlocked()) return;
+
     const current = document.documentElement.getAttribute('data-theme');
     const next = current === 'dark' ? 'light' : 'dark';
+
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
     syncThemeBtnText(next);
@@ -667,17 +693,20 @@ function toggleTheme() {
 
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
+// 图片文件名显示
 const imageInput = document.getElementById('imageInput');
 if (imageInput) {
     imageInput.addEventListener('change', function () {
         const file = this.files && this.files[0];
         const nameBox = document.getElementById('imageFileName');
+
         if (nameBox) {
             nameBox.innerText = file ? `已选择：${file.name}` : '未选择图片';
         }
     });
 }
 
+// 点击遮罩关闭弹窗
 window.addEventListener('click', function(e) {
     const memberModal = document.getElementById('memberModal');
     const comingSoonModal = document.getElementById('comingSoonModal');
@@ -685,8 +714,16 @@ window.addEventListener('click', function(e) {
     if (e.target === memberModal) {
         closeMemberModal();
     }
+
     if (e.target === comingSoonModal) {
         closeComingSoon();
+    }
+});
+
+// 回车确认会员码
+document.getElementById('memberCodeInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        confirmMemberCode();
     }
 });
 
