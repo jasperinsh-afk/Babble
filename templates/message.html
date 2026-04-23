@@ -8,123 +8,27 @@
 
     <style>
         .emergency-overlay{
-            position: fixed;
-            inset: 0;
-            z-index: 999999;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
+            position: fixed; inset: 0; z-index: 999999; display: none;
+            align-items: center; justify-content: center; padding: 24px;
             background:
                 radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 35%),
                 linear-gradient(135deg, #2b0000 0%, #7a0000 45%, #d10000 100%);
             overflow: hidden;
         }
-
-        .emergency-overlay::before,
-        .emergency-overlay::after{
-            content: "";
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
-
-        .emergency-overlay::before{
-            background:
-                repeating-linear-gradient(
-                    180deg,
-                    rgba(255,255,255,0.03) 0px,
-                    rgba(255,255,255,0.03) 2px,
-                    transparent 2px,
-                    transparent 6px
-                );
-            mix-blend-mode: overlay;
-            opacity: 0.35;
-        }
-
-        .emergency-overlay::after{
-            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.35) 100%);
-        }
-
         .emergency-panel{
-            position: relative;
-            z-index: 2;
-            width: min(92vw, 760px);
-            padding: 40px 28px;
-            border: 1px solid rgba(255,255,255,0.18);
-            background: rgba(0,0,0,0.45);
-            backdrop-filter: blur(6px);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
-            color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-                         "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            position: relative; z-index: 2; width: min(92vw, 760px); padding: 40px 28px;
+            border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(6px); color: #fff;
         }
-
-        .emergency-tag{
-            display: inline-block;
-            margin-bottom: 18px;
-            padding: 6px 12px;
-            border: 1px solid rgba(255,255,255,0.22);
-            font-size: 12px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.82);
-            background: rgba(255,255,255,0.06);
-        }
-
-        .emergency-title{
-            margin: 0 0 18px;
-            font-size: clamp(34px, 7vw, 64px);
-            font-weight: 900;
-            line-height: 1.06;
-            letter-spacing: 1px;
-            color: #fff;
-        }
-
-        .emergency-divider{
-            width: 100%;
-            height: 1px;
-            background: linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.08));
-            margin: 18px 0 26px;
-        }
-
-        .emergency-lines{
-            display: grid;
-            gap: 12px;
-        }
-
-        .emergency-line{
-            font-size: clamp(20px, 3.2vw, 30px);
-            font-weight: 700;
-            color: rgba(255,255,255,0.9);
-            letter-spacing: 1px;
-        }
-
-        .emergency-blink{
-            display: inline-block;
-            color: #ffd6d6;
-            animation: emergencyBlink 1.2s infinite;
-        }
-
-        @keyframes emergencyBlink{
-            0%, 49% { opacity: 1; }
-            50%, 100% { opacity: 0.35; }
-        }
-
-        @media (max-width: 640px){
-            .emergency-panel{
-                padding: 28px 20px;
-            }
-
-            .emergency-line{
-                line-height: 1.4;
-            }
-        }
+        .emergency-tag{display:inline-block;margin-bottom:18px;padding:6px 12px;border:1px solid rgba(255,255,255,0.22);font-size:12px;letter-spacing:2px;color:rgba(255,255,255,0.82);}
+        .emergency-title{margin:0 0 18px;font-size:clamp(34px,7vw,64px);font-weight:900;line-height:1.06;}
+        .emergency-divider{width:100%;height:1px;background:linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.08));margin:18px 0 26px;}
+        .emergency-lines{display:grid;gap:12px;}
+        .emergency-line{font-size:clamp(20px,3.2vw,30px);font-weight:700;color:rgba(255,255,255,0.9);}
     </style>
 </head>
 
 <body>
-    <!-- 红屏预留页 -->
     <div id="emergencyOverlay" class="emergency-overlay">
         <div class="emergency-panel">
             <div class="emergency-tag">EMERGENCY SCREEN / 预留突发情况页</div>
@@ -133,33 +37,21 @@
             <div class="emergency-lines">
                 <div class="emergency-line">服务已终止</div>
                 <div class="emergency-line">我们已介入调查</div>
-                <div class="emergency-line">请稍安勿躁 <span class="emergency-blink">●</span></div>
+                <div class="emergency-line">请稍安勿躁</div>
             </div>
         </div>
     </div>
 
-    <!-- 统一功能开发中浮窗 -->
     <div id="comingSoonModal" class="coming-soon-modal">
         <div class="coming-soon-card">
             <button class="coming-soon-close" type="button" onclick="closeComingSoon()">×</button>
-
-            <div class="coming-soon-orbit">
-                <div class="coming-soon-core">阁</div>
-            </div>
-
             <div class="coming-soon-kicker">BABBLE FEATURE CENTER</div>
             <h3 id="comingSoonTitle">功能开发中</h3>
             <p id="comingSoonText">功能开发中，敬请期待</p>
-
-            <div class="coming-soon-progress">
-                <span></span>
-            </div>
-
             <button class="coming-soon-ok" type="button" onclick="closeComingSoon()">我知道了</button>
         </div>
     </div>
 
-    <!-- 顶部导航栏 -->
     <nav class="top-nav">
         <a href="/message" class="nav-brand">
             <span class="nav-brand-main">匿语阁</span>
@@ -168,8 +60,7 @@
 
         <div class="nav-center">
             <button class="nav-link guild-nav-link" type="button" onclick="showComingSoon('匿语荟 · 交流新方式')">
-                ✦ 匿语荟
-                <span>交流新方式</span>
+                ✦ 匿语荟 <span>交流新方式</span>
             </button>
         </div>
 
@@ -178,30 +69,25 @@
         </div>
     </nav>
 
-    <!-- 顶部提示 -->
     <div id="toast" class="success-toast">
         <span id="toastText">发送成功</span>
         <button class="close-btn" type="button" onclick="hideToast()">×</button>
     </div>
 
-    <!-- 会员码弹窗 -->
     <div id="memberModal" class="member-modal">
         <div class="modal-content">
             <h3>超级会员验证</h3>
-            <p>输入会员码后可发布炫彩背景会员帖</p>
+            <p>输入会员码后可使用会员功能</p>
             <input type="text" id="memberCodeInput" placeholder="请输入会员码">
             <div class="modal-buttons">
                 <button class="modal-btn confirm" type="button" onclick="confirmMemberCode()">确认</button>
                 <button class="modal-btn cancel" type="button" onclick="closeMemberModal()">取消</button>
             </div>
-            <div class="hint">提示：会员码区分大小写已关闭（自动转大写）</div>
+            <div class="hint">提示：会员码自动转大写</div>
         </div>
     </div>
 
     <div class="main" id="mainPage">
-        <!--<h2 class="title">多谢使用匿语阁</h2>-->
-
-        <!-- 登录注册区 -->
         <div id="authPanel">
             <div id="authNotLogin" style="display:none;">
                 <input id="loginUsername" type="text" placeholder="用户名">
@@ -212,32 +98,22 @@
 
             <div id="authLogged" style="display:none;">
                 当前账号：
-                <span class="inline-user-info">
-                    <span id="currentUser" style="font-weight:bold;"></span>
-                </span>
-                <button class="submit" type="button" onclick="doChangeUsername()" style="margin-left:8px;">
-                    修改用户名
-                </button>
-                <button class="submit" type="button" onclick="doDeleteAccount()" style="margin-left:8px; background:#b00020; color:#fff;">
-                    注销账号
-                </button>
-                <button class="submit" type="button" onclick="doLogout()" style="margin-left:8px;">退出</button>
+                <span class="inline-user-info"><span id="currentUser" style="font-weight:bold;"></span></span>
+                <button class="submit" type="button" onclick="doChangeUsername()">修改用户名</button>
+                <button class="submit" type="button" onclick="doDeleteAccount()">注销账号</button>
+                <button class="submit" type="button" onclick="doLogout()">退出</button>
             </div>
         </div>
 
-        <!-- 匿名发帖说明 -->
-        <div class="anonymous-info">
-            💬 无需登录即可匿名发帖；上传图片需完成超级会员验证
-        </div>
+        <div class="anonymous-info">💬 无需登录即可匿名发帖；上传图片需超级会员验证</div>
 
-
-        <!-- 发帖表单 -->
         <form id="mainForm" enctype="multipart/form-data">
             <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
 
             <div class="upload-wrapper">
-                <!--<label for="imageInput" class="image-upload-btn">上传图片 - 会员专享</label>-->
-                <label for="imageInput" class="super-shine">上传图片 - 会员专享</label>
+                <button id="vipUploadBtn" class="image-upload-btn" type="button">
+                    <span class="vip-crown">👑</span>上传图片 - 会员专享
+                </button>
                 <input id="imageInput" type="file" name="image" accept="image/*">
                 <div id="imageFileName" class="image-file-name">未选择图片</div>
             </div>
@@ -246,16 +122,12 @@
 
             <div class="button-group">
                 <button class="submit main-submit-btn" type="submit">匿名发帖</button>
-
-                <button class="super-member-btn" type="button" onclick="openMemberModal()">
-                    <span class="super-shine"></span>
-                    炫彩背景 - 会员专享
-                    <!--<span class="super-member-tag">炫彩背景 - 会员专享</span>-->
+                <button class="submit" type="button" onclick="openMemberModal()">
+                    <span class="vip-crown">👑</span>炫彩背景 - 会员专享
                 </button>
             </div>
         </form>
 
-        <!-- 留言列表 -->
         <div id="listContainer"></div>
     </div>
 
@@ -263,53 +135,33 @@
 const EMERGENCY_MODE = false;
 let me = null;
 
-// ========== 统一开发中浮窗 ==========
 function showComingSoon(featureName = '该功能') {
     if (emergencyBlocked()) return;
-
     const modal = document.getElementById('comingSoonModal');
-    const title = document.getElementById('comingSoonTitle');
-    const text = document.getElementById('comingSoonText');
-
-    if (title) title.innerText = featureName + '开发中';
-    if (text) text.innerText = '功能开发中，敬请期待';
-
-    if (modal) modal.style.display = 'flex';
+    document.getElementById('comingSoonTitle').innerText = featureName + '开发中';
+    document.getElementById('comingSoonText').innerText = '功能开发中，敬请期待';
+    modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
-
 function closeComingSoon() {
-    const modal = document.getElementById('comingSoonModal');
-    if (modal) modal.style.display = 'none';
-
-    if (!isEmergencyMode()) {
-        document.body.style.overflow = '';
-    }
+    document.getElementById('comingSoonModal').style.display = 'none';
+    if (!isEmergencyMode()) document.body.style.overflow = '';
 }
-
-function isEmergencyMode() {
-    return EMERGENCY_MODE === true;
-}
-
+function isEmergencyMode() { return EMERGENCY_MODE === true; }
 function showEmergencyScreen() {
     const overlay = document.getElementById('emergencyOverlay');
     const mainPage = document.getElementById('mainPage');
     const toast = document.getElementById('toast');
-
     if (mainPage) mainPage.style.display = 'none';
     if (toast) toast.style.display = 'none';
     if (overlay) overlay.style.display = 'flex';
-
     document.body.style.overflow = 'hidden';
 }
-
 function emergencyBlocked() {
     if (!isEmergencyMode()) return false;
     showEmergencyScreen();
     return true;
 }
-
-// ========== 通用 ==========
 function showToast(msg) {
     if (isEmergencyMode()) return;
     const t = document.getElementById('toast');
@@ -317,178 +169,133 @@ function showToast(msg) {
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 1800);
 }
-
-function hideToast() {
-    document.getElementById('toast').classList.remove('show');
-}
-
+function hideToast() { document.getElementById('toast').classList.remove('show'); }
 function esc(s='') {
     return String(s).replace(/[&<>"']/g, c => (
         {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
     ));
 }
 
-// ========== 会员弹窗 ==========
+/* 会员弹窗 */
 function openMemberModal() {
     if (emergencyBlocked()) return;
     document.getElementById('memberModal').style.display = 'flex';
     const input = document.getElementById('memberCodeInput');
-    if (input) {
-        setTimeout(() => input.focus(), 50);
-    }
+    setTimeout(() => input && input.focus(), 50);
 }
-
-function closeMemberModal() {
-    document.getElementById('memberModal').style.display = 'none';
-}
-
+function closeMemberModal() { document.getElementById('memberModal').style.display = 'none'; }
 function confirmMemberCode() {
     if (emergencyBlocked()) return;
-
     const code = (document.getElementById('memberCodeInput').value || '').trim().toUpperCase();
-
-    if (!code) {
-        alert('请输入会员码');
-        return;
-    }
-
+    if (!code) return alert('请输入会员码');
     document.getElementById('memberCodeHidden').value = code;
     closeMemberModal();
     showToast('超级会员验证已设置');
 }
 
-// ========== 登录态 ==========
+/* 点击上传图片按钮：先要求会员码，再打开文件选择 */
+document.getElementById('vipUploadBtn').addEventListener('click', () => {
+    if (emergencyBlocked()) return;
+    const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
+    if (!memberCode) {
+        openMemberModal();
+        alert('上传图片前请先完成超级会员验证');
+        return;
+    }
+    document.getElementById('imageInput').click();
+});
+
+/* 登录态 */
 async function refreshMe() {
     if (emergencyBlocked()) return;
-
     const res = await fetch('/me');
     const data = await res.json();
     me = data.logged_in ? data.username : null;
-
     const notLogin = document.getElementById('authNotLogin');
     const logged = document.getElementById('authLogged');
     const currentUser = document.getElementById('currentUser');
-
     if (me) {
         notLogin.style.display = 'none';
         logged.style.display = 'inline-flex';
-        logged.style.alignItems = 'center';
         currentUser.innerText = me;
     } else {
         logged.style.display = 'none';
         notLogin.style.display = 'inline-flex';
-        notLogin.style.gap = '8px';
-        notLogin.style.alignItems = 'center';
     }
 }
-
 async function doRegister() {
     if (emergencyBlocked()) return;
-
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
-
     if (!username || !password) return alert('请输入用户名和密码');
-
     const fd = new FormData();
     fd.append('username', username);
     fd.append('password', password);
-
     const res = await fetch('/register', { method: 'POST', body: fd });
     const data = await res.json();
-
-    if (data.status === 'ok') {
-        showToast('注册成功，请登录');
-    } else {
-        alert('❌ ' + (data.message || '注册失败'));
-    }
+    if (data.status === 'ok') showToast('注册成功，请登录');
+    else alert('❌ ' + (data.message || '注册失败'));
 }
-
 async function doLogin() {
     if (emergencyBlocked()) return;
-
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
-
     if (!username || !password) return alert('请输入用户名和密码');
-
     const fd = new FormData();
     fd.append('username', username);
     fd.append('password', password);
-
     const res = await fetch('/login', { method: 'POST', body: fd });
     const data = await res.json();
-
     if (data.status === 'ok') {
         showToast('登录成功');
         await refreshMe();
         await loadMessages();
-    } else {
-        alert('❌ ' + (data.message || '登录失败'));
-    }
+    } else alert('❌ ' + (data.message || '登录失败'));
 }
-
 async function doLogout() {
     if (emergencyBlocked()) return;
-
     const res = await fetch('/logout', { method: 'POST' });
     const data = await res.json();
-
     if (data.status === 'ok') {
         showToast('已退出');
         await refreshMe();
         await loadMessages();
     }
 }
-
 async function doChangeUsername() {
     if (emergencyBlocked()) return;
-
     const newName = prompt('请输入新用户名（2-30字）：');
     if (!newName) return;
-
     const fd = new FormData();
     fd.append('new_username', newName.trim());
-
     const res = await fetch('/change_username', { method: 'POST', body: fd });
     const data = await res.json();
-
     if (data.status === 'ok') {
         showToast('用户名修改成功');
         await refreshMe();
         await loadMessages();
-    } else {
-        alert('❌ ' + (data.message || '修改失败'));
-    }
+    } else alert('❌ ' + (data.message || '修改失败'));
 }
-
 async function doDeleteAccount() {
     if (emergencyBlocked()) return;
-
     const ok = confirm('确认注销账号？此操作不可恢复。');
     if (!ok) return;
-
     const res = await fetch('/delete_account', { method: 'POST' });
     const data = await res.json();
-
     if (data.status === 'ok') {
         showToast('账号已注销');
         await refreshMe();
         await loadMessages();
-    } else {
-        alert('❌ ' + (data.message || '注销失败'));
-    }
+    } else alert('❌ ' + (data.message || '注销失败'));
 }
 
-// ========== 发帖 ==========
+/* 发帖 */
 document.getElementById('mainForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-
     if (emergencyBlocked()) return;
 
     const imageInput = document.getElementById('imageInput');
     const hasImage = imageInput && imageInput.files && imageInput.files.length > 0;
-
     const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
 
     if (hasImage && !memberCode) {
@@ -498,36 +305,26 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
     }
 
     const fd = new FormData(this);
-
-
     const submitBtn = this.querySelector('.main-submit-btn');
     const originalText = submitBtn.textContent;
-
     submitBtn.textContent = '发送中...';
     submitBtn.disabled = true;
 
     try {
         const res = await fetch('/upload', { method: 'POST', body: fd });
         const data = await res.json();
-
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
 
         if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
-
         if (data.status === 'ok') {
             this.reset();
             document.getElementById('memberCodeHidden').value = '';
             document.getElementById('memberCodeInput').value = '';
-
-            const nameBox = document.getElementById('imageFileName');
-            if (nameBox) nameBox.innerText = '未选择图片';
-
+            document.getElementById('imageFileName').innerText = '未选择图片';
             showToast(hasImage ? '发送成功！已发布会员图片帖' : '发送成功！系统已为您生成随机昵称');
             await loadMessages();
-        } else {
-            alert('❌ ' + (data.message || '发送失败'));
-        }
+        } else alert('❌ ' + (data.message || '发送失败'));
     } catch (e) {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
@@ -535,32 +332,25 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
     }
 });
 
-// ========== 点赞 ==========
+/* 点赞 */
 async function toggleLike(messageId, btnEl) {
     if (emergencyBlocked()) return;
-
     const fd = new FormData();
     fd.append('message_id', String(messageId));
-
     const res = await fetch('/toggle_like', { method: 'POST', body: fd });
     const data = await res.json();
-
     if (res.status === 401) return alert('❌ 请先登录后再点赞');
     if (data.status !== 'ok') return alert('❌ ' + (data.message || '点赞失败'));
-
     btnEl.classList.toggle('liked', !!data.liked);
-
     const c = btnEl.querySelector('.like-count');
     if (c) c.innerText = Number(data.like_count || 0);
 }
 
-// ========== 回复 ==========
+/* 回复 */
 async function submitReply(messageId) {
     if (emergencyBlocked()) return;
-
     const input = document.getElementById('reply_input_' + messageId);
     const content = input.value.trim();
-
     if (!content) return alert('回复内容不能为空');
 
     const fd = new FormData();
@@ -569,26 +359,20 @@ async function submitReply(messageId) {
 
     const replyBtn = input.nextElementSibling;
     const originalText = replyBtn.textContent;
-
     replyBtn.textContent = '回复中...';
     replyBtn.disabled = true;
 
     try {
         const res = await fetch('/reply', { method: 'POST', body: fd });
         const data = await res.json();
-
         replyBtn.textContent = originalText;
         replyBtn.disabled = false;
-
         if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
-
         if (data.status === 'ok') {
             input.value = '';
             showToast('回复成功！');
             await loadMessages();
-        } else {
-            alert('❌ ' + (data.message || '回复失败'));
-        }
+        } else alert('❌ ' + (data.message || '回复失败'));
     } catch (e) {
         replyBtn.textContent = originalText;
         replyBtn.disabled = false;
@@ -596,10 +380,9 @@ async function submitReply(messageId) {
     }
 }
 
-// ========== 渲染列表 ==========
+/* 渲染列表 */
 async function loadMessages() {
     if (emergencyBlocked()) return;
-
     const container = document.getElementById('listContainer');
     const res = await fetch('/messages');
     const data = await res.json();
@@ -610,7 +393,6 @@ async function loadMessages() {
     }
 
     const list = data.messages || [];
-
     if (!list.length) {
         container.innerHTML = `<div class="no-messages">还没有留言，快来发布第一条吧～</div>`;
         return;
@@ -618,7 +400,9 @@ async function loadMessages() {
 
     container.innerHTML = list.map(m => {
         const premiumCls = Number(m.is_premium) ? 'premium-bg' : '';
-        const premiumBadge = Number(m.is_premium) ? '<span class="plus-badge">超级会员</span>' : '';
+        const premiumBadge = Number(m.is_premium)
+            ? '<span class="plus-badge"><span class="vip-crown">👑</span>超级会员</span>'
+            : '';
 
         const contentHtml = m.content ? `<div class="content">${esc(m.content)}</div>` : '';
         const imageHtml = m.image_path ? `<div class="content"><img src="${esc(m.image_path)}" alt="img"></div>` : '';
@@ -628,12 +412,8 @@ async function loadMessages() {
 
         const replies = (m.replies || []).map(r => `
             <div class="reply ${premiumCls}">
-                <div class="reply-head">
-                    <div class="reply-head-meta">
-                        <div class="reply-content"><b>${esc(r.username || '匿名')}：</b>${esc(r.content || '')}</div>
-                        <div class="reply-date">${esc(r.date || '')}</div>
-                    </div>
-                </div>
+                <div class="reply-content"><b>${esc(r.username || '匿名')}：</b>${esc(r.content || '')}</div>
+                <div class="reply-date">${esc(r.date || '')}</div>
             </div>
         `).join('');
 
@@ -649,100 +429,72 @@ async function loadMessages() {
                 ${imageHtml}
 
                 <div class="message-actions">
-                    <button class="action-dev-btn pin-action" type="button" onclick="showComingSoon('置顶功能')">
-                        📌 置顶
-                    </button>
-
-                    <button class="action-dev-btn recall-action" type="button" onclick="showComingSoon('撤回功能')">
-                        ↩ 撤回
-                    </button>
-
+                    <button class="action-dev-btn" type="button" onclick="showComingSoon('置顶功能')">📌 置顶</button>
+                    <button class="action-dev-btn" type="button" onclick="showComingSoon('撤回功能')">↩ 撤回</button>
                     <button class="like-btn ${likedCls}" type="button" onclick="toggleLike(${m.id}, this)">
                         ❤️ <span class="like-count">${likeCount}</span>
                     </button>
                 </div>
 
-                <div class="reply-box">
-                    ${replies || '<div style="color:#777;">暂无回复</div>'}
-                </div>
+                <div class="reply-box">${replies || '<div style="color:#777;">暂无回复</div>'}</div>
 
                 <div class="reply-form">
                     <input id="reply_input_${m.id}" type="text" placeholder="写下回复...">
-                    <button class="submit reply-submit-btn" type="button" onclick="submitReply(${m.id})">回复</button>
+                    <button class="reply-submit-btn" type="button" onclick="submitReply(${m.id})">回复</button>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-// ========== 暗色 / 原本主题 ==========
+/* 主题 */
 function initTheme() {
     const saved = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', saved);
     syncThemeBtnText(saved);
 }
-
 function syncThemeBtnText(theme) {
     const btn = document.getElementById('themeToggle');
     btn.innerText = theme === 'dark' ? '🎨 原本主题' : '🌙 暗色主题';
 }
-
 function toggleTheme() {
     if (emergencyBlocked()) return;
-
     const current = document.documentElement.getAttribute('data-theme');
     const next = current === 'dark' ? 'light' : 'dark';
-
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
     syncThemeBtnText(next);
 }
-
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
-// 图片文件名显示
+/* 图片文件名显示 */
 const imageInput = document.getElementById('imageInput');
 if (imageInput) {
     imageInput.addEventListener('change', function () {
         const file = this.files && this.files[0];
         const nameBox = document.getElementById('imageFileName');
-
-        if (nameBox) {
-            nameBox.innerText = file ? `已选择：${file.name}` : '未选择图片';
-        }
+        if (nameBox) nameBox.innerText = file ? `已选择：${file.name}` : '未选择图片';
     });
 }
 
-// 点击遮罩关闭弹窗
+/* 点击遮罩关闭 */
 window.addEventListener('click', function(e) {
     const memberModal = document.getElementById('memberModal');
     const comingSoonModal = document.getElementById('comingSoonModal');
-
-    if (e.target === memberModal) {
-        closeMemberModal();
-    }
-
-    if (e.target === comingSoonModal) {
-        closeComingSoon();
-    }
+    if (e.target === memberModal) closeMemberModal();
+    if (e.target === comingSoonModal) closeComingSoon();
 });
 
-// 回车确认会员码
+/* 回车确认会员码 */
 document.getElementById('memberCodeInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        confirmMemberCode();
-    }
+    if (e.key === 'Enter') confirmMemberCode();
 });
 
 initTheme();
 
-// ========== 初始化 ==========
+/* 初始化 */
 (async function init() {
-    if (isEmergencyMode()) {
-        showEmergencyScreen();
-        return;
-    }
-
+    if (isEmergencyMode()) return showEmergencyScreen();
     await refreshMe();
     await loadMessages();
 })();
