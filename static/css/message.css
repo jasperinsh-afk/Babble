@@ -136,7 +136,6 @@ body {
 }
 
 .nav-link {
-    border: 1px solid rgba(255,255,255,.32);
     border-radius: 999px;
     padding: 9px 18px;
     cursor: pointer;
@@ -146,28 +145,18 @@ body {
     transition: all .22s ease;
 }
 
+/* 除主题按钮外统一按钮样式：这里让 nav-link 也走 submit 风格 */
 .guild-nav-link {
-    position: relative;
-    isolation: isolate;
-    color: #fff;
-    border: 2px solid rgba(255, 230, 120, .95);
-    background:
-        radial-gradient(circle at 18% 18%, rgba(255,255,255,.55), transparent 22%),
-        linear-gradient(90deg, #ff2d55, #ff914d, #ffd60a, #7dff6a, #30d5ff, #9b5cff, #ff2d55);
-    background-size: 260% 100%;
-    animation: guildMegaFlow 3.2s linear infinite, guildPulse 1.8s ease-in-out infinite;
-    box-shadow:
-        0 0 0 3px rgba(255, 214, 10, .18),
-        0 0 18px rgba(255, 214, 10, .65),
-        0 0 34px rgba(255, 45, 85, .45),
-        0 12px 32px rgba(93,62,168,.42),
-        inset 0 1px 0 rgba(255,255,255,.45);
-    text-shadow:
-        0 1px 2px rgba(0,0,0,.38),
-        0 0 10px rgba(255,255,255,.45);
+    border: 2px solid var(--btn-border);
+    background-color: var(--btn-bg);
+    color: var(--btn-text);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
 }
-
-
+.guild-nav-link:hover {
+    background-color: var(--btn-hover-bg);
+    color: var(--btn-hover-text);
+    transform: translateY(-1px);
+}
 .guild-nav-link span {
     margin-left: 8px;
     padding-left: 8px;
@@ -176,83 +165,12 @@ body {
     font-weight: 700;
     opacity: .88;
 }
-
-.guild-nav-link::before {
-    content: "";
-    position: absolute;
-    top: -60%;
-    left: -45%;
-    width: 42%;
-    height: 220%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.72), transparent);
-    transform: rotate(25deg);
-    animation: guildSweep 2.2s linear infinite;
-    pointer-events: none;
-    z-index: -1;
-}
-
+.guild-nav-link::before,
 .guild-nav-link::after {
-    content: "HOT";
-    position: absolute;
-    top: -11px;
-    right: -12px;
-    padding: 2px 6px;
-    border-radius: 999px;
-    background: #ff003d;
-    color: #fff;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: .5px;
-    box-shadow: 0 0 12px rgba(255,0,61,.7);
+    display: none;
 }
 
-
-.guild-nav-link:hover {
-    transform: translateY(-3px) scale(1.06);
-    filter: brightness(1.16) saturate(1.2);
-    box-shadow:
-        0 0 0 4px rgba(255, 214, 10, .24),
-        0 0 24px rgba(255, 214, 10, .85),
-        0 0 44px rgba(255, 45, 85, .6),
-        0 16px 38px rgba(93,62,168,.5),
-        inset 0 1px 0 rgba(255,255,255,.55);
-}
-
-
-@keyframes guildMegaFlow {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    100% {
-        background-position: 260% 50%;
-    }
-}
-
-@keyframes guildPulse {
-    0%, 100% {
-        transform: translateY(0) scale(1);
-        filter: brightness(1);
-    }
-
-    50% {
-        transform: translateY(-1px) scale(1.035);
-        filter: brightness(1.12);
-    }
-}
-
-@keyframes guildSweep {
-    0% {
-        left: -55%;
-    }
-
-    100% {
-        left: 125%;
-    }
-}
-
-
-/* 主题按钮 */
+/* 主题按钮（保留独立样式） */
 .theme-toggle {
     background: var(--toggle-bg);
     color: var(--toggle-text);
@@ -265,7 +183,6 @@ body {
     transition: .2s ease;
     white-space: nowrap;
 }
-
 .theme-toggle:hover {
     filter: brightness(1.08);
 }
@@ -280,13 +197,6 @@ body {
     color: var(--text-main);
     border-radius: 10px;
     transition: background-color .25s ease, color .25s ease;
-}
-
-.title {
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 40px;
-    color: var(--text-secondary);
 }
 
 .anonymous-info {
@@ -321,11 +231,7 @@ body {
     gap: 10px;
     max-width: calc(100vw - 24px);
 }
-
-.success-toast.show {
-    top: 88px;
-}
-
+.success-toast.show { top: 88px; }
 .success-toast .close-btn {
     background: none;
     border: none;
@@ -347,7 +253,6 @@ body {
     align-items: center;
     padding: 18px;
 }
-
 .modal-content {
     background-color: var(--bg-main);
     color: var(--text-main);
@@ -359,31 +264,20 @@ body {
     box-shadow: 0 10px 30px rgba(0,0,0,.3);
     animation: modalFadeIn .3s ease;
 }
-
 @keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-
 .modal-content h3 {
     color: #ff4444;
     font-size: 28px;
     margin-bottom: 10px;
 }
-
 .modal-content p {
     font-size: 18px;
     color: var(--text-muted);
     margin-bottom: 20px;
 }
-
 .modal-content input {
     width: 100%;
     padding: 12px;
@@ -397,45 +291,15 @@ body {
     background: var(--input-bg);
     color: var(--text-main);
 }
-
 .modal-content input:focus {
     border-color: #ff4444;
     box-shadow: 0 0 10px rgba(255,68,68,.3);
 }
-
 .modal-buttons {
     display: flex;
     gap: 15px;
     justify-content: center;
 }
-
-.modal-btn {
-    padding: 12px 24px;
-    font-size: 18px;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.modal-btn.confirm {
-    background-color: #ff4444;
-    color: #fff;
-}
-
-.modal-btn.confirm:hover {
-    background-color: #ff0000;
-}
-
-.modal-btn.cancel {
-    background-color: #444;
-    color: #fff;
-}
-
-.modal-btn.cancel:hover {
-    background-color: #555;
-}
-
 .hint {
     margin-top: 15px;
     font-size: 16px;
@@ -452,18 +316,14 @@ body {
     margin: 18px auto 26px !important;
     text-align: center;
 }
-
-#authNotLogin,
-#authLogged {
+#authNotLogin, #authLogged {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
     flex-wrap: wrap;
 }
-
-#loginUsername,
-#loginPassword {
+#loginUsername, #loginPassword {
     width: 220px;
     max-width: 42vw;
     height: 46px;
@@ -476,19 +336,15 @@ body {
     text-align: center;
     background: var(--input-bg);
 }
-
-#loginUsername:focus,
-#loginPassword:focus {
+#loginUsername:focus, #loginPassword:focus {
     border-color: #ff4444;
     box-shadow: 0 0 8px rgba(255,68,68,0.25);
 }
-
 #authLogged {
     font-size: 22px !important;
     color: var(--text-secondary);
     font-weight: bold;
 }
-
 .inline-user-info {
     display: inline-flex;
     align-items: center;
@@ -496,13 +352,8 @@ body {
 }
 
 /* ========= 发帖输入 ========= */
-form {
-    text-align: center;
-    padding: 10px;
-}
-
-.todo,
-.todo_new {
+form { text-align: center; padding: 10px; }
+.todo, .todo_new {
     width: 90%;
     max-width: 800px;
     height: 120px;
@@ -521,33 +372,10 @@ form {
 
 /* 会员输入框边框 */
 @keyframes holo-spectrum {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    100% {
-        background-position: 300% 50%;
-    }
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
 }
-
-@keyframes holo-scan {
-    0% {
-        transform: translateX(-60%);
-        opacity: 0;
-    }
-
-    50% {
-        opacity: .6;
-    }
-
-    100% {
-        transform: translateX(60%);
-        opacity: 0;
-    }
-}
-
-.todo.premium-border,
-.todo_new.premium-border {
+.todo.premium-border, .todo_new.premium-border {
     position: relative;
     border: 2px solid transparent;
     background:
@@ -558,18 +386,7 @@ form {
     border-radius: 10px;
 }
 
-.todo.premium-border::after,
-.todo_new.premium-border::after {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    border-radius: 12px;
-    background: linear-gradient(60deg, transparent, rgba(255,255,255,.6), transparent);
-    animation: holo-scan 3.5s linear infinite;
-    pointer-events: none;
-}
-
-/* ========= 按钮 ========= */
+/* ========= 统一按钮 ========= */
 .button-group {
     display: flex;
     gap: 12px;
@@ -580,14 +397,21 @@ form {
     flex-wrap: nowrap;
 }
 
-.submit {
+.submit,
+.modal-btn,
+.image-upload-btn,
+.action-dev-btn,
+.like-btn,
+.reply-submit-btn,
+.coming-soon-ok,
+.nav-link {
     position: relative;
     overflow: hidden;
     min-width: 90px;
-    max-width: 180px;
+    max-width: 220px;
     padding: 8px 14px;
     font-size: 16px;
-    border-radius: 6px;
+    border-radius: 999px;
     background-color: var(--btn-bg);
     color: var(--btn-text);
     border: 2px solid var(--btn-border);
@@ -597,13 +421,29 @@ form {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 auto;
     white-space: nowrap;
 }
-
-.submit:hover {
+.submit:hover,
+.modal-btn:hover,
+.image-upload-btn:hover,
+.action-dev-btn:hover,
+.like-btn:hover,
+.reply-submit-btn:hover,
+.coming-soon-ok:hover,
+.nav-link:hover {
     background-color: var(--btn-hover-bg);
     color: var(--btn-hover-text);
+    transform: translateY(-1px);
+}
+.like-btn.liked {
+    background: #ff4d6d;
+    color: #fff;
+    border-color: #ff4d6d;
+}
+
+.modal-btn.cancel {
+    background-color: #666;
+    color: #fff;
 }
 
 /* 发图按钮 */
@@ -616,144 +456,30 @@ form {
     width: 90%;
     max-width: 400px;
 }
-
-.upload-wrapper label {
-    cursor: pointer;
-}
-
-#imageInput {
-    display: none;
-}
-
-.image-upload-btn {
-    font-size: 20px !important;
-    color: #fff !important;
-    cursor: pointer;
-    font-weight: bold;
-    padding: 10px 20px !important;
-    border: none !important;
-    border-radius: 999px !important;
-    background:
-        linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.04)),
-        linear-gradient(135deg, #ff914d, #5d3ea8) !important;
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.35),
-        0 8px 20px rgba(93,62,168,.28);
-    transition: all .22s ease;
-}
-
-.image-upload-btn:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.08);
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.45),
-        0 12px 28px rgba(93,62,168,.34);
-}
-
+#imageInput { display: none; }
 .image-file-name {
     color: var(--text-muted);
     font-size: 14px;
 }
 
-/* 超级会员 + 炫彩背景合并按钮 */
-.super-member-btn {
-    position: relative;
-    overflow: hidden;
-    min-width: 180px;
-    padding: 8px 16px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,.72);
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 900;
-    color: #4a2500;
-    background:
-        linear-gradient(135deg, #fff7c2 0%, #ffd76a 20%, #b7791f 42%, #fff1a8 58%, #d89b22 76%, #fff8d5 100%);
-    background-size: 220% 220%;
-    animation: goldFlow 3.2s ease infinite;
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.8),
-        inset 0 -2px 0 rgba(94,49,0,.22),
-        0 10px 26px rgba(184,126,26,.36),
-        0 0 18px rgba(255,215,106,.35);
-    transition: all .22s ease;
-    white-space: nowrap;
-    flex: 0 1 auto;
-}
-
-.super-member-btn:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.9),
-        inset 0 -2px 0 rgba(94,49,0,.25),
-        0 14px 34px rgba(184,126,26,.48),
-        0 0 26px rgba(255,215,106,.6);
-}
-
-.super-member-tag {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    color: rgba(74,37,0,.78);
-    margin-top: 2px;
-    white-space: nowrap;
-}
-
-.super-shine {
-    position: absolute;
-    top: -40%;
-    left: -70%;
-    width: 46%;
-    height: 180%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
-    transform: rotate(24deg);
-    animation: superShine 2.4s linear infinite;
-    pointer-events: none;
-}
-
-@keyframes goldFlow {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    50% {
-        background-position: 100% 50%;
-    }
-
-    100% {
-        background-position: 0% 50%;
-    }
-}
-
-@keyframes superShine {
-    0% {
-        left: -70%;
-    }
-
-    100% {
-        left: 130%;
-    }
-}
-
-/* 波纹 */
-.submit .ripple,
-.member-btn .ripple {
-    position: absolute;
+/* 会员标识（紫色王冠） */
+.vip-crown {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
     border-radius: 50%;
-    background: rgba(255,255,255,.5);
-    transform: scale(0);
-    animation: ripple-animation .6s linear;
-    pointer-events: none;
+    background: linear-gradient(135deg, #7d4dff, #b388ff);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+    box-shadow: 0 0 0 2px rgba(125,77,255,.18), 0 2px 8px rgba(93,62,168,.35);
+    flex: 0 0 auto;
 }
 
-@keyframes ripple-animation {
-    to {
-        transform: scale(4);
-        opacity: 0;
-    }
-}
-
-/* ========= 留言卡片 ========= */
+/* 留言卡片 */
 .message {
     border: 1px solid var(--border-color);
     margin-top: 20px;
@@ -762,33 +488,25 @@ form {
     animation: fadeInUp .5s ease forwards;
     overflow: hidden;
 }
-
 .message-head {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 12px 14px 0;
 }
-
-.message-head-meta {
-    min-width: 0;
-    flex: 1;
-}
-
+.message-head-meta { min-width: 0; flex: 1; }
 .content {
     padding: 15px;
     font-size: 28px;
     word-wrap: break-word;
     white-space: pre-wrap;
 }
-
 .content img {
     max-width: 100%;
     border-radius: 8px;
     margin: 10px 0;
     display: block;
 }
-
 .date {
     text-align: right;
     padding: 8px 12px;
@@ -796,8 +514,6 @@ form {
     color: var(--text-secondary);
     font-weight: bold;
 }
-
-/* 点赞区 + 开发中按钮 */
 .message-actions {
     padding: 0 12px 10px;
     display: flex;
@@ -806,69 +522,12 @@ form {
     align-items: center;
     flex-wrap: wrap;
 }
-
-.like-btn {
-    border: 1px solid var(--border-color);
-    background: var(--bg-reply);
-    color: var(--text-main);
-    border-radius: 16px;
-    padding: 4px 10px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all .2s ease;
-}
-
-.like-btn:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.05);
-}
-
-.like-btn.liked {
-    background: #ff4d6d;
-    color: #fff;
-    border-color: #ff4d6d;
-}
-
-.action-dev-btn {
-    border: 1px solid var(--border-color);
-    background:
-        linear-gradient(135deg, rgba(255,255,255,.7), rgba(255,255,255,.22)),
-        var(--bg-reply);
-    color: var(--text-main);
-    border-radius: 16px;
-    padding: 4px 10px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .2s ease;
-}
-
-.action-dev-btn:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.06);
-}
-
-.pin-action {
-    color: #7a4b00;
-    border-color: rgba(255,190,80,.7);
-    background:
-        linear-gradient(135deg, rgba(255,232,174,.88), rgba(255,255,255,.45));
-}
-
-.recall-action {
-    color: #7d2634;
-    border-color: rgba(255,77,109,.45);
-    background:
-        linear-gradient(135deg, rgba(255,220,226,.88), rgba(255,255,255,.45));
-}
-
 .reply-box {
     background-color: var(--bg-reply-box);
     padding: 10px;
     margin: 10px 15px;
     border-radius: 8px;
 }
-
 .reply {
     background-color: var(--bg-reply);
     color: var(--text-main);
@@ -877,36 +536,21 @@ form {
     margin-bottom: 8px;
     animation: fadeInUp .4s ease forwards;
 }
-
-.reply-head {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.reply-head-meta {
-    flex: 1;
-    min-width: 0;
-}
-
 .reply-content {
     white-space: pre-wrap;
     word-wrap: break-word;
     font-size: 24px;
     padding: 5px 0;
 }
-
 .reply-date {
     font-size: 14px;
     color: var(--text-muted);
 }
-
 .reply-form {
     display: flex;
     gap: 8px;
     padding: 0 12px 12px;
 }
-
 .reply-form input {
     flex: 1;
     min-width: 0;
@@ -918,35 +562,16 @@ form {
     color: var(--text-main);
     background: var(--input-bg);
 }
-
-.reply-submit-btn {
-    min-width: 72px;
-    max-width: 90px;
-}
-
 @keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ========= 会员帖彩虹背景 ========= */
 @keyframes plus-rainbow-flow {
-    0% {
-        background-position: 0% 50%;
-    }
-
-    100% {
-        background-position: 300% 50%;
-    }
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
 }
-
 .message.premium-bg {
     position: relative;
     border-radius: 12px;
@@ -959,7 +584,6 @@ form {
     background-size: 300% 100%;
     animation: plus-rainbow-flow 3.5s linear infinite;
 }
-
 .message.premium-bg .content,
 .message.premium-bg .date,
 .message.premium-bg .reply-box,
@@ -970,61 +594,25 @@ form {
     background: rgba(255,255,255,.88);
     border-radius: 8px;
 }
-
-.message.premium-bg .content {
-    margin: 12px;
-}
-
-.message.premium-bg .date {
-    margin: 0 12px 12px;
-}
-
-.message.premium-bg .message-head {
-    margin: 12px 12px 0;
-}
-
-.message.premium-bg .message-actions {
-    margin: 0 12px 12px;
-    padding-top: 8px;
-}
-
-.reply.premium-bg {
-    position: relative;
-    background: linear-gradient(
-        135deg,
-        rgba(255,255,255,0.95),
-        rgba(230,200,255,0.45),
-        rgba(200,240,255,0.45),
-        rgba(255,255,255,0.95)
-    );
-    background-size: 300% 300%;
-    animation: holo-spectrum 7s ease infinite;
-    overflow: hidden;
-}
+.message.premium-bg .content { margin: 12px; }
+.message.premium-bg .date { margin: 0 12px 12px; }
+.message.premium-bg .message-head { margin: 12px 12px 0; }
+.message.premium-bg .message-actions { margin: 0 12px 12px; padding-top: 8px; }
 
 /* 会员标签 */
 .plus-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     margin-left: 8px;
     padding: 2px 8px;
     font-size: 14px;
     font-weight: bold;
     color: #fff;
-    border-radius: 6px;
-    background: linear-gradient(
-        90deg,
-        #ff0000,#ff9900,#ffff00,#00ff00,#0099ff,#6600ff,#ff00ff,#ff0000
-    );
-    background-size: 300% 100%;
-    animation: plus-rainbow-flow 3s linear infinite;
-    box-shadow:
-        0 0 6px rgba(255,0,0,.9),
-        0 0 12px rgba(255,153,0,.8),
-        0 0 18px rgba(0,153,255,.6);
-    vertical-align: middle;
+    border-radius: 999px;
+    background: linear-gradient(90deg,#7d4dff,#5d3ea8);
 }
 
-/* ========= 错误/空状态 ========= */
+/* 错误/空状态 */
 .error-message {
     text-align: center;
     padding: 40px;
@@ -1034,19 +622,6 @@ form {
     border: 2px dashed #ff4444;
     color: #fff;
 }
-
-.error-message h3 {
-    color: #ff4444;
-    font-size: 28px;
-    margin-bottom: 15px;
-}
-
-.error-message p {
-    color: #ccc;
-    font-size: 20px;
-    margin-bottom: 20px;
-}
-
 .no-messages {
     text-align: center;
     padding: 40px;
@@ -1058,7 +633,7 @@ form {
     border: 2px dashed var(--border-color);
 }
 
-/* ========= 统一开发中浮窗 ========= */
+/* 开发中浮窗 */
 .coming-soon-modal {
     position: fixed;
     inset: 0;
@@ -1073,7 +648,6 @@ form {
         rgba(8, 7, 18, .72);
     backdrop-filter: blur(10px);
 }
-
 .coming-soon-card {
     position: relative;
     width: min(92vw, 440px);
@@ -1085,25 +659,7 @@ form {
         linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.06)),
         linear-gradient(135deg, rgba(48,31,88,.92), rgba(20,16,36,.96));
     border: 1px solid rgba(255,255,255,.22);
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.22),
-        0 30px 80px rgba(0,0,0,.46),
-        0 0 40px rgba(255,145,77,.18);
-    overflow: hidden;
-    animation: modalPop .24s ease;
 }
-
-.coming-soon-card::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    background:
-        linear-gradient(120deg, transparent, rgba(255,214,120,.28), transparent);
-    transform: translateX(-80%);
-    animation: modalSweep 3s linear infinite;
-    pointer-events: none;
-}
-
 .coming-soon-close {
     position: absolute;
     top: 12px;
@@ -1117,362 +673,50 @@ form {
     font-size: 24px;
     line-height: 1;
     cursor: pointer;
-    z-index: 2;
 }
-
-.coming-soon-close:hover {
-    background: rgba(255,255,255,.16);
-}
-
-.coming-soon-orbit {
-    width: 86px;
-    height: 86px;
-    margin: 0 auto 18px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background:
-        conic-gradient(from 0deg, #ff914d, #ffd76a, #5d3ea8, #9a7cff, #ff914d);
-    animation: orbitRotate 4s linear infinite;
-    box-shadow:
-        0 0 24px rgba(255,145,77,.46),
-        0 0 42px rgba(93,62,168,.34);
-}
-
-.coming-soon-core {
-    width: 68px;
-    height: 68px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: rgba(14,10,29,.92);
-    color: #ffd76a;
-    font-size: 34px;
-    font-weight: 900;
-    border: 1px solid rgba(255,255,255,.18);
-}
-
-.coming-soon-kicker {
-    position: relative;
-    z-index: 1;
-    margin-bottom: 8px;
-    font-size: 12px;
-    letter-spacing: 2px;
-    color: rgba(255,255,255,.62);
-    font-weight: 800;
-}
-
-.coming-soon-card h3 {
-    position: relative;
-    z-index: 1;
-    font-size: 30px;
-    margin-bottom: 10px;
-    color: #fff4c2;
-}
-
-.coming-soon-card p {
-    position: relative;
-    z-index: 1;
-    font-size: 18px;
-    color: rgba(255,255,255,.84);
-    margin-bottom: 22px;
-}
-
-.coming-soon-progress {
-    position: relative;
-    z-index: 1;
-    height: 8px;
-    border-radius: 999px;
-    overflow: hidden;
-    background: rgba(255,255,255,.12);
-    margin: 0 auto 22px;
-}
-
-.coming-soon-progress span {
-    display: block;
-    width: 42%;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, #ff914d, #ffd76a, #9a7cff);
-    animation: progressMove 1.8s ease-in-out infinite;
-}
-
-.coming-soon-ok {
-    position: relative;
-    z-index: 1;
-    border: none;
-    border-radius: 999px;
-    padding: 10px 24px;
-    font-size: 16px;
-    font-weight: 900;
-    color: #321b00;
-    cursor: pointer;
-    background: linear-gradient(135deg, #fff4bf, #ffbd59, #ffd76a);
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.75),
-        0 10px 24px rgba(255,145,77,.28);
-}
-
-.coming-soon-ok:hover {
-    filter: brightness(1.06);
-    transform: translateY(-1px);
-}
-
-@keyframes modalPop {
-    from {
-        opacity: 0;
-        transform: translateY(10px) scale(.96);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes modalSweep {
-    0% {
-        transform: translateX(-80%);
-    }
-
-    100% {
-        transform: translateX(80%);
-    }
-}
-
-@keyframes orbitRotate {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes progressMove {
-    0% {
-        transform: translateX(-120%);
-    }
-
-    50% {
-        transform: translateX(90%);
-    }
-
-    100% {
-        transform: translateX(230%);
-    }
-}
+.coming-soon-kicker { margin-bottom: 8px; font-size: 12px; letter-spacing: 2px; }
+.coming-soon-card h3 { font-size: 30px; margin-bottom: 10px; }
+.coming-soon-card p { font-size: 18px; margin-bottom: 22px; }
 
 /* ========= 移动端 ========= */
 @media (max-width: 768px) {
-    .top-nav {
-        min-height: 64px;
-        padding: 0 10px;
-        grid-template-columns: auto 1fr auto;
-        gap: 8px;
+    .top-nav { min-height: 64px; padding: 0 10px; gap: 8px; }
+    .nav-brand-main { font-size: 20px; }
+    .nav-brand-sub { font-size: 10px; letter-spacing: 1px; }
+    .nav-link { padding: 7px 9px; font-size: 12px; }
+
+    .theme-toggle { font-size: 11px; padding: 7px 9px; }
+    .success-toast { font-size: 16px; padding: 12px 16px; }
+    .success-toast.show { top: 74px; }
+
+    .main { width: 95%; padding: 15px; margin: 20px auto; }
+    .anonymous-info { font-size: 14px; padding: 10px; }
+
+    .todo, .todo_new { width: 95%; height: 100px; font-size: 18px; }
+
+    .button-group { gap: 8px; width: 100%; max-width: 100%; }
+    .submit, .modal-btn, .image-upload-btn, .action-dev-btn, .like-btn, .reply-submit-btn, .coming-soon-ok, .nav-link {
+        min-width: 82px; font-size: 14px; padding: 8px 12px;
     }
 
-    .nav-brand {
-        gap: 5px;
-    }
+    .content { font-size: 20px; padding: 12px; }
+    .date { font-size: 16px; padding: 6px 8px; text-align: left; }
+    .reply-content { font-size: 18px; }
+    .reply-date { font-size: 12px; }
 
-    .nav-brand-main {
-        font-size: 20px;
+    #authNotLogin, #authLogged { gap: 8px; }
+    #loginUsername, #loginPassword {
+        width: 40vw; max-width: 170px; min-width: 130px; height: 42px; font-size: 16px;
     }
+    #authLogged { font-size: 17px !important; }
 
-    .nav-brand-sub {
-        font-size: 10px;
-        letter-spacing: 1px;
-    }
-
-    .nav-link {
-        padding: 7px 9px;
-        font-size: 12px;
-    }
-
-    .guild-nav-link span {
-        margin-left: 4px;
-        padding-left: 4px;
-        font-size: 10px;
-    }
-
-    .theme-toggle {
-        font-size: 11px;
-        padding: 7px 9px;
-    }
-
-    .success-toast {
-        font-size: 16px;
-        padding: 12px 16px;
-    }
-
-    .success-toast.show {
-        top: 74px;
-    }
-
-    .main {
-        width: 95%;
-        padding: 15px;
-        margin: 20px auto;
-    }
-
-    .title {
-        font-size: 28px;
-    }
-
-    .anonymous-info {
-        font-size: 14px;
-        padding: 10px;
-    }
-
-    .todo,
-    .todo_new {
-        width: 95%;
-        height: 100px;
-        font-size: 18px;
-    }
-
-    .button-group {
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
-        flex-wrap: nowrap;
-        gap: 8px;
-        width: 100%;
-        max-width: 100%;
-        overflow: visible;
-    }
-
-    .button-group .submit {
-        flex: 0 0 auto;
-        min-width: 88px;
-        max-width: none;
-        padding: 8px 12px;
-        font-size: 14px;
-        white-space: nowrap;
-    }
-
-    .button-group .super-member-btn {
-        flex: 0 1 auto;
-        min-width: 150px;
-        max-width: calc(100vw - 150px);
-        padding: 8px 12px;
-        font-size: 14px;
-        white-space: nowrap;
-    }
-
-    .super-member-tag {
-        font-size: 10px;
-    }
-
-    .image-upload-btn {
-        font-size: 16px !important;
-        padding: 9px 16px !important;
-    }
-
-    .content {
-        font-size: 20px;
-        padding: 12px;
-    }
-
-    .date {
-        font-size: 16px;
-        padding: 6px 8px;
-        text-align: left;
-    }
-
-    .reply-content {
-        font-size: 18px;
-    }
-
-    .reply-date {
-        font-size: 12px;
-    }
-
-    #authNotLogin,
-    #authLogged {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    #loginUsername,
-    #loginPassword {
-        width: 40vw;
-        max-width: 170px;
-        min-width: 130px;
-        height: 42px;
-        font-size: 16px;
-    }
-
-    #authPanel .submit {
-        min-width: 72px;
-        padding: 8px 12px;
-        font-size: 14px;
-    }
-
-    #authLogged {
-        font-size: 17px !important;
-    }
-
-    .plus-badge {
-        font-size: 12px;
-        padding: 2px 6px;
-    }
-
-    .message-actions {
-        justify-content: flex-end;
-        flex-wrap: wrap;
-    }
-
-    .action-dev-btn,
-    .like-btn {
-        font-size: 13px;
-    }
-
-    .reply-form {
-        gap: 6px;
-        padding: 0 10px 10px;
-    }
-
-    .reply-form input {
-        font-size: 15px;
-    }
-
-    .reply-submit-btn {
-        min-width: 62px;
-    }
-
-    .coming-soon-card h3 {
-        font-size: 26px;
-    }
-
-    .coming-soon-card p {
-        font-size: 16px;
-    }
+    .plus-badge { font-size: 12px; padding: 2px 6px; }
 }
 
-/* 超小屏优化，保证按钮不丑叠 */
 @media (max-width: 420px) {
-    .top-nav {
-        grid-template-columns: auto 1fr auto;
-        padding: 0 8px;
-        gap: 6px;
-    }
-
-    .nav-brand-main {
-        font-size: 18px;
-    }
-
-    .nav-brand-sub {
-        display: none;
-    }
-
-    .guild-nav-link {
-        padding: 7px 8px;
-        font-size: 12px;
-    }
-
-    .guild-nav-link span {
-        display: none;
-    }
+    .top-nav { padding: 0 8px; gap: 6px; }
+    .nav-brand-main { font-size: 18px; }
+    .nav-brand-sub { display: none; }
 
     .theme-toggle {
         font-size: 0;
@@ -1480,59 +724,8 @@ form {
         height: 34px;
         padding: 0;
     }
+    .theme-toggle::before { content: "🌙"; font-size: 16px; }
+    [data-theme="dark"] .theme-toggle::before { content: "🎨"; }
 
-    .theme-toggle::before {
-        content: "🌙";
-        font-size: 16px;
-    }
-
-    [data-theme="dark"] .theme-toggle::before {
-        content: "🎨";
-    }
-
-    .button-group {
-        flex-wrap: nowrap;
-        gap: 6px;
-    }
-
-    .button-group .submit {
-        min-width: 82px;
-        padding: 8px 10px;
-        font-size: 13px;
-    }
-
-    .button-group .super-member-btn {
-        min-width: 142px;
-        padding: 8px 10px;
-        font-size: 13px;
-    }
-
-    .super-member-tag {
-        font-size: 9px;
-    }
-
-    .modal-content {
-        padding: 24px 18px;
-    }
-
-    .modal-content h3 {
-        font-size: 24px;
-    }
-
-    .modal-content p {
-        font-size: 16px;
-    }
-
-    .modal-buttons {
-        gap: 10px;
-    }
-
-    .modal-btn {
-        padding: 10px 18px;
-        font-size: 16px;
-    }
-    .guild-nav-link::after {
-        display: none;
-    }
-
+    .button-group { gap: 6px; }
 }
