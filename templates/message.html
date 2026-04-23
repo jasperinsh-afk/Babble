@@ -76,7 +76,7 @@
 
     <div id="memberModal" class="member-modal">
         <div class="modal-content">
-            <h3>超级会员验证</h3>
+            <h3>会员验证</h3>
             <p>输入会员码后可使用会员功能</p>
             <input type="text" id="memberCodeInput" placeholder="请输入会员码">
             <div class="modal-buttons">
@@ -105,14 +105,14 @@
             </div>
         </div>
 
-        <div class="anonymous-info">💬 无需登录即可匿名发帖；上传图片需超级会员验证</div>
+        <div class="anonymous-info">💬 无需登录即可匿名发帖</div>
 
         <form id="mainForm" enctype="multipart/form-data">
             <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
 
             <div class="upload-wrapper">
                 <button id="vipUploadBtn" class="image-upload-btn" type="button">
-                    <span class="vip-crown">👑</span>上传图片 - 会员专享
+                    <span class="vip-crown">👑</span>上传图片
                 </button>
                 <input id="imageInput" type="file" name="image" accept="image/*">
                 <div id="imageFileName" class="image-file-name">未选择图片</div>
@@ -123,7 +123,7 @@
             <div class="button-group">
                 <button class="submit main-submit-btn" type="submit">匿名发帖</button>
                 <button class="submit" type="button" onclick="openMemberModal()">
-                    <span class="vip-crown">👑</span>炫彩背景 - 会员专享
+                    <span class="vip-crown">👑</span>炫彩背景
                 </button>
             </div>
         </form>
@@ -199,7 +199,6 @@ document.getElementById('vipUploadBtn').addEventListener('click', () => {
     const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
     if (!memberCode) {
         openMemberModal();
-        alert('上传图片前请先完成超级会员验证');
         return;
     }
     document.getElementById('imageInput').click();
@@ -300,7 +299,7 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
 
     if (hasImage && !memberCode) {
         openMemberModal();
-        alert('上传图片需要先完成超级会员验证');
+        alert('上传图片需要先完成会员验证');
         return;
     }
 
@@ -401,7 +400,7 @@ async function loadMessages() {
     container.innerHTML = list.map(m => {
         const premiumCls = Number(m.is_premium) ? 'premium-bg' : '';
         const premiumBadge = Number(m.is_premium)
-            ? '<span class="plus-badge"><span class="vip-crown">👑</span>超级会员</span>'
+            ? '<span class="plus-badge"><span class="vip-crown">👑</span>会员</span>'
             : '';
 
         const contentHtml = m.content ? `<div class="content">${esc(m.content)}</div>` : '';
