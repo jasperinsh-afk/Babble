@@ -25,6 +25,113 @@
         .emergency-divider{width:100%;height:1px;background:linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.08));margin:18px 0 26px;}
         .emergency-lines{display:grid;gap:12px;}
         .emergency-line{font-size:clamp(20px,3.2vw,30px);font-weight:700;color:rgba(255,255,255,0.9);}
+
+        /* ===== 积分浮窗（低调奢华）===== */
+        .points-modal{
+            position: fixed; inset: 0; z-index: 100001; display: none;
+            align-items: center; justify-content: center; padding: 20px;
+            background: rgba(8, 7, 18, .62);
+            backdrop-filter: blur(8px);
+        }
+        .points-card{
+            width: min(92vw, 460px);
+            border-radius: 18px;
+            padding: 24px 20px 18px;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,.18);
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.06)),
+                linear-gradient(135deg, rgba(48,31,88,.92), rgba(20,16,36,.96));
+            box-shadow: 0 20px 52px rgba(0,0,0,.4), 0 0 30px rgba(255,145,77,.12);
+            position: relative;
+            overflow: hidden;
+        }
+        .points-card h3{
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #fff4c2;
+            letter-spacing: .5px;
+        }
+        .points-meta{
+            font-size: 14px;
+            color: rgba(255,255,255,.82);
+            margin-bottom: 12px;
+        }
+        .points-progress{
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.16);
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .points-progress > span{
+            display:block;
+            height:100%;
+            width:0%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #ff914d, #ffd76a, #9a7cff);
+            transition: width .4s ease;
+        }
+        .points-line{
+            font-size: 14px;
+            color: rgba(255,255,255,.88);
+            margin-bottom: 10px;
+        }
+        .points-actions{
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .points-btn{
+            border: 2px solid rgba(255,255,255,.72);
+            border-radius: 999px;
+            background: #ff914d;
+            color: #3d00ad;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .points-btn:hover{
+            background:#cc0000;
+            color:#fff;
+        }
+        .points-badge{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            background: linear-gradient(90deg,#7d4dff,#5d3ea8);
+            color:#fff;
+            margin-left: 8px;
+        }
+        .points-crown{
+            display:inline-grid;place-items:center;
+            width:16px;height:16px;border-radius:50%;
+            background:rgba(255,255,255,.16);
+            font-size:11px;
+        }
+
+        /* 顶部积分小条 */
+        .points-topbar{
+            max-width: 800px;
+            margin: 10px auto 0;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border:1px solid var(--border-color);
+            background: var(--bg-message);
+            color: var(--text-secondary);
+            font-size: 14px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+            flex-wrap:wrap;
+        }
     </style>
 </head>
 
@@ -49,6 +156,20 @@
             <h3 id="comingSoonTitle">功能开发中</h3>
             <p id="comingSoonText">功能开发中，敬请期待</p>
             <button class="coming-soon-ok" type="button" onclick="closeComingSoon()">我知道了</button>
+        </div>
+    </div>
+
+    <!-- 每日积分浮窗 -->
+    <div id="pointsModal" class="points-modal">
+        <div class="points-card">
+            <h3>今日成长进度</h3>
+            <div class="points-meta" id="pointsMeta">正在加载积分信息...</div>
+            <div class="points-progress"><span id="pointsProgressBar"></span></div>
+            <div class="points-line" id="pointsLine1">积分：0 / 100</div>
+            <div class="points-line" id="pointsLine2">距离会员解锁还差：100 分</div>
+            <div class="points-actions">
+                <button class="points-btn" type="button" onclick="closePointsModal()">我知道了</button>
+            </div>
         </div>
     </div>
 
@@ -83,7 +204,7 @@
                 <button class="modal-btn confirm" type="button" onclick="confirmMemberCode()">确认</button>
                 <button class="modal-btn cancel" type="button" onclick="closeMemberModal()">取消</button>
             </div>
-            <div class="hint">提示：会员码自动转大写</div>
+            <div class="hint">提示：会员码自动转大写（114PZ514 可直升会员）</div>
         </div>
     </div>
 
@@ -103,6 +224,11 @@
                 <button class="submit" type="button" onclick="doDeleteAccount()">注销账号</button>
                 <button class="submit" type="button" onclick="doLogout()">退出</button>
             </div>
+        </div>
+
+        <div id="pointsTopbar" class="points-topbar" style="display:none;">
+            <span id="pointsTopbarText">积分：0 / 100</span>
+            <span id="pointsTopbarBadge"></span>
         </div>
 
         <div class="anonymous-info">💬 无需登录即可匿名发帖</div>
@@ -134,6 +260,7 @@
 <script>
 const EMERGENCY_MODE = false;
 let me = null;
+let pointsState = { points: 0, is_member: false, today_signed: false, today_theme_rewarded: false };
 
 function showComingSoon(featureName = '该功能') {
     if (emergencyBlocked()) return;
@@ -176,6 +303,78 @@ function esc(s='') {
     ));
 }
 
+/* ===== 积分显示 ===== */
+function closePointsModal() {
+    const modal = document.getElementById('pointsModal');
+    if (modal) modal.style.display = 'none';
+    if (!isEmergencyMode()) document.body.style.overflow = '';
+}
+function updatePointsUI(state) {
+    pointsState = Object.assign(pointsState, state || {});
+    const p = Number(pointsState.points || 0);
+    const percent = Math.max(0, Math.min(100, p));
+    const isMember = !!pointsState.is_member;
+
+    const bar = document.getElementById('pointsProgressBar');
+    const line1 = document.getElementById('pointsLine1');
+    const line2 = document.getElementById('pointsLine2');
+    const meta = document.getElementById('pointsMeta');
+    if (bar) bar.style.width = percent + '%';
+    if (line1) line1.innerText = `积分：${p} / 100`;
+    if (line2) line2.innerText = isMember ? '已解锁会员权益（含上传图片、炫彩背景）' : `距离会员解锁还差：${Math.max(0, 100 - p)} 分`;
+    if (meta) meta.innerText = `每日打卡 +5｜发帖 +10｜发图 +15｜回复 +5｜切换模式(每日1次) +5`;
+
+    const topbar = document.getElementById('pointsTopbar');
+    const topText = document.getElementById('pointsTopbarText');
+    const topBadge = document.getElementById('pointsTopbarBadge');
+    if (topbar && me) topbar.style.display = 'flex';
+    if (topText) topText.innerText = `积分：${p} / 100`;
+    if (topBadge) {
+        topBadge.innerHTML = isMember
+            ? '<span class="points-badge"><span class="points-crown">👑</span>会员已解锁</span>'
+            : '';
+    }
+}
+async function fetchPointsAndRender(showModal = false) {
+    if (!me) {
+        const topbar = document.getElementById('pointsTopbar');
+        if (topbar) topbar.style.display = 'none';
+        return;
+    }
+    try {
+        const res = await fetch('/points_status');
+        const data = await res.json();
+        if (data.status === 'ok') {
+            updatePointsUI(data);
+            if (showModal) {
+                const modal = document.getElementById('pointsModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+        }
+    } catch (_) {}
+}
+async function dailyCheckInAndPopup() {
+    if (!me) return;
+    try {
+        const res = await fetch('/daily_checkin', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            updatePointsUI(data);
+            const modal = document.getElementById('pointsModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+            if (data.rewarded) {
+                showToast('今日打卡成功 +5 分');
+            }
+        }
+    } catch (_) {}
+}
+
 /* 会员弹窗 */
 function openMemberModal() {
     if (emergencyBlocked()) return;
@@ -184,20 +383,46 @@ function openMemberModal() {
     setTimeout(() => input && input.focus(), 50);
 }
 function closeMemberModal() { document.getElementById('memberModal').style.display = 'none'; }
-function confirmMemberCode() {
+async function confirmMemberCode() {
     if (emergencyBlocked()) return;
     const code = (document.getElementById('memberCodeInput').value || '').trim().toUpperCase();
     if (!code) return alert('请输入会员码');
     document.getElementById('memberCodeHidden').value = code;
+
+    // 作弊码直升会员
+    if (me) {
+        try {
+            const fd = new FormData();
+            fd.append('code', code);
+            const res = await fetch('/redeem_member_code', { method:'POST', body: fd });
+            const data = await res.json();
+            if (data.status === 'ok' && data.upgraded) {
+                showToast('会员已解锁');
+                await fetchPointsAndRender(false);
+            } else if (data.status !== 'ok') {
+                alert('❌ ' + (data.message || '会员码无效'));
+                return;
+            }
+        } catch (_) {}
+    }
+
     closeMemberModal();
-    showToast('超级会员验证已设置');
+    showToast('会员码已设置');
 }
 
-/* 点击上传图片按钮：先要求会员码，再打开文件选择 */
-document.getElementById('vipUploadBtn').addEventListener('click', () => {
+/* 点击上传图片按钮：先要求会员码或已是会员 */
+document.getElementById('vipUploadBtn').addEventListener('click', async () => {
     if (emergencyBlocked()) return;
     const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
+
     if (!memberCode) {
+        if (me) {
+            await fetchPointsAndRender(false);
+            if (pointsState.is_member) {
+                document.getElementById('imageInput').click();
+                return;
+            }
+        }
         openMemberModal();
         return;
     }
@@ -248,6 +473,8 @@ async function doLogin() {
     if (data.status === 'ok') {
         showToast('登录成功');
         await refreshMe();
+        await dailyCheckInAndPopup();     // 每日自动弹窗 + 打卡
+        await fetchPointsAndRender(false);
         await loadMessages();
     } else alert('❌ ' + (data.message || '登录失败'));
 }
@@ -272,6 +499,7 @@ async function doChangeUsername() {
     if (data.status === 'ok') {
         showToast('用户名修改成功');
         await refreshMe();
+        await fetchPointsAndRender(false);
         await loadMessages();
     } else alert('❌ ' + (data.message || '修改失败'));
 }
@@ -298,9 +526,18 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
     const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
 
     if (hasImage && !memberCode) {
-        openMemberModal();
-        alert('上传图片需要先完成会员验证');
-        return;
+        if (me) {
+            await fetchPointsAndRender(false);
+            if (!pointsState.is_member) {
+                openMemberModal();
+                alert('上传图片需要先完成会员验证或积分达到100分解锁会员');
+                return;
+            }
+        } else {
+            openMemberModal();
+            alert('上传图片需要先完成会员验证');
+            return;
+        }
     }
 
     const fd = new FormData(this);
@@ -322,6 +559,7 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
             document.getElementById('memberCodeInput').value = '';
             document.getElementById('imageFileName').innerText = '未选择图片';
             showToast(hasImage ? '发送成功！已发布会员图片帖' : '发送成功！系统已为您生成随机昵称');
+            await fetchPointsAndRender(false);
             await loadMessages();
         } else alert('❌ ' + (data.message || '发送失败'));
     } catch (e) {
@@ -370,6 +608,7 @@ async function submitReply(messageId) {
         if (data.status === 'ok') {
             input.value = '';
             showToast('回复成功！');
+            await fetchPointsAndRender(false);
             await loadMessages();
         } else alert('❌ ' + (data.message || '回复失败'));
     } catch (e) {
@@ -456,13 +695,25 @@ function syncThemeBtnText(theme) {
     const btn = document.getElementById('themeToggle');
     btn.innerText = theme === 'dark' ? '🎨 原本主题' : '🌙 暗色主题';
 }
-function toggleTheme() {
+async function toggleTheme() {
     if (emergencyBlocked()) return;
     const current = document.documentElement.getAttribute('data-theme');
     const next = current === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
     syncThemeBtnText(next);
+
+    // 每日切换模式奖励（每日1次）
+    if (me) {
+        try {
+            const res = await fetch('/theme_reward', { method: 'POST' });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                updatePointsUI(data);
+                if (data.rewarded) showToast('今日切换模式奖励 +5 分');
+            }
+        } catch (_) {}
+    }
 }
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
@@ -480,8 +731,10 @@ if (imageInput) {
 window.addEventListener('click', function(e) {
     const memberModal = document.getElementById('memberModal');
     const comingSoonModal = document.getElementById('comingSoonModal');
+    const pointsModal = document.getElementById('pointsModal');
     if (e.target === memberModal) closeMemberModal();
     if (e.target === comingSoonModal) closeComingSoon();
+    if (e.target === pointsModal) closePointsModal();
 });
 
 /* 回车确认会员码 */
@@ -495,6 +748,8 @@ initTheme();
 (async function init() {
     if (isEmergencyMode()) return showEmergencyScreen();
     await refreshMe();
+    await dailyCheckInAndPopup();
+    await fetchPointsAndRender(false);
     await loadMessages();
 })();
 </script>
