@@ -132,7 +132,6 @@
             100% { transform: translateX(160%) rotate(18deg); opacity: 0; }
         }
 
-        /* 亮色金卡 */
         :root .message.premium-bg{
             position: relative;
             overflow: hidden;
@@ -195,7 +194,6 @@
             pointer-events:none;
         }
 
-        /* 暗色金卡修复 */
         [data-theme="dark"] .message.premium-bg{
             border: 1px solid rgba(255,196,94,.45);
             background:
@@ -538,13 +536,24 @@ async function dailyCheckInAndPopup() {
     } catch (_) {}
 }
 
-function openMemberModal() {
+/* ===== 关键改动：满足会员时，不弹会员码框 ===== */
+async function openMemberModal() {
     if (emergencyBlocked()) return;
+
+    if (me) {
+        await fetchPointsAndRender(false);
+        if (pointsState.is_member) {
+            showToast('已为你启用会员权益');
+            return;
+        }
+    }
+
     document.getElementById('memberModal').style.display = 'flex';
     const input = document.getElementById('memberCodeInput');
     setTimeout(() => input && input.focus(), 50);
 }
 function closeMemberModal() { document.getElementById('memberModal').style.display = 'none'; }
+
 async function confirmMemberCode() {
     if (emergencyBlocked()) return;
     const code = (document.getElementById('memberCodeInput').value || '').trim().toUpperCase();
@@ -613,22 +622,25 @@ async function confirmCheatCode() {
     }
 }
 
+/* ===== 关键改动：上传按钮已是会员直接放行 ===== */
 document.getElementById('vipUploadBtn').addEventListener('click', async () => {
     if (emergencyBlocked()) return;
-    const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
 
-    if (!memberCode) {
-        if (me) {
-            await fetchPointsAndRender(false);
-            if (pointsState.is_member) {
-                document.getElementById('imageInput').click();
-                return;
-            }
+    if (me) {
+        await fetchPointsAndRender(false);
+        if (pointsState.is_member) {
+            document.getElementById('imageInput').click();
+            return;
         }
-        openMemberModal();
+    }
+
+    const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
+    if (memberCode) {
+        document.getElementById('imageInput').click();
         return;
     }
-    document.getElementById('imageInput').click();
+
+    openMemberModal();
 });
 
 async function refreshMe() {
