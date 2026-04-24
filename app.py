@@ -268,6 +268,10 @@ def column_exists(cursor, table_name, column_name):
     return bool(row and row["cnt"] > 0)
 
 
+def is_valid_member_code(code: str) -> bool:
+    return (code or "").strip().upper() == CHEAT_MEMBER_CODE
+
+
 # ========= 积分工具 =========
 def ensure_points_row(cursor, user_id):
     cursor.execute("""
@@ -372,7 +376,6 @@ def init_db():
             ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
             """)
 
-            # 新增：积分表（自动创建，不用手动）
             c.execute("""
             CREATE TABLE IF NOT EXISTS user_points (
                 user_id INT PRIMARY KEY,
@@ -427,7 +430,6 @@ def ensure_db_columns():
                 if not column_exists(c, "likes", "username"):
                     c.execute("ALTER TABLE likes ADD COLUMN username VARCHAR(64) NOT NULL DEFAULT ''")
 
-            # user_points 补字段（防止半升级环境）
             if table_exists_with_cursor(c, "user_points"):
                 if not column_exists(c, "user_points", "user_id"):
                     c.execute("ALTER TABLE user_points ADD COLUMN user_id INT PRIMARY KEY")
@@ -600,7 +602,7 @@ def redeem_member_code():
         if not code:
             return jsonify({"status": "error", "message": "请输入会员码"}), 400
 
-        if code != CHEAT_MEMBER_CODE:
+        if not is_valid_member_code(code):
             return jsonify({"status": "error", "message": "会员码无效"}), 400
 
         conn = get_conn()
@@ -661,7 +663,6 @@ def register():
                         VALUES (%s, %s)
                     """, (username, password))
 
-                # 新用户积分记录
                 c.execute(f"SELECT id FROM `{user_table}` WHERE username = %s", (username,))
                 u = c.fetchone()
                 if u:
@@ -839,26 +840,33 @@ def upload():
         image = request.files.get("image") or request.files.get("file") or request.files.get("photo")
         has_image = bool(image and image.filename)
 
+        valid_member_code = is_valid_member_code(member_code)
+        user_is_member = False
+
+        # 读取登录用户会员状态（积分达标/兑换后）
+        if user_id:
+            conn_check = get_conn()
+            try:
+                with conn_check.cursor() as cc:
+                    row = get_points_row(cc, user_id)
+                    normalize_member_by_points(cc, user_id)
+                    row = get_points_row(cc, user_id)
+                    user_is_member = bool(int(row.get("is_member") or 0))
+                conn_check.commit()
+            finally:
+                conn_check.close()
+
+        # 非会员且输入了错误会员码 => 直接报错，防止假码混入
+        if member_code and (not valid_member_code) and (not user_is_member):
+            return jsonify({"status": "error", "message": "会员码无效"}), 400
+
+        can_use_member = valid_member_code or user_is_member
+
         if has_image:
             if not allowed_image_file(image.filename):
                 return jsonify({"status": "error", "message": "图片格式不支持"}), 400
 
-            # 有图：登录用户可“会员码”或“积分会员”二选一；匿名只能靠会员码
-            can_image = False
-            if member_code == CHEAT_MEMBER_CODE:
-                can_image = True
-            elif user_id:
-                conn_tmp = get_conn()
-                try:
-                    with conn_tmp.cursor() as ctmp:
-                        row = get_points_row(ctmp, user_id)
-                        normalize_member_by_points(ctmp, user_id)
-                        row = get_points_row(ctmp, user_id)
-                        can_image = bool(int(row.get("is_member") or 0))
-                    conn_tmp.commit()
-                finally:
-                    conn_tmp.close()
-            if not can_image and not member_code:
+            if not can_use_member:
                 return jsonify({"status": "error", "message": "上传图片需要会员权限"}), 403
 
             ext = image.filename.rsplit(".", 1)[1].lower()
@@ -868,22 +876,8 @@ def upload():
             image.save(save_path)
             image_path = to_static_url(save_path)
 
-        # premium 逻辑：有会员码 / 积分会员 / 有图均可视为 premium 帖
-        is_premium = 0
-        if member_code:
-            is_premium = 1
-        elif user_id:
-            conn_tmp2 = get_conn()
-            try:
-                with conn_tmp2.cursor() as ctmp2:
-                    row2 = get_points_row(ctmp2, user_id)
-                    normalize_member_by_points(ctmp2, user_id)
-                    row2 = get_points_row(ctmp2, user_id)
-                    if int(row2.get("is_member") or 0) == 1:
-                        is_premium = 1
-                conn_tmp2.commit()
-            finally:
-                conn_tmp2.close()
+        # premium：仅当“真实会员身份成立”时才置1
+        is_premium = 1 if can_use_member else 0
 
         conn = get_conn()
         try:
@@ -916,12 +910,10 @@ def upload():
                         now_str()
                     ))
 
-                # 积分：仅登录用户加分
                 if user_id:
                     add_points(c, user_id, POINTS_POST_IMAGE if has_image else POINTS_POST_TEXT)
 
-                    # 作弊码可直升会员
-                    if member_code == CHEAT_MEMBER_CODE:
+                    if valid_member_code:
                         c.execute("""
                             UPDATE user_points
                             SET is_member = 1,
