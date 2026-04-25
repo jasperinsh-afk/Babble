@@ -315,30 +315,7 @@
         </div>
     </div>
 
-    <nav class="top-nav">
-        <a href="/message" class="nav-brand">
-            <span class="nav-brand-main">匿语阁</span>
-            <span class="nav-brand-sub">BABBLE</span>
-        </a>
-
-        <div class="nav-center">
-            <button class="nav-link guild-nav-link" type="button" onclick="showComingSoon('匿语荟 · 交流新方式')">
-                ✦ 匿语荟 <span>交流新方式</span>
-            </button>
-        </div>
-
-        <div class="nav-actions">
-            <button class="points-entry-btn" type="button" onclick="openPointsModalByEntry()">👑 成长进度</button>
-            <button class="cheat-entry-btn" type="button" onclick="openCheatModal()">⚙ 特殊码</button>
-            <button id="themeToggle" class="theme-toggle" type="button">🌙 暗色主题</button>
-        </div>
-    </nav>
-
-    <div id="toast" class="success-toast">
-        <span id="toastText">发送成功</span>
-        <button class="close-btn" type="button" onclick="hideToast()">×</button>
-    </div>
-
+    <!-- 会员码弹窗保留但不再主动使用 -->
     <div id="memberModal" class="member-modal">
         <div class="modal-content">
             <h3>会员验证</h3>
@@ -362,6 +339,30 @@
                 <button class="modal-btn cancel" type="button" onclick="closeCheatModal()">取消</button>
             </div>
         </div>
+    </div>
+
+    <nav class="top-nav">
+        <a href="/message" class="nav-brand">
+            <span class="nav-brand-main">匿语阁</span>
+            <span class="nav-brand-sub">BABBLE</span>
+        </a>
+
+        <div class="nav-center">
+            <button class="nav-link guild-nav-link" type="button" onclick="showComingSoon('匿语荟 · 交流新方式')">
+                ✦ 匿语荟 <span>交流新方式</span>
+            </button>
+        </div>
+
+        <div class="nav-actions">
+            <button class="points-entry-btn" type="button" onclick="openPointsModalByEntry()">👑 成长进度</button>
+            <button class="cheat-entry-btn" type="button" onclick="openCheatModal()">⚙ 特殊码</button>
+            <button id="themeToggle" class="theme-toggle" type="button">🌙 暗色主题</button>
+        </div>
+    </nav>
+
+    <div id="toast" class="success-toast">
+        <span id="toastText">发送成功</span>
+        <button class="close-btn" type="button" onclick="hideToast()">×</button>
     </div>
 
     <div class="main" id="mainPage">
@@ -453,6 +454,7 @@ function showToast(msg) {
     setTimeout(() => t.classList.remove('show'), 1800);
 }
 function hideToast() { document.getElementById('toast').classList.remove('show'); }
+function showMemberLocked() { showToast('未解锁会员'); }
 function esc(s='') {
     return String(s).replace(/[&<>"']/g, c => (
         {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
@@ -536,7 +538,7 @@ async function dailyCheckInAndPopup() {
     } catch (_) {}
 }
 
-/* ===== 关键改动：满足会员时，不弹会员码框 ===== */
+/* 按你的要求：无会员权限时，不弹会员码框，直接提示未解锁 */
 async function openMemberModal() {
     if (emergencyBlocked()) return;
 
@@ -544,14 +546,16 @@ async function openMemberModal() {
         await fetchPointsAndRender(false);
         if (pointsState.is_member) {
             showToast('已为你启用会员权益');
-            return;
+            return true;
         }
+        showMemberLocked();
+        return false;
     }
 
-    document.getElementById('memberModal').style.display = 'flex';
-    const input = document.getElementById('memberCodeInput');
-    setTimeout(() => input && input.focus(), 50);
+    showMemberLocked();
+    return false;
 }
+
 function closeMemberModal() { document.getElementById('memberModal').style.display = 'none'; }
 
 async function confirmMemberCode() {
@@ -622,7 +626,7 @@ async function confirmCheatCode() {
     }
 }
 
-/* ===== 关键改动：上传按钮已是会员直接放行 ===== */
+/* 按你的要求：上传入口无会员直接提示 */
 document.getElementById('vipUploadBtn').addEventListener('click', async () => {
     if (emergencyBlocked()) return;
 
@@ -632,15 +636,11 @@ document.getElementById('vipUploadBtn').addEventListener('click', async () => {
             document.getElementById('imageInput').click();
             return;
         }
-    }
-
-    const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
-    if (memberCode) {
-        document.getElementById('imageInput').click();
+        showMemberLocked();
         return;
     }
 
-    openMemberModal();
+    showMemberLocked();
 });
 
 async function refreshMe() {
@@ -735,19 +735,17 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
 
     const imageInput = document.getElementById('imageInput');
     const hasImage = imageInput && imageInput.files && imageInput.files.length > 0;
-    const memberCode = (document.getElementById('memberCodeHidden').value || '').trim();
 
-    if (hasImage && !memberCode) {
+    // 按你的要求：有图但无会员，直接提示，不弹会员码
+    if (hasImage) {
         if (me) {
             await fetchPointsAndRender(false);
             if (!pointsState.is_member) {
-                openMemberModal();
-                alert('上传图片需要先完成会员验证或积分达到100分解锁会员');
+                showMemberLocked();
                 return;
             }
         } else {
-            openMemberModal();
-            alert('上传图片需要先完成会员验证');
+            showMemberLocked();
             return;
         }
     }
