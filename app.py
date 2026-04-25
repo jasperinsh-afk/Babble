@@ -30,7 +30,7 @@ POINTS_THEME_DAILY = 5
 POINTS_MEMBER_THRESHOLD = 100
 CHEAT_MEMBER_CODE = "114PZ514"
 
-# ========= 五一限时活动配置（新增，保留原逻辑） =========
+# ========= 五一限时活动配置 =========
 WUYI_EVENT_START = date(2026, 5, 1)
 WUYI_EVENT_END = date(2026, 5, 5)
 WUYI_DAILY_POST_TARGET = 2
@@ -278,7 +278,7 @@ def is_valid_member_code(code: str) -> bool:
     return (code or "").strip().upper() == CHEAT_MEMBER_CODE
 
 
-# ========= 五一活动工具（新增） =========
+# ========= 五一活动工具 =========
 def is_wuyi_event_active():
     t = date.today()
     return WUYI_EVENT_START <= t <= WUYI_EVENT_END
@@ -288,12 +288,22 @@ def get_date_like_prefix():
     return f"{today_str()}%"
 
 
+def event_start_str():
+    return WUYI_EVENT_START.strftime("%Y-%m-%d 00:00:00")
+
+
+def event_end_str():
+    return WUYI_EVENT_END.strftime("%Y-%m-%d 23:59:59")
+
+
 def count_today_posts(cursor, tables, user_id):
     if not user_id:
         return 0
+
     mode = tables["mode"]
     message_table = tables["message_table"]
     date_col = "date" if mode == "old" else "created_at"
+
     cursor.execute(
         f"SELECT COUNT(*) AS cnt FROM `{message_table}` WHERE user_id = %s AND `{date_col}` LIKE %s",
         (user_id, get_date_like_prefix())
@@ -302,13 +312,56 @@ def count_today_posts(cursor, tables, user_id):
     return int((row or {}).get("cnt") or 0)
 
 
-def count_invited_users(cursor, tables, username):
+def count_event_invited_users(cursor, tables, username):
+    """
+    统计 2026-05-01 ~ 2026-05-05 期间注册，
+    且 inviter = 当前用户名 的用户数量
+
+    这才是你要的“5天总共邀请3人”
+    """
     if not username:
         return 0
+
     user_table = tables["user_table"]
     if not column_exists(cursor, user_table, "inviter"):
         return 0
-    cursor.execute(f"SELECT COUNT(*) AS cnt FROM `{user_table}` WHERE inviter = %s", (username,))
+
+    mode = tables["mode"]
+
+    if mode == "old":
+        # 旧表 user 常见字段：date
+        if not column_exists(cursor, user_table, "date"):
+            return 0
+
+        cursor.execute(f"""
+            SELECT COUNT(*) AS cnt
+            FROM `{user_table}`
+            WHERE inviter = %s
+              AND `date` >= %s
+              AND `date` <= %s
+        """, (username, event_start_str(), event_end_str()))
+    else:
+        # 新表 users 一般没有 created_at/date，所以这里兼容两种情况
+        if column_exists(cursor, user_table, "created_at"):
+            cursor.execute(f"""
+                SELECT COUNT(*) AS cnt
+                FROM `{user_table}`
+                WHERE inviter = %s
+                  AND `created_at` >= %s
+                  AND `created_at` <= %s
+            """, (username, event_start_str(), event_end_str()))
+        elif column_exists(cursor, user_table, "date"):
+            cursor.execute(f"""
+                SELECT COUNT(*) AS cnt
+                FROM `{user_table}`
+                WHERE inviter = %s
+                  AND `date` >= %s
+                  AND `date` <= %s
+            """, (username, event_start_str(), event_end_str()))
+        else:
+            # 如果新表没有注册时间字段，则无法精确统计活动期邀请
+            return 0
+
     row = cursor.fetchone()
     return int((row or {}).get("cnt") or 0)
 
@@ -318,14 +371,14 @@ def apply_wuyi_member_if_eligible(cursor, tables, user_id, username):
     活动期间：
     - 当日发帖 >= 2
     或
-    - 累计邀请 >= 3
+    - 2026.5.1 ~ 2026.5.5 五天内累计邀请 >= 3
     则置会员
     """
     if not user_id or not is_wuyi_event_active():
         return False
 
     today_posts = count_today_posts(cursor, tables, user_id)
-    invited = count_invited_users(cursor, tables, username)
+    invited = count_event_invited_users(cursor, tables, username)
     eligible = (today_posts >= WUYI_DAILY_POST_TARGET) or (invited >= WUYI_INVITE_TARGET)
 
     if eligible:
@@ -364,7 +417,10 @@ def normalize_member_by_points(cursor, user_id):
     is_member = int(row.get("is_member") or 0)
     should_member = 1 if points >= POINTS_MEMBER_THRESHOLD else is_member
     if should_member != is_member:
-        cursor.execute("UPDATE user_points SET is_member = %s, updated_at = %s WHERE user_id = %s", (should_member, now_str(), user_id))
+        cursor.execute(
+            "UPDATE user_points SET is_member = %s, updated_at = %s WHERE user_id = %s",
+            (should_member, now_str(), user_id)
+        )
     return should_member
 
 
@@ -513,10 +569,14 @@ def ensure_db_columns():
                 if not column_exists(c, "user_points", "updated_at"):
                     c.execute("ALTER TABLE user_points ADD COLUMN updated_at VARCHAR(32) NOT NULL DEFAULT ''")
 
-            # 五一活动：邀请人字段自动补充（新旧表都兼容）
+            # 邀请人字段自动补充
             if table_exists_with_cursor(c, "users"):
                 if not column_exists(c, "users", "inviter"):
                     c.execute("ALTER TABLE users ADD COLUMN inviter VARCHAR(64) NOT NULL DEFAULT ''")
+                # 新表为了精确统计五一期间邀请，补 created_at
+                if not column_exists(c, "users", "created_at"):
+                    c.execute("ALTER TABLE users ADD COLUMN created_at VARCHAR(32) NOT NULL DEFAULT ''")
+
             if table_exists_with_cursor(c, "user"):
                 if not column_exists(c, "user", "inviter"):
                     c.execute("ALTER TABLE user ADD COLUMN inviter VARCHAR(64) NOT NULL DEFAULT ''")
@@ -624,8 +684,10 @@ def daily_checkin():
                 row = get_points_row(c, user["id"])
                 if row.get("last_checkin_date") != today:
                     add_points(c, user["id"], POINTS_DAILY_CHECKIN)
-                    c.execute("UPDATE user_points SET last_checkin_date = %s, updated_at = %s WHERE user_id = %s",
-                              (today, now_str(), user["id"]))
+                    c.execute(
+                        "UPDATE user_points SET last_checkin_date = %s, updated_at = %s WHERE user_id = %s",
+                        (today, now_str(), user["id"])
+                    )
                     rewarded = True
 
                 apply_wuyi_member_if_eligible(c, tables, user["id"], user["username"])
@@ -646,7 +708,15 @@ def theme_reward():
     try:
         user = get_current_user()
         if not user:
-            return jsonify({"status": "ok", "rewarded": False, "delta": 0, "points": 0, "is_member": False, "today_signed": False, "today_theme_rewarded": False})
+            return jsonify({
+                "status": "ok",
+                "rewarded": False,
+                "delta": 0,
+                "points": 0,
+                "is_member": False,
+                "today_signed": False,
+                "today_theme_rewarded": False
+            })
 
         today = today_str()
         rewarded = False
@@ -658,8 +728,10 @@ def theme_reward():
                 row = get_points_row(c, user["id"])
                 if row.get("last_theme_reward_date") != today:
                     add_points(c, user["id"], POINTS_THEME_DAILY)
-                    c.execute("UPDATE user_points SET last_theme_reward_date = %s, updated_at = %s WHERE user_id = %s",
-                              (today, now_str(), user["id"]))
+                    c.execute(
+                        "UPDATE user_points SET last_theme_reward_date = %s, updated_at = %s WHERE user_id = %s",
+                        (today, now_str(), user["id"])
+                    )
                     rewarded = True
 
                 apply_wuyi_member_if_eligible(c, tables, user["id"], user["username"])
@@ -761,11 +833,25 @@ def register():
                             VALUES (%s, %s, %s, %s)
                         """, (username, password, now_str(), client_ip()))
                 else:
-                    if column_exists(c, user_table, "inviter"):
+                    # 新表 users：补 created_at，方便统计 5.1-5.5 邀请人数
+                    has_inviter = column_exists(c, user_table, "inviter")
+                    has_created_at = column_exists(c, user_table, "created_at")
+
+                    if has_inviter and has_created_at:
+                        c.execute(f"""
+                            INSERT INTO `{user_table}` (username, password, inviter, created_at)
+                            VALUES (%s, %s, %s, %s)
+                        """, (username, password, inviter_to_save, now_str()))
+                    elif has_inviter:
                         c.execute(f"""
                             INSERT INTO `{user_table}` (username, password, inviter)
                             VALUES (%s, %s, %s)
                         """, (username, password, inviter_to_save))
+                    elif has_created_at:
+                        c.execute(f"""
+                            INSERT INTO `{user_table}` (username, password, created_at)
+                            VALUES (%s, %s, %s)
+                        """, (username, password, now_str()))
                     else:
                         c.execute(f"""
                             INSERT INTO `{user_table}` (username, password)
@@ -777,7 +863,6 @@ def register():
                 if u:
                     ensure_points_row(c, u["id"])
 
-                    # 若填写了有效邀请人，尝试即时刷新邀请人的活动会员资格
                     if inviter_to_save:
                         c.execute(f"SELECT id, username FROM `{user_table}` WHERE username = %s", (inviter_to_save,))
                         inviter_row = c.fetchone()
@@ -875,7 +960,6 @@ def change_username():
                 if table_exists("likes"):
                     c.execute("UPDATE likes SET username = %s WHERE username = %s", (new_username, old_username))
 
-                # 五一活动邀请关系维护：被邀请记录里的 inviter 同步改名
                 if column_exists(c, user_table, "inviter"):
                     c.execute(f"UPDATE `{user_table}` SET inviter = %s WHERE inviter = %s", (new_username, old_username))
 
@@ -965,7 +1049,6 @@ def upload():
         valid_member_code = is_valid_member_code(member_code)
         user_is_member = False
 
-        # 读取登录用户会员状态（积分达标/兑换后）+ 五一活动资格
         if user_id:
             conn_check = get_conn()
             try:
@@ -979,7 +1062,6 @@ def upload():
             finally:
                 conn_check.close()
 
-        # 非会员且输入了错误会员码 => 直接报错，防止假码混入
         if member_code and (not valid_member_code) and (not user_is_member):
             return jsonify({"status": "error", "message": "会员码无效"}), 400
 
@@ -999,7 +1081,6 @@ def upload():
             image.save(save_path)
             image_path = to_static_url(save_path)
 
-        # premium：仅当“真实会员身份成立”时才置1
         is_premium = 1 if can_use_member else 0
 
         conn = get_conn()
@@ -1045,7 +1126,6 @@ def upload():
                             WHERE user_id = %s
                         """, (POINTS_MEMBER_THRESHOLD, POINTS_MEMBER_THRESHOLD, now_str(), user_id))
 
-                    # 五一活动条件：发帖后立即判断
                     apply_wuyi_member_if_eligible(c, tables, user_id, username)
 
                 points_row = get_points_row(c, user_id) if user_id else None
