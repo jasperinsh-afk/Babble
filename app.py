@@ -1375,6 +1375,53 @@ def messages():
             "mysql_user": MYSQL_USER,
             "mysql_database": MYSQL_DATABASE
         }), 500
+@app.route("/wuyi_progress")
+def wuyi_progress():
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({
+                "status": "error",
+                "message": "请先登录"
+            }), 401
+
+        tables = current_tables()
+
+        conn = get_conn()
+        try:
+            with conn.cursor() as c:
+                today_posts = count_today_posts(c, tables, user["id"])
+                invited = count_event_invited_users(c, tables, user["username"])
+                apply_wuyi_member_if_eligible(c, tables, user["id"], user["username"])
+                row = get_points_row(c, user["id"])
+            conn.commit()
+        finally:
+            conn.close()
+
+        is_member = bool(int((row or {}).get("is_member") or 0))
+        post_left = max(0, WUYI_DAILY_POST_TARGET - today_posts)
+        invite_left = max(0, WUYI_INVITE_TARGET - invited)
+        reached = (today_posts >= WUYI_DAILY_POST_TARGET) or (invited >= WUYI_INVITE_TARGET)
+
+        return jsonify({
+            "status": "ok",
+            "active": is_wuyi_event_active(),
+            "today_posts": today_posts,
+            "post_target": WUYI_DAILY_POST_TARGET,
+            "post_left": post_left,
+            "invited": invited,
+            "invite_target": WUYI_INVITE_TARGET,
+            "invite_left": invite_left,
+            "reached": reached,
+            "is_member": is_member
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({
+            "status": "error",
+            "message": "获取活动进度失败",
+            "detail": repr(e)
+        }), 500
 
 
 # ========= 错误处理 =========
