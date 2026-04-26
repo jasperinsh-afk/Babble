@@ -62,6 +62,26 @@
             background: rgba(8, 7, 18, .62);
             backdrop-filter: blur(8px);
         }
+        <div id="wuyiModal" class="points-modal">
+            <div class="points-card">
+                <h3>五一活动进度</h3>
+                <div class="points-meta" id="wuyiMeta">正在加载活动进度...</div>
+        
+                <div class="points-line" id="wuyiLine1">今日发帖：0 / 2</div>
+                <div class="points-progress"><span id="wuyiPostBar"></span></div>
+        
+                <div class="points-line" id="wuyiLine2">活动邀请：0 / 3</div>
+                <div class="points-progress"><span id="wuyiInviteBar"></span></div>
+        
+                <div class="points-line" id="wuyiLine3">距离发帖目标还差：2 帖</div>
+                <div class="points-line" id="wuyiLine4">距离邀请目标还差：3 人</div>
+        
+                <div class="points-actions">
+                    <button class="points-btn" type="button" onclick="closeWuyiModal()">我知道了</button>
+                </div>
+            </div>
+        </div>
+
         .points-card{
             width: min(92vw, 460px);
             border-radius: 18px;
@@ -916,6 +936,77 @@ async function loadMessages() {
         `;
     }).join('');
 }
+function closeWuyiModal() {
+    const modal = document.getElementById('wuyiModal');
+    if (modal) modal.style.display = 'none';
+    if (!isEmergencyMode()) document.body.style.overflow = '';
+}
+
+async function openWuyiProgressModal() {
+    if (emergencyBlocked()) return;
+
+    if (!me) {
+        showToast('请先登录后查看活动进度');
+        return;
+    }
+
+    const modal = document.getElementById('wuyiModal');
+    const meta = document.getElementById('wuyiMeta');
+    const line1 = document.getElementById('wuyiLine1');
+    const line2 = document.getElementById('wuyiLine2');
+    const line3 = document.getElementById('wuyiLine3');
+    const line4 = document.getElementById('wuyiLine4');
+    const postBar = document.getElementById('wuyiPostBar');
+    const inviteBar = document.getElementById('wuyiInviteBar');
+
+    meta.innerText = '正在加载活动进度...';
+    line1.innerText = '今日发帖：0 / 2';
+    line2.innerText = '活动邀请：0 / 3';
+    line3.innerText = '';
+    line4.innerText = '';
+    postBar.style.width = '0%';
+    inviteBar.style.width = '0%';
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    try {
+        const res = await fetch('/wuyi_progress');
+        const data = await res.json();
+
+        if (data.status !== 'ok') {
+            meta.innerText = data.message || '加载失败';
+            return;
+        }
+
+        const todayPosts = Number(data.today_posts || 0);
+        const postTarget = Number(data.post_target || 2);
+        const invited = Number(data.invited || 0);
+        const inviteTarget = Number(data.invite_target || 3);
+        const postLeft = Number(data.post_left || 0);
+        const inviteLeft = Number(data.invite_left || 0);
+
+        const postPercent = Math.max(0, Math.min(100, (todayPosts / postTarget) * 100));
+        const invitePercent = Math.max(0, Math.min(100, (invited / inviteTarget) * 100));
+
+        line1.innerText = `今日发帖：${todayPosts} / ${postTarget}`;
+        line2.innerText = `活动邀请：${invited} / ${inviteTarget}`;
+        postBar.style.width = postPercent + '%';
+        inviteBar.style.width = invitePercent + '%';
+
+        if (data.reached || data.is_member) {
+            meta.innerText = data.active ? '你已达成五一活动目标，会员已解锁' : '你已达成活动目标';
+            line3.innerText = '发帖目标：已完成';
+            line4.innerText = '邀请目标：已完成';
+        } else {
+            meta.innerText = data.active ? '满足任一条件即可解锁会员' : '当前不在活动期间';
+            line3.innerText = `距离发帖目标还差：${postLeft} 帖`;
+            line4.innerText = `距离邀请目标还差：${inviteLeft} 人`;
+        }
+    } catch (e) {
+        meta.innerText = '请求失败，请稍后重试';
+    }
+}
 
 function initTheme() {
     const saved = localStorage.getItem('theme') || 'light';
@@ -961,11 +1052,14 @@ window.addEventListener('click', function(e) {
     const comingSoonModal = document.getElementById('comingSoonModal');
     const pointsModal = document.getElementById('pointsModal');
     const cheatModal = document.getElementById('cheatModal');
+    const wuyiModal = document.getElementById('wuyiModal');
     if (e.target === memberModal) closeMemberModal();
     if (e.target === comingSoonModal) closeComingSoon();
     if (e.target === pointsModal) closePointsModal();
     if (e.target === cheatModal) closeCheatModal();
+    if (e.target === wuyiModal) closeWuyiModal();
 });
+
 
 document.getElementById('memberCodeInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') confirmMemberCode();
