@@ -1,7 +1,7 @@
 import os
 import time
 import traceback
-from datetime import datetime, date
+from datetime import datetime
 from urllib.parse import urlparse, unquote
 
 import pymysql
@@ -20,21 +20,6 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "images")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-
-# ========= 积分配置 =========
-POINTS_DAILY_CHECKIN = 5
-POINTS_POST_TEXT = 10
-POINTS_POST_IMAGE = 15
-POINTS_REPLY = 5
-POINTS_THEME_DAILY = 5
-POINTS_MEMBER_THRESHOLD = 100
-CHEAT_MEMBER_CODE = "114PZ514"
-
-# ========= 五一限时活动配置 =========
-WUYI_EVENT_START = date(2026, 5, 1)
-WUYI_EVENT_END = date(2026, 5, 5)
-WUYI_DAILY_POST_TARGET = 2
-WUYI_INVITE_TARGET = 3
 
 
 # ========= 数据库配置解析 =========
@@ -113,7 +98,7 @@ MYSQL_DATABASE = MYSQL_CONFIG.get("database")
 MYSQL_SOURCE = MYSQL_CONFIG.get("source")
 
 
-# ========= 工具 =========
+# ========= 工具函数 =========
 def validate_mysql_env():
     problems = []
 
@@ -152,10 +137,6 @@ def get_conn():
 
 def now_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-def today_str():
-    return datetime.now().strftime("%Y-%m-%d")
 
 
 def allowed_image_file(filename):
@@ -201,10 +182,6 @@ def table_exists(table_name):
 
 
 def detect_table_mode():
-    """
-    old:  message / reply / user
-    new:  messages / replies / users
-    """
     conn = get_conn()
     try:
         with conn.cursor() as c:
@@ -262,193 +239,6 @@ def get_current_user():
         conn.close()
 
 
-def column_exists(cursor, table_name, column_name):
-    cursor.execute("""
-        SELECT COUNT(*) AS cnt
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = %s
-          AND TABLE_NAME = %s
-          AND COLUMN_NAME = %s
-    """, (MYSQL_DATABASE, table_name, column_name))
-    row = cursor.fetchone()
-    return bool(row and row["cnt"] > 0)
-
-
-def is_valid_member_code(code: str) -> bool:
-    return (code or "").strip().upper() == CHEAT_MEMBER_CODE
-
-
-# ========= 五一活动工具 =========
-def is_wuyi_event_active():
-    t = date.today()
-    return WUYI_EVENT_START <= t <= WUYI_EVENT_END
-
-
-def get_date_like_prefix():
-    return f"{today_str()}%"
-
-
-def event_start_str():
-    return WUYI_EVENT_START.strftime("%Y-%m-%d 00:00:00")
-
-
-def event_end_str():
-    return WUYI_EVENT_END.strftime("%Y-%m-%d 23:59:59")
-
-
-def count_today_posts(cursor, tables, user_id):
-    if not user_id:
-        return 0
-
-    mode = tables["mode"]
-    message_table = tables["message_table"]
-    date_col = "date" if mode == "old" else "created_at"
-
-    cursor.execute(
-        f"SELECT COUNT(*) AS cnt FROM `{message_table}` WHERE user_id = %s AND `{date_col}` LIKE %s",
-        (user_id, get_date_like_prefix())
-    )
-    row = cursor.fetchone()
-    return int((row or {}).get("cnt") or 0)
-
-
-def count_event_invited_users(cursor, tables, username):
-    """
-    统计 2026-05-01 ~ 2026-05-05 期间注册，
-    且 inviter = 当前用户名 的用户数量
-
-    这才是你要的“5天总共邀请3人”
-    """
-    if not username:
-        return 0
-
-    user_table = tables["user_table"]
-    if not column_exists(cursor, user_table, "inviter"):
-        return 0
-
-    mode = tables["mode"]
-
-    if mode == "old":
-        # 旧表 user 常见字段：date
-        if not column_exists(cursor, user_table, "date"):
-            return 0
-
-        cursor.execute(f"""
-            SELECT COUNT(*) AS cnt
-            FROM `{user_table}`
-            WHERE inviter = %s
-              AND `date` >= %s
-              AND `date` <= %s
-        """, (username, event_start_str(), event_end_str()))
-    else:
-        # 新表 users 一般没有 created_at/date，所以这里兼容两种情况
-        if column_exists(cursor, user_table, "created_at"):
-            cursor.execute(f"""
-                SELECT COUNT(*) AS cnt
-                FROM `{user_table}`
-                WHERE inviter = %s
-                  AND `created_at` >= %s
-                  AND `created_at` <= %s
-            """, (username, event_start_str(), event_end_str()))
-        elif column_exists(cursor, user_table, "date"):
-            cursor.execute(f"""
-                SELECT COUNT(*) AS cnt
-                FROM `{user_table}`
-                WHERE inviter = %s
-                  AND `date` >= %s
-                  AND `date` <= %s
-            """, (username, event_start_str(), event_end_str()))
-        else:
-            # 如果新表没有注册时间字段，则无法精确统计活动期邀请
-            return 0
-
-    row = cursor.fetchone()
-    return int((row or {}).get("cnt") or 0)
-
-
-def apply_wuyi_member_if_eligible(cursor, tables, user_id, username):
-    """
-    活动期间：
-    - 当日发帖 >= 2
-    或
-    - 2026.5.1 ~ 2026.5.5 五天内累计邀请 >= 3
-    则置会员
-    """
-    if not user_id or not is_wuyi_event_active():
-        return False
-
-    today_posts = count_today_posts(cursor, tables, user_id)
-    invited = count_event_invited_users(cursor, tables, username)
-    eligible = (today_posts >= WUYI_DAILY_POST_TARGET) or (invited >= WUYI_INVITE_TARGET)
-
-    if eligible:
-        ensure_points_row(cursor, user_id)
-        cursor.execute("""
-            UPDATE user_points
-            SET is_member = 1,
-                updated_at = %s
-            WHERE user_id = %s
-        """, (now_str(), user_id))
-    return eligible
-
-
-# ========= 积分工具 =========
-def ensure_points_row(cursor, user_id):
-    cursor.execute("""
-        INSERT INTO user_points (user_id, points, is_member, last_checkin_date, last_theme_reward_date, created_at, updated_at)
-        VALUES (%s, 0, 0, '', '', %s, %s)
-        ON DUPLICATE KEY UPDATE updated_at = VALUES(updated_at)
-    """, (user_id, now_str(), now_str()))
-
-
-def get_points_row(cursor, user_id):
-    ensure_points_row(cursor, user_id)
-    cursor.execute("""
-        SELECT user_id, points, is_member, last_checkin_date, last_theme_reward_date, updated_at
-        FROM user_points
-        WHERE user_id = %s
-    """, (user_id,))
-    return cursor.fetchone()
-
-
-def normalize_member_by_points(cursor, user_id):
-    row = get_points_row(cursor, user_id)
-    points = int(row.get("points") or 0)
-    is_member = int(row.get("is_member") or 0)
-    should_member = 1 if points >= POINTS_MEMBER_THRESHOLD else is_member
-    if should_member != is_member:
-        cursor.execute(
-            "UPDATE user_points SET is_member = %s, updated_at = %s WHERE user_id = %s",
-            (should_member, now_str(), user_id)
-        )
-    return should_member
-
-
-def add_points(cursor, user_id, delta):
-    if delta <= 0:
-        return get_points_row(cursor, user_id)
-    ensure_points_row(cursor, user_id)
-    cursor.execute("""
-        UPDATE user_points
-        SET points = points + %s,
-            updated_at = %s
-        WHERE user_id = %s
-    """, (delta, now_str(), user_id))
-    normalize_member_by_points(cursor, user_id)
-    return get_points_row(cursor, user_id)
-
-
-def points_payload_from_row(row):
-    points = int(row.get("points") or 0)
-    is_member = bool(int(row.get("is_member") or 0))
-    return {
-        "points": points,
-        "is_member": is_member,
-        "today_signed": (row.get("last_checkin_date") == today_str()),
-        "today_theme_rewarded": (row.get("last_theme_reward_date") == today_str())
-    }
-
-
 # ========= 数据库初始化 =========
 def init_db():
     conn = get_conn()
@@ -469,7 +259,6 @@ def init_db():
                 user_id INT NULL,
                 content TEXT,
                 image_path VARCHAR(500) DEFAULT '',
-                is_premium TINYINT DEFAULT 0,
                 created_at VARCHAR(32) NOT NULL,
                 INDEX idx_messages_id (id),
                 INDEX idx_messages_user_id (user_id)
@@ -499,19 +288,6 @@ def init_db():
             ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
             """)
 
-            c.execute("""
-            CREATE TABLE IF NOT EXISTS user_points (
-                user_id INT PRIMARY KEY,
-                points INT NOT NULL DEFAULT 0,
-                is_member TINYINT NOT NULL DEFAULT 0,
-                last_checkin_date VARCHAR(16) NOT NULL DEFAULT '',
-                last_theme_reward_date VARCHAR(16) NOT NULL DEFAULT '',
-                created_at VARCHAR(32) NOT NULL,
-                updated_at VARCHAR(32) NOT NULL,
-                INDEX idx_user_points_is_member (is_member)
-            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-            """)
-
         conn.commit()
     finally:
         conn.close()
@@ -530,8 +306,6 @@ def ensure_db_columns():
                     c.execute("ALTER TABLE messages ADD COLUMN content TEXT")
                 if not column_exists(c, "messages", "image_path"):
                     c.execute("ALTER TABLE messages ADD COLUMN image_path VARCHAR(500) DEFAULT ''")
-                if not column_exists(c, "messages", "is_premium"):
-                    c.execute("ALTER TABLE messages ADD COLUMN is_premium TINYINT DEFAULT 0")
                 if not column_exists(c, "messages", "created_at"):
                     c.execute("ALTER TABLE messages ADD COLUMN created_at VARCHAR(32) NOT NULL DEFAULT ''")
 
@@ -553,40 +327,33 @@ def ensure_db_columns():
                 if not column_exists(c, "likes", "username"):
                     c.execute("ALTER TABLE likes ADD COLUMN username VARCHAR(64) NOT NULL DEFAULT ''")
 
-            if table_exists_with_cursor(c, "user_points"):
-                if not column_exists(c, "user_points", "user_id"):
-                    c.execute("ALTER TABLE user_points ADD COLUMN user_id INT PRIMARY KEY")
-                if not column_exists(c, "user_points", "points"):
-                    c.execute("ALTER TABLE user_points ADD COLUMN points INT NOT NULL DEFAULT 0")
-                if not column_exists(c, "user_points", "is_member"):
-                    c.execute("ALTER TABLE user_points ADD COLUMN is_member TINYINT NOT NULL DEFAULT 0")
-                if not column_exists(c, "user_points", "last_checkin_date"):
-                    c.execute("ALTER TABLE user_points ADD COLUMN last_checkin_date VARCHAR(16) NOT NULL DEFAULT ''")
-                if not column_exists(c, "user_points", "last_theme_reward_date"):
-                    c.execute("ALTER TABLE user_points ADD COLUMN last_theme_reward_date VARCHAR(16) NOT NULL DEFAULT ''")
-                if not column_exists(c, "user_points", "created_at"):
-                    c.execute("ALTER TABLE user_points ADD COLUMN created_at VARCHAR(32) NOT NULL DEFAULT ''")
-                if not column_exists(c, "user_points", "updated_at"):
-                    c.execute("ALTER TABLE user_points ADD COLUMN updated_at VARCHAR(32) NOT NULL DEFAULT ''")
-
-            # 邀请人字段自动补充
             if table_exists_with_cursor(c, "users"):
                 if not column_exists(c, "users", "inviter"):
                     c.execute("ALTER TABLE users ADD COLUMN inviter VARCHAR(64) NOT NULL DEFAULT ''")
-                # 新表为了精确统计五一期间邀请，补 created_at
                 if not column_exists(c, "users", "created_at"):
                     c.execute("ALTER TABLE users ADD COLUMN created_at VARCHAR(32) NOT NULL DEFAULT ''")
 
             if table_exists_with_cursor(c, "user"):
                 if not column_exists(c, "user", "inviter"):
                     c.execute("ALTER TABLE user ADD COLUMN inviter VARCHAR(64) NOT NULL DEFAULT ''")
-
         conn.commit()
     finally:
         conn.close()
 
 
-# ========= 页面 =========
+def column_exists(cursor, table_name, column_name):
+    cursor.execute("""
+        SELECT COUNT(*) AS cnt
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = %s
+          AND TABLE_NAME = %s
+          AND COLUMN_NAME = %s
+    """, (MYSQL_DATABASE, table_name, column_name))
+    row = cursor.fetchone()
+    return bool(row and row["cnt"] > 0)
+
+
+# ========= 页面路由 =========
 @app.route("/")
 @app.route("/message")
 def message_page():
@@ -612,23 +379,13 @@ def me():
                 if not user:
                     session.clear()
                     return jsonify({"logged_in": False, "username": None})
-
-                ensure_points_row(c, user["id"])
-                normalize_member_by_points(c, user["id"])
-                apply_wuyi_member_if_eligible(c, tables, user["id"], user["username"])
-                row = get_points_row(c, user["id"])
-                conn.commit()
         finally:
             conn.close()
 
-        payload = points_payload_from_row(row)
         return jsonify({
             "logged_in": True,
             "username": user["username"],
-            "mode": tables["mode"],
-            "points": payload["points"],
-            "is_member": payload["is_member"],
-            "wuyi_active": is_wuyi_event_active()
+            "mode": tables["mode"]
         })
 
     except Exception as e:
@@ -638,150 +395,6 @@ def me():
             "username": None,
             "error": repr(e)
         }), 500
-
-
-# ========= 积分接口 =========
-@app.route("/points_status")
-def points_status():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify({"status": "error", "message": "请先登录"}), 401
-
-        tables = current_tables()
-        conn = get_conn()
-        try:
-            with conn.cursor() as c:
-                row = get_points_row(c, user["id"])
-                normalize_member_by_points(c, user["id"])
-                apply_wuyi_member_if_eligible(c, tables, user["id"], user["username"])
-                row = get_points_row(c, user["id"])
-            conn.commit()
-        finally:
-            conn.close()
-
-        payload = points_payload_from_row(row)
-        return jsonify({"status": "ok", **payload, "wuyi_active": is_wuyi_event_active()})
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": "获取积分失败", "detail": repr(e)}), 500
-
-
-@app.route("/daily_checkin", methods=["POST"])
-def daily_checkin():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify({"status": "error", "message": "请先登录"}), 401
-
-        today = today_str()
-        rewarded = False
-        tables = current_tables()
-
-        conn = get_conn()
-        try:
-            with conn.cursor() as c:
-                row = get_points_row(c, user["id"])
-                if row.get("last_checkin_date") != today:
-                    add_points(c, user["id"], POINTS_DAILY_CHECKIN)
-                    c.execute(
-                        "UPDATE user_points SET last_checkin_date = %s, updated_at = %s WHERE user_id = %s",
-                        (today, now_str(), user["id"])
-                    )
-                    rewarded = True
-
-                apply_wuyi_member_if_eligible(c, tables, user["id"], user["username"])
-                row = get_points_row(c, user["id"])
-            conn.commit()
-        finally:
-            conn.close()
-
-        payload = points_payload_from_row(row)
-        return jsonify({"status": "ok", "rewarded": rewarded, "delta": POINTS_DAILY_CHECKIN if rewarded else 0, **payload})
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": "打卡失败", "detail": repr(e)}), 500
-
-
-@app.route("/theme_reward", methods=["POST"])
-def theme_reward():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify({
-                "status": "ok",
-                "rewarded": False,
-                "delta": 0,
-                "points": 0,
-                "is_member": False,
-                "today_signed": False,
-                "today_theme_rewarded": False
-            })
-
-        today = today_str()
-        rewarded = False
-        tables = current_tables()
-
-        conn = get_conn()
-        try:
-            with conn.cursor() as c:
-                row = get_points_row(c, user["id"])
-                if row.get("last_theme_reward_date") != today:
-                    add_points(c, user["id"], POINTS_THEME_DAILY)
-                    c.execute(
-                        "UPDATE user_points SET last_theme_reward_date = %s, updated_at = %s WHERE user_id = %s",
-                        (today, now_str(), user["id"])
-                    )
-                    rewarded = True
-
-                apply_wuyi_member_if_eligible(c, tables, user["id"], user["username"])
-                row = get_points_row(c, user["id"])
-            conn.commit()
-        finally:
-            conn.close()
-
-        payload = points_payload_from_row(row)
-        return jsonify({"status": "ok", "rewarded": rewarded, "delta": POINTS_THEME_DAILY if rewarded else 0, **payload})
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": "主题奖励失败", "detail": repr(e)}), 500
-
-
-@app.route("/redeem_member_code", methods=["POST"])
-def redeem_member_code():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify({"status": "error", "message": "请先登录"}), 401
-
-        code = (request.form.get("code") or "").strip().upper()
-        if not code:
-            return jsonify({"status": "error", "message": "请输入会员码"}), 400
-
-        if not is_valid_member_code(code):
-            return jsonify({"status": "error", "message": "会员码无效"}), 400
-
-        conn = get_conn()
-        try:
-            with conn.cursor() as c:
-                ensure_points_row(c, user["id"])
-                c.execute("""
-                    UPDATE user_points
-                    SET is_member = 1,
-                        points = CASE WHEN points < %s THEN %s ELSE points END,
-                        updated_at = %s
-                    WHERE user_id = %s
-                """, (POINTS_MEMBER_THRESHOLD, POINTS_MEMBER_THRESHOLD, now_str(), user["id"]))
-                row = get_points_row(c, user["id"])
-            conn.commit()
-        finally:
-            conn.close()
-
-        payload = points_payload_from_row(row)
-        return jsonify({"status": "ok", "upgraded": True, **payload})
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": "兑换失败", "detail": repr(e)}), 500
 
 
 # ========= 注册 / 登录 / 退出 =========
@@ -798,13 +411,10 @@ def register():
 
         if len(username) < 2 or len(username) > 30:
             return jsonify({"status": "error", "message": "用户名长度需 2-30 个字符"})
-
         if len(password) < 2 or len(password) > 100:
             return jsonify({"status": "error", "message": "密码长度不合法"})
-
         if inviter and len(inviter) > 30:
             return jsonify({"status": "error", "message": "邀请人用户名过长"})
-
         if inviter and inviter == username:
             return jsonify({"status": "error", "message": "邀请人不能是自己"})
 
@@ -818,8 +428,8 @@ def register():
                 inviter_to_save = ""
                 if inviter and column_exists(c, user_table, "inviter"):
                     c.execute(f"SELECT id FROM `{user_table}` WHERE username = %s", (inviter,))
-                    inviter_user = c.fetchone()
-                    inviter_to_save = inviter if inviter_user else ""
+                    if c.fetchone():
+                        inviter_to_save = inviter
 
                 if mode == "old":
                     if column_exists(c, user_table, "inviter"):
@@ -833,7 +443,6 @@ def register():
                             VALUES (%s, %s, %s, %s)
                         """, (username, password, now_str(), client_ip()))
                 else:
-                    # 新表 users：补 created_at，方便统计 5.1-5.5 邀请人数
                     has_inviter = column_exists(c, user_table, "inviter")
                     has_created_at = column_exists(c, user_table, "created_at")
 
@@ -857,18 +466,6 @@ def register():
                             INSERT INTO `{user_table}` (username, password)
                             VALUES (%s, %s)
                         """, (username, password))
-
-                c.execute(f"SELECT id FROM `{user_table}` WHERE username = %s", (username,))
-                u = c.fetchone()
-                if u:
-                    ensure_points_row(c, u["id"])
-
-                    if inviter_to_save:
-                        c.execute(f"SELECT id, username FROM `{user_table}` WHERE username = %s", (inviter_to_save,))
-                        inviter_row = c.fetchone()
-                        if inviter_row:
-                            apply_wuyi_member_if_eligible(c, tables, inviter_row["id"], inviter_row["username"])
-
             conn.commit()
         finally:
             conn.close()
@@ -906,11 +503,6 @@ def login():
                 user = c.fetchone()
                 if not user:
                     return jsonify({"status": "error", "message": "用户名或密码错误"})
-
-                ensure_points_row(c, user["id"])
-                normalize_member_by_points(c, user["id"])
-                apply_wuyi_member_if_eligible(c, tables, user["id"], user["username"])
-            conn.commit()
         finally:
             conn.close()
 
@@ -926,87 +518,6 @@ def login():
 def logout():
     session.clear()
     return jsonify({"status": "ok"})
-
-
-@app.route("/change_username", methods=["POST"])
-def change_username():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify({"status": "error", "message": "请先登录"}), 401
-
-        tables = current_tables()
-        user_table = tables["user_table"]
-        message_table = tables["message_table"]
-        reply_table = tables["reply_table"]
-
-        new_username = (request.form.get("new_username") or "").strip()
-        if len(new_username) < 2 or len(new_username) > 30:
-            return jsonify({"status": "error", "message": "用户名长度需 2-30 个字符"})
-
-        conn = get_conn()
-        try:
-            with conn.cursor() as c:
-                c.execute(f"SELECT id FROM `{user_table}` WHERE username = %s", (new_username,))
-                if c.fetchone():
-                    return jsonify({"status": "error", "message": "新用户名已存在"})
-
-                old_username = user["username"]
-
-                c.execute(f"UPDATE `{user_table}` SET username = %s WHERE id = %s", (new_username, user["id"]))
-                c.execute(f"UPDATE `{message_table}` SET username = %s WHERE user_id = %s", (new_username, user["id"]))
-                c.execute(f"UPDATE `{reply_table}` SET username = %s WHERE user_id = %s", (new_username, user["id"]))
-
-                if table_exists("likes"):
-                    c.execute("UPDATE likes SET username = %s WHERE username = %s", (new_username, old_username))
-
-                if column_exists(c, user_table, "inviter"):
-                    c.execute(f"UPDATE `{user_table}` SET inviter = %s WHERE inviter = %s", (new_username, old_username))
-
-            conn.commit()
-        finally:
-            conn.close()
-
-        session["username"] = new_username
-        return jsonify({"status": "ok"})
-
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": "修改用户名失败", "detail": repr(e)}), 500
-
-
-@app.route("/delete_account", methods=["POST"])
-def delete_account():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify({"status": "error", "message": "请先登录"}), 401
-
-        tables = current_tables()
-        user_table = tables["user_table"]
-        message_table = tables["message_table"]
-        reply_table = tables["reply_table"]
-
-        conn = get_conn()
-        try:
-            with conn.cursor() as c:
-                if table_exists("likes"):
-                    c.execute("DELETE FROM likes WHERE username = %s", (user["username"],))
-                c.execute(f"DELETE FROM `{reply_table}` WHERE user_id = %s", (user["id"],))
-                c.execute(f"DELETE FROM `{message_table}` WHERE user_id = %s", (user["id"],))
-                c.execute(f"DELETE FROM `{user_table}` WHERE id = %s", (user["id"],))
-                if table_exists("user_points"):
-                    c.execute("DELETE FROM user_points WHERE user_id = %s", (user["id"],))
-            conn.commit()
-        finally:
-            conn.close()
-
-        session.clear()
-        return jsonify({"status": "ok"})
-
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": "注销失败", "detail": repr(e)}), 500
 
 
 # ========= 发帖 =========
@@ -1025,12 +536,6 @@ def upload():
             or ""
         ).strip()
 
-        member_code = (
-            request.form.get("member_code")
-            or request.form.get("vip_code")
-            or ""
-        ).strip().upper()
-
         if not content:
             return jsonify({"status": "error", "message": "内容不能为空"}), 400
 
@@ -1046,33 +551,9 @@ def upload():
         image = request.files.get("image") or request.files.get("file") or request.files.get("photo")
         has_image = bool(image and image.filename)
 
-        valid_member_code = is_valid_member_code(member_code)
-        user_is_member = False
-
-        if user_id:
-            conn_check = get_conn()
-            try:
-                with conn_check.cursor() as cc:
-                    row = get_points_row(cc, user_id)
-                    normalize_member_by_points(cc, user_id)
-                    apply_wuyi_member_if_eligible(cc, tables, user_id, username)
-                    row = get_points_row(cc, user_id)
-                    user_is_member = bool(int(row.get("is_member") or 0))
-                conn_check.commit()
-            finally:
-                conn_check.close()
-
-        if member_code and (not valid_member_code) and (not user_is_member):
-            return jsonify({"status": "error", "message": "会员码无效"}), 400
-
-        can_use_member = valid_member_code or user_is_member
-
         if has_image:
             if not allowed_image_file(image.filename):
                 return jsonify({"status": "error", "message": "图片格式不支持"}), 400
-
-            if not can_use_member:
-                return jsonify({"status": "error", "message": "上传图片需要会员权限"}), 403
 
             ext = image.filename.rsplit(".", 1)[1].lower()
             safe_username = secure_filename(username) or "anonymous"
@@ -1081,21 +562,18 @@ def upload():
             image.save(save_path)
             image_path = to_static_url(save_path)
 
-        is_premium = 1 if can_use_member else 0
-
         conn = get_conn()
         try:
             with conn.cursor() as c:
                 if mode == "old":
                     c.execute(f"""
                         INSERT INTO `{message_table}` (
-                            ip, content, date, is_premium, username, image_path, user_id
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            ip, content, date, username, image_path, user_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
                     """, (
                         client_ip(),
                         content,
                         now_str(),
-                        is_premium,
                         username,
                         image_path,
                         user_id
@@ -1103,41 +581,20 @@ def upload():
                 else:
                     c.execute(f"""
                         INSERT INTO `{message_table}` (
-                            username, user_id, content, image_path, is_premium, created_at
-                        ) VALUES (%s, %s, %s, %s, %s, %s)
+                            username, user_id, content, image_path, created_at
+                        ) VALUES (%s, %s, %s, %s, %s)
                     """, (
                         username,
                         user_id,
                         content,
                         image_path,
-                        is_premium,
                         now_str()
                     ))
-
-                if user_id:
-                    add_points(c, user_id, POINTS_POST_IMAGE if has_image else POINTS_POST_TEXT)
-
-                    if valid_member_code:
-                        c.execute("""
-                            UPDATE user_points
-                            SET is_member = 1,
-                                points = CASE WHEN points < %s THEN %s ELSE points END,
-                                updated_at = %s
-                            WHERE user_id = %s
-                        """, (POINTS_MEMBER_THRESHOLD, POINTS_MEMBER_THRESHOLD, now_str(), user_id))
-
-                    apply_wuyi_member_if_eligible(c, tables, user_id, username)
-
-                points_row = get_points_row(c, user_id) if user_id else None
-
             conn.commit()
         finally:
             conn.close()
 
-        resp = {"status": "ok", "mode": mode}
-        if points_row:
-            resp.update(points_payload_from_row(points_row))
-        return jsonify(resp)
+        return jsonify({"status": "ok", "mode": mode})
 
     except Exception as e:
         traceback.print_exc()
@@ -1158,7 +615,6 @@ def reply():
 
         if not message_id.isdigit():
             return jsonify({"status": "error", "message": "参数错误"})
-
         if not reply_content:
             return jsonify({"status": "error", "message": "回复内容不能为空"})
 
@@ -1168,8 +624,7 @@ def reply():
         try:
             with conn.cursor() as c:
                 c.execute(f"SELECT id FROM `{message_table}` WHERE id = %s", (message_id,))
-                msg = c.fetchone()
-                if not msg:
+                if not c.fetchone():
                     return jsonify({"status": "error", "message": "留言不存在"})
 
                 user = get_current_user()
@@ -1183,14 +638,13 @@ def reply():
                 if mode == "old":
                     c.execute(f"""
                         INSERT INTO `{reply_table}` (
-                            ip, content, date, message_id, is_premium, username, user_id
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            ip, content, date, message_id, username, user_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
                     """, (
                         client_ip(),
                         reply_content,
                         now_str(),
                         message_id,
-                        0,
                         username,
                         user_id
                     ))
@@ -1206,30 +660,19 @@ def reply():
                         reply_content,
                         now_str()
                     ))
-
-                if user_id:
-                    add_points(c, user_id, POINTS_REPLY)
-                    apply_wuyi_member_if_eligible(c, tables, user_id, username)
-                    points_row = get_points_row(c, user_id)
-                else:
-                    points_row = None
-
             conn.commit()
         finally:
             conn.close()
 
-        resp = {"status": "ok", "mode": mode}
-        if points_row:
-            resp.update(points_payload_from_row(points_row))
-        return jsonify(resp)
+        return jsonify({"status": "ok", "mode": mode})
 
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": "回复失败", "detail": repr(e)}), 500
 
 
-# ========= 点赞 =========
-@app.route("/toggle_like", methods=["POST"])
+# ========= 点赞（修复路由匹配小程序调用） =========
+@app.route("/like", methods=["POST"])
 def toggle_like():
     try:
         tables = current_tables()
@@ -1252,8 +695,7 @@ def toggle_like():
         try:
             with conn.cursor() as c:
                 c.execute("SELECT id FROM messages WHERE id = %s", (message_id,))
-                msg = c.fetchone()
-                if not msg:
+                if not c.fetchone():
                     return jsonify({"status": "error", "message": "留言不存在"})
 
                 c.execute("SELECT id FROM likes WHERE message_id = %s AND username = %s", (message_id, user["username"]))
@@ -1265,8 +707,6 @@ def toggle_like():
                 else:
                     c.execute("INSERT IGNORE INTO likes (message_id, username) VALUES (%s, %s)", (message_id, user["username"]))
                     liked = True
-
-                conn.commit()
 
                 c.execute("SELECT COUNT(*) AS cnt FROM likes WHERE message_id = %s", (message_id,))
                 like_count = c.fetchone()["cnt"]
@@ -1298,7 +738,7 @@ def messages():
                 if mode == "old":
                     c.execute(f"""
                         SELECT
-                            m.id, m.username, m.user_id, m.content, m.image_path, m.is_premium,
+                            m.id, m.username, m.user_id, m.content, m.image_path,
                             m.date AS created_at, 0 AS like_count
                         FROM `{message_table}` m
                         ORDER BY m.id DESC
@@ -1306,7 +746,7 @@ def messages():
                 else:
                     c.execute(f"""
                         SELECT
-                            m.id, m.username, m.user_id, m.content, m.image_path, m.is_premium, m.created_at,
+                            m.id, m.username, m.user_id, m.content, m.image_path, m.created_at,
                             (SELECT COUNT(*) FROM likes l WHERE l.message_id = m.id) AS like_count
                         FROM `{message_table}` m
                         ORDER BY m.id DESC
@@ -1344,7 +784,6 @@ def messages():
                         "username": m.get("username") or "匿名用户",
                         "content": m.get("content") or "",
                         "image_path": m.get("image_path") or "",
-                        "is_premium": m.get("is_premium") or 0,
                         "date": m.get("created_at") or "",
                         "like_count": m.get("like_count") or 0,
                         "liked_by_me": liked_by_me,
@@ -1375,53 +814,6 @@ def messages():
             "mysql_user": MYSQL_USER,
             "mysql_database": MYSQL_DATABASE
         }), 500
-@app.route("/wuyi_progress")
-def wuyi_progress():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify({
-                "status": "error",
-                "message": "请先登录"
-            }), 401
-
-        tables = current_tables()
-
-        conn = get_conn()
-        try:
-            with conn.cursor() as c:
-                today_posts = count_today_posts(c, tables, user["id"])
-                invited = count_event_invited_users(c, tables, user["username"])
-                apply_wuyi_member_if_eligible(c, tables, user["id"], user["username"])
-                row = get_points_row(c, user["id"])
-            conn.commit()
-        finally:
-            conn.close()
-
-        is_member = bool(int((row or {}).get("is_member") or 0))
-        post_left = max(0, WUYI_DAILY_POST_TARGET - today_posts)
-        invite_left = max(0, WUYI_INVITE_TARGET - invited)
-        reached = (today_posts >= WUYI_DAILY_POST_TARGET) or (invited >= WUYI_INVITE_TARGET)
-
-        return jsonify({
-            "status": "ok",
-            "active": is_wuyi_event_active(),
-            "today_posts": today_posts,
-            "post_target": WUYI_DAILY_POST_TARGET,
-            "post_left": post_left,
-            "invited": invited,
-            "invite_target": WUYI_INVITE_TARGET,
-            "invite_left": invite_left,
-            "reached": reached,
-            "is_member": is_member
-        })
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({
-            "status": "error",
-            "message": "获取活动进度失败",
-            "detail": repr(e)
-        }), 500
 
 
 # ========= 错误处理 =========
@@ -1447,7 +839,6 @@ print("MYSQL_USER:", MYSQL_USER)
 print("MYSQL_DATABASE:", MYSQL_DATABASE)
 print("HAS_PASSWORD:", bool(MYSQL_PASSWORD))
 print("UPLOAD_FOLDER:", UPLOAD_FOLDER)
-print("WUYI_EVENT:", f"{WUYI_EVENT_START} ~ {WUYI_EVENT_END}")
 print("====================================")
 
 try:
