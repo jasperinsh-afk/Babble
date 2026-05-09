@@ -295,18 +295,16 @@ def me():
 
 @app.route("/one_login")
 def niyu_one_login():
-    """匿语 ONE 登录入口"""
     if not session.get("is_member"):
-        return "请先输入开发码 验证通过后进入匿语 ONE "
-    return app.send_static_file("one_login.html")
-
+        return "请先输入开发码 114PZ514 验证通过后进入匿语 ONE "
+    return render_template("one_login.html")
 
 @app.route("/one")
 def niyu_one_home():
-    """匿语 ONE 主页（星球页）"""
     if not session.get("is_member"):
-        return "请先输入开发码 验证通过后进入匿语 ONE "
-    return app.send_static_file("one_home.html")
+        return "请先输入开发码 114PZ514 验证通过后进入匿语 ONE "
+    return render_template("one_home.html")
+
 
 
 # ========= 其他已有路由（注册、登录、发帖、回复、点赞等）保持不变 =========
