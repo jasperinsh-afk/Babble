@@ -1,311 +1,966 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>匿语阁 | BABBLE</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/message.css') }}">
-  <style>
-    body {
-      margin: 0;
-      font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC",sans-serif;
-    }
-    .emergency-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 999999;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 35%), linear-gradient(135deg,#2b0000 0%,#7a0000 45%,#d10000 100%);
-      overflow: hidden;
-    }
-    .emergency-panel {
-      width: min(92vw,760px);
-      padding: 40px 28px;
-      border:1px solid rgba(255,255,255,0.18);
-      background: rgba(0,0,0,0.45);
-      backdrop-filter: blur(6px);
-      color:#fff;
-    }
-    .emergency-tag {
-      display:inline-block;
-      margin-bottom:18px;
-      padding:6px 12px;
-      border:1px solid rgba(255,255,255,0.22);
-      font-size:12px;
-      letter-spacing:2px;
-      color:rgba(255,255,255,0.82);
-    }
-    .emergency-title {
-      margin:0 0 18px;
-      font-size:clamp(34px,7vw,64px);
-      font-weight:900;
-      line-height:1.06;
-    }
-    .emergency-divider {width:100%;height:1px;background:linear-gradient(90deg,rgba(255,255,255,0.6),rgba(255,255,255,0.08));margin:18px 0 26px;}
-    .emergency-lines{display:grid;gap:12px;}
-    .emergency-line{font-size:clamp(20px,3.2vw,30px);font-weight:700;color:rgba(255,255,255,0.9);}
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>匿语阁 | BABBLE</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/message.css') }}">
 
-    .points-entry-btn{
-      margin-right:10px;
-      border-radius:999px;
-      border:2px solid rgba(255,255,255,.8);
-      background:linear-gradient(135deg,#ffd76a,#ff914d);
-      color:#3d00ad;
-      font-weight:900;
-      font-size:14px;
-      padding:8px 14px;
-      cursor:pointer;
-      box-shadow:0 8px 20px rgba(255,145,77,.28);
-      transition:.2s ease;
-      white-space:nowrap;
-    }
-    .points-entry-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
-    .cheat-entry-btn{margin-right:8px;border-radius:999px;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:13px;padding:8px 12px;cursor:pointer;}
-    .cheat-entry-btn:hover{background:rgba(255,255,255,.16);}
-    /* 去掉五一banner样式 */
-    /* notice modal 样式 */
-    .notice-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 999999;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(8px);
-    }
-    .notice-box {
-      width: min(92vw,480px);
-      border-radius: 16px;
-      background: linear-gradient(135deg,#ff7a45 0%,#ff9c2e 50%,#ff4d4f 100%);
-      color:#fff;
-      box-shadow:0 10px 30px rgba(0,0,0,.35);
-      padding: 28px 22px;
-    }
-    .notice-box h3 {
-      margin:0;
-      font-size:20px;
-      font-weight:900;
-      text-align:center;
-    }
-    .notice-box p {
-      font-size:14px;
-      line-height:1.6;
-      margin: 16px 0;
-    }
-    .notice-btns {
-      text-align:center;
-      margin-top: 20px;
-      display:flex;
-      justify-content:center;
-      gap:12px;
-    }
-    .notice-btns button {
-      border:none;
-      border-radius:8px;
-      padding:8px 16px;
-      font-weight:700;
-      cursor:pointer;
-      font-size:14px;
-    }
-    .notice-link{background:#fff;color:#ff4d4f;}
-    .notice-cancel{background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.5);}
-  </style>
+    <style>
+        .emergency-overlay{
+            position: fixed; inset: 0; z-index: 999999; display: none;
+            align-items: center; justify-content: center; padding: 24px;
+            background:
+                radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 35%),
+                linear-gradient(135deg, #2b0000 0%, #7a0000 45%, #d10000 100%);
+            overflow: hidden;
+        }
+        .emergency-panel{
+            position: relative; z-index: 2; width: min(92vw, 760px); padding: 40px 28px;
+            border: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(6px); color: #fff;
+        }
+        .emergency-tag{display:inline-block;margin-bottom:18px;padding:6px 12px;border:1px solid rgba(255,255,255,0.22);font-size:12px;letter-spacing:2px;color:rgba(255,255,255,0.82);}
+        .emergency-title{margin:0 0 18px;font-size:clamp(34px,7vw,64px);font-weight:900;line-height:1.06;}
+        .emergency-divider{width:100%;height:1px;background:linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.08));margin:18px 0 26px;}
+        .emergency-lines{display:grid;gap:12px;}
+        .emergency-line{font-size:clamp(20px,3.2vw,30px);font-weight:700;color:rgba(255,255,255,0.9);}
+
+        .points-entry-btn{
+            margin-right: 10px;
+            border-radius: 999px;
+            border: 2px solid rgba(255,255,255,.8);
+            background: linear-gradient(135deg, #ffd76a, #ff914d);
+            color: #3d00ad;
+            font-weight: 900;
+            font-size: 14px;
+            padding: 8px 14px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(255,145,77,.28);
+            transition: .2s ease;
+            white-space: nowrap;
+        }
+        .points-entry-btn:hover{transform: translateY(-1px);filter: brightness(1.05);}
+
+        .cheat-entry-btn{
+            margin-right: 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,.45);
+            background: rgba(255,255,255,.08);
+            color: #fff;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .cheat-entry-btn:hover{ background: rgba(255,255,255,.16); }
+
+        .points-modal{
+            position: fixed; inset: 0; z-index: 100001; display: none;
+            align-items: center; justify-content: center; padding: 20px;
+            background: rgba(8, 7, 18, .62);
+            backdrop-filter: blur(8px);
+        }
+        .points-card{
+            width: min(92vw, 460px);
+            border-radius: 18px;
+            padding: 24px 20px 18px;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,.18);
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.06)),
+                linear-gradient(135deg, rgba(48,31,88,.92), rgba(20,16,36,.96));
+            box-shadow: 0 20px 52px rgba(0,0,0,.4), 0 0 30px rgba(255,145,77,.12);
+            position: relative;
+            overflow: hidden;
+        }
+        .points-card h3{font-size:24px;margin-bottom:10px;color:#fff4c2;letter-spacing:.5px;}
+        .points-meta{font-size:14px;color:rgba(255,255,255,.82);margin-bottom:12px;}
+        .points-progress{height:10px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden;margin-bottom:10px;}
+        .points-progress > span{display:block;height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,#ff914d,#ffd76a,#9a7cff);transition:width .4s ease;}
+        .points-line{font-size:14px;color:rgba(255,255,255,.88);margin-bottom:10px;}
+        .points-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+        .points-btn{
+            border: 2px solid rgba(255,255,255,.72);
+            border-radius: 999px;
+            background: #ff914d;
+            color: #3d00ad;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .points-btn:hover{background:#cc0000;color:#fff;}
+        .points-badge{
+            display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;
+            font-size:12px;font-weight:800;background:linear-gradient(90deg,#7d4dff,#5d3ea8);color:#fff;margin-left:8px;
+        }
+        .points-crown{
+            display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;
+            background:rgba(255,255,255,.16);font-size:11px;
+        }
+
+        .points-topbar{
+            max-width: 800px;
+            margin: 10px auto 0;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border:1px solid var(--border-color);
+            background: var(--bg-message);
+            color: var(--text-secondary);
+            font-size: 14px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+            flex-wrap:wrap;
+        }
+
+        @keyframes goldFlow {
+            0%   { background-position: 0% 50%, 0% 0%, 0% 0%; }
+            100% { background-position: 160% 50%, 0% 0%, 0% 0%; }
+        }
+        @keyframes ripplePulse {
+            0%   { transform: scale(.75); opacity: .28; }
+            70%  { opacity: .08; }
+            100% { transform: scale(1.85); opacity: 0; }
+        }
+        @keyframes sheenSweep {
+            0%   { transform: translateX(-130%) rotate(18deg); opacity: 0; }
+            15%  { opacity: .18; }
+            45%  { opacity: .08; }
+            100% { transform: translateX(160%) rotate(18deg); opacity: 0; }
+        }
+
+        :root .message.premium-bg{
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            border: 1px solid rgba(212, 167, 80, .55);
+            background:
+                linear-gradient(110deg,
+                    rgba(255,232,164,.22) 8%,
+                    rgba(255,244,206,.45) 16%,
+                    rgba(184,128,42,.22) 30%,
+                    rgba(255,242,190,.30) 45%,
+                    rgba(194,140,56,.25) 62%,
+                    rgba(255,237,176,.24) 78%,
+                    rgba(130,92,28,.24) 100%
+                ),
+                radial-gradient(circle at 12% 8%, rgba(255,250,232,.36), transparent 36%),
+                linear-gradient(135deg, #7a5220 0%, #b68133 42%, #f0d28b 100%);
+            background-size: 160% 100%, 100% 100%, 100% 100%;
+            animation: goldFlow 9s linear infinite;
+            box-shadow:
+                0 10px 30px rgba(94, 64, 18, .20),
+                inset 0 1px 0 rgba(255,255,255,.35),
+                inset 0 -1px 0 rgba(116,76,18,.25);
+        }
+
+        .message.premium-bg::before{
+            content:"";
+            position:absolute;
+            inset:-140% auto auto -40%;
+            width:70%;
+            height:280%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255,255,255,.05) 35%,
+                rgba(255,255,255,.22) 50%,
+                rgba(255,255,255,.06) 65%,
+                transparent 100%
+            );
+            filter: blur(1px);
+            animation: sheenSweep 6.2s ease-in-out infinite;
+            pointer-events:none;
+        }
+
+        .message.premium-bg::after{
+            content:"";
+            position:absolute;
+            width:280px;
+            height:280px;
+            left:50%;
+            top:50%;
+            margin-left:-140px;
+            margin-top:-140px;
+            border-radius:50%;
+            border: 1px solid rgba(255,245,210,.22);
+            box-shadow:
+                0 0 0 0 rgba(255,232,164,.14),
+                inset 0 0 36px rgba(255,252,236,.06);
+            animation: ripplePulse 4.8s ease-out infinite;
+            pointer-events:none;
+        }
+
+        [data-theme="dark"] .message.premium-bg{
+            border: 1px solid rgba(255,196,94,.45);
+            background:
+              linear-gradient(120deg, #2a2112 0%, #5a4524 40%, #8a6a34 75%, #3b2d18 100%);
+            box-shadow:
+              0 10px 30px rgba(0,0,0,.45),
+              inset 0 1px 0 rgba(255,225,160,.18),
+              inset 0 -1px 0 rgba(0,0,0,.35);
+            animation: goldFlow 12s linear infinite;
+        }
+        [data-theme="dark"] .message.premium-bg::before{ opacity: .55; }
+        [data-theme="dark"] .message.premium-bg::after{ border-color: rgba(255,220,150,.16); }
+
+        .message.premium-bg .content,
+        .message.premium-bg .date,
+        .message.premium-bg .reply-box,
+        .message.premium-bg .reply-form,
+        .message.premium-bg .message-head,
+        .message.premium-bg .message-actions{
+            position: relative;
+            z-index: 2;
+            background: rgba(255,255,255,.90);
+            backdrop-filter: blur(2px);
+            border-radius: 10px;
+        }
+
+        [data-theme="dark"] .message.premium-bg .content,
+        [data-theme="dark"] .message.premium-bg .date,
+        [data-theme="dark"] .message.premium-bg .reply-box,
+        [data-theme="dark"] .message.premium-bg .reply-form,
+        [data-theme="dark"] .message.premium-bg .message-head,
+        [data-theme="dark"] .message.premium-bg .message-actions{
+            background: rgba(22,22,26,.82);
+            color: #eaeaf0;
+            border: 1px solid rgba(255,255,255,.06);
+        }
+
+        .message .reply.premium-bg{
+            border: 1px solid rgba(212,167,80,.38);
+            background:
+                linear-gradient(120deg, rgba(255,238,188,.28), rgba(181,129,45,.12)),
+                rgba(255,255,255,.92);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.45);
+        }
+
+        [data-theme="dark"] .message .reply.premium-bg{
+            border: 1px solid rgba(255,196,94,.30);
+            background: linear-gradient(120deg, rgba(255,220,150,.10), rgba(120,90,40,.08)), rgba(28,28,32,.88);
+            color:#eaeaf0;
+        }
+
+        .plus-badge{
+            background: linear-gradient(90deg, #916122, #c9953f 55%, #f0d28b);
+            color:#fff;
+            box-shadow: 0 2px 8px rgba(145,97,34,.28);
+            border: 1px solid rgba(255,236,179,.35);
+        }
+
+        @media (max-width: 768px){
+            .points-entry-btn{margin-right:6px;padding:7px 10px;font-size:12px;}
+            .cheat-entry-btn{margin-right:6px;padding:7px 10px;font-size:12px;}
+            .message.premium-bg::after{width:220px;height:220px;margin-left:-110px;margin-top:-110px;}
+        }
+        @media (max-width: 420px){
+            .points-entry-btn{
+                font-size: 0;
+                width: 38px;
+                height: 34px;
+                padding: 0;
+                margin-right: 4px;
+            }
+            .points-entry-btn::before{content:"👑";font-size:16px;}
+            .cheat-entry-btn{
+                font-size: 0;
+                width: 38px;
+                height: 34px;
+                padding: 0;
+                margin-right: 4px;
+            }
+            .cheat-entry-btn::before{content:"⚙";font-size:16px;}
+        }
+    </style>
 </head>
+
 <body>
-
-  <!-- 运营公告弹窗 -->
-  <div id="noticeModal" class="notice-modal">
-    <div class="notice-box">
-      <h3>运营公告</h3>
-      <p>
-        因战略升级，匿语阁 (Babble) 网页版将于 <strong>2026 年 5 月 23 日</strong> 起暂停服务。<br>
-        四个月间，我们记录了同学们的心声与告白，这次暂停是为了更好的重生。<br>
-        敬请期待全新校园社交平台「匿语 ONE」六月回归。<br>
-        感谢支持与包容！—— 匿语阁团队
-      </p>
-      <div class="notice-btns">
-        <button class="notice-link" type="button" onclick="window.open('https://sps.yy-gp.com/hgakv/i.html','_blank')">完整公告</button>
-        <button class="notice-cancel" type="button" onclick="document.getElementById('noticeModal').style.display='none'">取消</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="emergencyOverlay" class="emergency-overlay">
-    <div class="emergency-panel">
-      <div class="emergency-tag">EMERGENCY SCREEN / 预留突发情况页</div>
-      <h1 class="emergency-title">检测到突发情况</h1>
-      <div class="emergency-divider"></div>
-      <div class="emergency-lines">
-        <div class="emergency-line">服务已终止</div>
-        <div class="emergency-line">我们已介入调查</div>
-        <div class="emergency-line">请稍安勿躁</div>
-      </div>
-    </div>
-  </div>
-  <!-- 主导航，仅保留一份 -->
-  <nav class="top-nav">
-    <a href="/message" class="nav-brand">
-      <span class="nav-brand-main">匿语阁</span>
-      <span class="nav-brand-sub">BABBLE</span>
-    </a>
-    <div class="nav-center">
-      <button class="nav-link guild-nav-link" type="button" onclick="showComingSoon('匿语荟 · 交流新方式')">
-        ✦ 匿语荟 <span>交流新方式</span>
-      </button>
-    </div>
-    <div class="nav-actions">
-      <button class="points-entry-btn" type="button" onclick="openPointsModalByEntry()">👑 成长进度</button>
-      <button class="cheat-entry-btn" type="button" onclick="openCheatModal()">⚙ 特殊码</button>
-      <button id="themeToggle" class="theme-toggle" type="button">🌙 暗色主题</button>
-    </div>
-  </nav>
-
-  <div id="toast" class="success-toast">
-    <span id="toastText">发送成功</span>
-    <button class="close-btn" type="button" onclick="hideToast()">×</button>
-  </div>
-
-  <div class="main" id="mainPage">
-    <div id="authPanel">
-      <div id="authNotLogin" style="display:none;">
-        <input id="loginUsername" type="text" placeholder="用户名">
-        <input id="loginPassword" type="password" placeholder="密码">
-        <input id="loginInviter" type="text" placeholder="邀请人用户名（可选）">
-        <button class="submit" type="button" onclick="doRegister()">注册</button>
-        <button class="submit" type="button" onclick="doLogin()">登录</button>
-      </div>
-      <div id="authLogged" style="display:none;">
-        当前账号：
-        <span class="inline-user-info"><span id="currentUser" style="font-weight:bold;"></span></span>
-        <button class="submit" type="button" onclick="doChangeUsername()">修改用户名</button>
-        <button class="submit" type="button" onclick="doDeleteAccount()">注销账号</button>
-        <button class="submit" type="button" onclick="doLogout()">退出</button>
-      </div>
-    </div> 
-
-    <div id="pointsTopbar" class="points-topbar" style="display:none;">
-      <span id="pointsTopbarText">积分：0 / 100</span>
-      <span id="pointsTopbarBadge"></span>
+    <div id="emergencyOverlay" class="emergency-overlay">
+        <div class="emergency-panel">
+            <div class="emergency-tag">EMERGENCY SCREEN / 预留突发情况页</div>
+            <h1 class="emergency-title">检测到突发情况</h1>
+            <div class="emergency-divider"></div>
+            <div class="emergency-lines">
+                <div class="emergency-line">服务已终止</div>
+                <div class="emergency-line">我们已介入调查</div>
+                <div class="emergency-line">请稍安勿躁</div>
+            </div>
+        </div>
     </div>
 
-    <div class="anonymous-info">💬 无需登录即可匿名发帖</div>
+    <div id="comingSoonModal" class="coming-soon-modal">
+        <div class="coming-soon-card">
+            <button class="coming-soon-close" type="button" onclick="closeComingSoon()">×</button>
+            <div class="coming-soon-kicker">BABBLE FEATURE CENTER</div>
+            <h3 id="comingSoonTitle">功能开发中</h3>
+            <p id="comingSoonText">功能开发中，敬请期待</p>
+            <button class="coming-soon-ok" type="button" onclick="closeComingSoon()">我知道了</button>
+        </div>
+    </div>
 
-    <form id="mainForm" enctype="multipart/form-data">
-      <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
-      <div class="upload-wrapper">
-        <button id="vipUploadBtn" class="image-upload-btn" type="button">
-          <span class="vip-crown">👑</span>上传图片
-        </button>
-        <input id="imageInput" type="file" name="image" accept="image/*">
-        <div id="imageFileName" class="image-file-name">未选择图片</div>
-      </div>
-      <input type="hidden" name="member_code" id="memberCodeHidden" value="">
-      <div class="button-group">
-        <button class="submit main-submit-btn" type="submit">匿名发帖</button>
-        <button class="submit" type="button" onclick="openMemberModal()">
-          <span class="vip-crown">👑</span>炫彩背景
-        </button>
-      </div>
-    </form>
+    <div id="pointsModal" class="points-modal">
+        <div class="points-card">
+            <h3>今日成长进度</h3>
+            <div class="points-meta" id="pointsMeta">正在加载积分信息...</div>
+            <div class="points-progress"><span id="pointsProgressBar"></span></div>
+            <div class="points-line" id="pointsLine1">积分：0 / 100</div>
+            <div class="points-line" id="pointsLine2">距离会员解锁还差：100 分</div>
+            <div class="points-actions">
+                <button class="points-btn" type="button" onclick="closePointsModal()">我知道了</button>
+            </div>
+        </div>
+    </div>
 
-    <div id="listContainer"></div>
-  </div>
+    <!-- 会员码弹窗保留但不再主动使用 -->
+    <div id="memberModal" class="member-modal">
+        <div class="modal-content">
+            <h3>会员验证</h3>
+            <p>输入会员码后可使用会员功能</p>
+            <input type="text" id="memberCodeInput" placeholder="请输入会员码">
+            <div class="modal-buttons">
+                <button class="modal-btn confirm" type="button" onclick="confirmMemberCode()">确认</button>
+                <button class="modal-btn cancel" type="button" onclick="closeMemberModal()">取消</button>
+            </div>
+            <div class="hint">提示：会员码自动转大写</div>
+        </div>
+    </div>
 
-  <script>
-    const EMERGENCY_MODE = false;
-    let me = null;
-    let pointsState = {
-      points: 0,
-      is_member: false,
-      today_signed: false,
-      today_theme_rewarded: false
-    };
+    <div id="cheatModal" class="member-modal" style="display:none;">
+        <div class="modal-content">
+            <h3>输入特殊码</h3>
+            <p>用于账号权限校验</p>
+            <input type="password" id="cheatCodeInput" placeholder="请输入特殊码">
+            <div class="modal-buttons">
+                <button class="modal-btn confirm" type="button" onclick="confirmCheatCode()">确认</button>
+                <button class="modal-btn cancel" type="button" onclick="closeCheatModal()">取消</button>
+            </div>
+        </div>
+    </div>
 
-    function showComingSoon(name='该功能'){
-      if(emergencyBlocked())return;
-      document.getElementById('comingSoonModal').style.display='flex';
+    <nav class="top-nav">
+        <a href="/message" class="nav-brand">
+            <span class="nav-brand-main">匿语阁</span>
+            <span class="nav-brand-sub">BABBLE</span>
+        </a>
+
+        <div class="nav-center">
+            <button class="nav-link guild-nav-link" type="button" onclick="showComingSoon('匿语荟 · 交流新方式')">
+                ✦ 匿语荟 <span>交流新方式</span>
+            </button>
+        </div>
+
+        <div class="nav-actions">
+            <button class="points-entry-btn" type="button" onclick="openPointsModalByEntry()">👑 成长进度</button>
+            <button class="cheat-entry-btn" type="button" onclick="openCheatModal()">⚙ 特殊码</button>
+            <button id="themeToggle" class="theme-toggle" type="button">🌙 暗色主题</button>
+        </div>
+    </nav>
+
+    <div id="toast" class="success-toast">
+        <span id="toastText">发送成功</span>
+        <button class="close-btn" type="button" onclick="hideToast()">×</button>
+    </div>
+
+    <div class="main" id="mainPage">
+        <div id="authPanel">
+            <div id="authNotLogin" style="display:none;">
+                <input id="loginUsername" type="text" placeholder="用户名">
+                <input id="loginPassword" type="password" placeholder="密码">
+                <button class="submit" type="button" onclick="doRegister()">注册</button>
+                <button class="submit" type="button" onclick="doLogin()">登录</button>
+            </div>
+
+            <div id="authLogged" style="display:none;">
+                当前账号：
+                <span class="inline-user-info"><span id="currentUser" style="font-weight:bold;"></span></span>
+                <button class="submit" type="button" onclick="doChangeUsername()">修改用户名</button>
+                <button class="submit" type="button" onclick="doDeleteAccount()">注销账号</button>
+                <button class="submit" type="button" onclick="doLogout()">退出</button>
+            </div>
+        </div>
+
+        <div id="pointsTopbar" class="points-topbar" style="display:none;">
+            <span id="pointsTopbarText">积分：0 / 100</span>
+            <span id="pointsTopbarBadge"></span>
+        </div>
+
+        <div class="anonymous-info">💬 无需登录即可匿名发帖</div>
+
+        <form id="mainForm" enctype="multipart/form-data">
+            <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
+
+            <div class="upload-wrapper">
+                <button id="vipUploadBtn" class="image-upload-btn" type="button">
+                    <span class="vip-crown">👑</span>上传图片
+                </button>
+                <input id="imageInput" type="file" name="image" accept="image/*">
+                <div id="imageFileName" class="image-file-name">未选择图片</div>
+            </div>
+
+            <input type="hidden" name="member_code" id="memberCodeHidden" value="">
+
+            <div class="button-group">
+                <button class="submit main-submit-btn" type="submit">匿名发帖</button>
+                <button class="submit" type="button" onclick="openMemberModal()">
+                    <span class="vip-crown">👑</span>炫彩背景
+                </button>
+            </div>
+        </form>
+
+        <div id="listContainer"></div>
+    </div>
+
+<script>
+const EMERGENCY_MODE = false;
+let me = null;
+let pointsState = { points: 0, is_member: false, today_signed: false, today_theme_rewarded: false };
+
+function showComingSoon(featureName = '该功能') {
+    if (emergencyBlocked()) return;
+    const modal = document.getElementById('comingSoonModal');
+    document.getElementById('comingSoonTitle').innerText = featureName + '开发中';
+    document.getElementById('comingSoonText').innerText = '功能开发中，敬请期待';
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+function closeComingSoon() {
+    document.getElementById('comingSoonModal').style.display = 'none';
+    if (!isEmergencyMode()) document.body.style.overflow = '';
+}
+function isEmergencyMode() { return EMERGENCY_MODE === true; }
+function showEmergencyScreen() {
+    const overlay = document.getElementById('emergencyOverlay');
+    const mainPage = document.getElementById('mainPage');
+    const toast = document.getElementById('toast');
+    if (mainPage) mainPage.style.display = 'none';
+    if (toast) toast.style.display = 'none';
+    if (overlay) overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+function emergencyBlocked() {
+    if (!isEmergencyMode()) return false;
+    showEmergencyScreen();
+    return true;
+}
+function showToast(msg) {
+    if (isEmergencyMode()) return;
+    const t = document.getElementById('toast');
+    document.getElementById('toastText').innerText = msg || '操作成功';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+}
+function hideToast() { document.getElementById('toast').classList.remove('show'); }
+function showMemberLocked() { showToast('未解锁会员'); }
+function esc(s='') {
+    return String(s).replace(/[&<>"']/g, c => (
+        {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+    ));
+}
+
+function closePointsModal() {
+    const modal = document.getElementById('pointsModal');
+    if (modal) modal.style.display = 'none';
+    if (!isEmergencyMode()) document.body.style.overflow = '';
+}
+async function openPointsModalByEntry() {
+    if (emergencyBlocked()) return;
+    if (!me) {
+        showToast('请先登录查看成长进度');
+        return;
+    }
+    await fetchPointsAndRender(true);
+}
+function updatePointsUI(state) {
+    pointsState = Object.assign(pointsState, state || {});
+    const p = Number(pointsState.points || 0);
+    const percent = Math.max(0, Math.min(100, p));
+    const isMember = !!pointsState.is_member;
+
+    const bar = document.getElementById('pointsProgressBar');
+    const line1 = document.getElementById('pointsLine1');
+    const line2 = document.getElementById('pointsLine2');
+    const meta = document.getElementById('pointsMeta');
+    if (bar) bar.style.width = percent + '%';
+    if (line1) line1.innerText = `积分：${p} / 100`;
+    if (line2) line2.innerText = isMember ? '已解锁会员权益（含上传图片、炫彩背景）' : `距离会员解锁还差：${Math.max(0, 100 - p)} 分`;
+    if (meta) meta.innerText = `每日打卡 +5｜发帖 +10｜发图 +15｜回复 +5｜切换模式(每日1次) +5`;
+
+    const topbar = document.getElementById('pointsTopbar');
+    const topText = document.getElementById('pointsTopbarText');
+    const topBadge = document.getElementById('pointsTopbarBadge');
+    if (topbar && me) topbar.style.display = 'flex';
+    if (topText) topText.innerText = `积分：${p} / 100`;
+    if (topBadge) {
+        topBadge.innerHTML = isMember
+            ? '<span class="points-badge"><span class="points-crown">👑</span>会员已解锁</span>'
+            : '';
+    }
+}
+async function fetchPointsAndRender(showModal = false) {
+    if (!me) {
+        const topbar = document.getElementById('pointsTopbar');
+        if (topbar) topbar.style.display = 'none';
+        return;
+    }
+    try {
+        const res = await fetch('/points_status');
+        const data = await res.json();
+        if (data.status === 'ok') {
+            updatePointsUI(data);
+            if (showModal) {
+                const modal = document.getElementById('pointsModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+        }
+    } catch (_) {}
+}
+async function dailyCheckInAndPopup() {
+    if (!me) return;
+    try {
+        const res = await fetch('/daily_checkin', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            updatePointsUI(data);
+            const modal = document.getElementById('pointsModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+            if (data.rewarded) showToast('今日打卡成功 +5 分');
+        }
+    } catch (_) {}
+}
+
+/* 按你的要求：无会员权限时，不弹会员码框，直接提示未解锁 */
+async function openMemberModal() {
+    if (emergencyBlocked()) return;
+
+    if (me) {
+        await fetchPointsAndRender(false);
+        if (pointsState.is_member) {
+            showToast('已为你启用会员权益');
+            return true;
+        }
+        showMemberLocked();
+        return false;
     }
 
-    function hideToast(){document.getElementById('toast').classList.remove('show');}
-    function showToast(msg){const t=document.getElementById('toast');document.getElementById('toastText').innerText=msg||'操作成功';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
-    function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+    showMemberLocked();
+    return false;
+}
 
-    async function refreshMe(){
-      const res=await fetch('/me');const data=await res.json();
-      me=data.logged_in?data.username:null;
-      const n=document.getElementById('authNotLogin'),l=document.getElementById('authLogged'),c=document.getElementById('currentUser');
-      if(me){n.style.display='none';l.style.display='inline-flex';c.innerText=me;}
-      else{l.style.display='none';n.style.display='inline-flex';}
+function closeMemberModal() { document.getElementById('memberModal').style.display = 'none'; }
+
+async function confirmMemberCode() {
+    if (emergencyBlocked()) return;
+    const code = (document.getElementById('memberCodeInput').value || '').trim().toUpperCase();
+    if (!code) return alert('请输入会员码');
+    document.getElementById('memberCodeHidden').value = code;
+
+    if (me) {
+        try {
+            const fd = new FormData();
+            fd.append('code', code);
+            const res = await fetch('/redeem_member_code', { method:'POST', body: fd });
+            const data = await res.json();
+            if (data.status === 'ok' && data.upgraded) {
+                showToast('会员已解锁');
+                await fetchPointsAndRender(false);
+            } else if (data.status !== 'ok') {
+                alert('❌ ' + (data.message || '会员码无效'));
+                return;
+            }
+        } catch (_) {}
     }
 
-    async function openPointsModalByEntry(){
-      if(!me){showToast('请先登录后查看积分');return;}
-      const res=await fetch('/points_status');const data=await res.json();
-      if(data.status==='ok'){
-        let p=data.points||0;let bar=document.getElementById('pointsProgressBar');
-        if(bar)bar.style.width=Math.min(p,100)+'%';
-        showToast('积分：'+p+'/100');
-      }
+    closeMemberModal();
+    showToast('会员码已设置');
+}
+
+function openCheatModal() {
+    if (emergencyBlocked()) return;
+    if (!me) {
+        showToast('请先登录');
+        return;
+    }
+    const modal = document.getElementById('cheatModal');
+    if (modal) modal.style.display = 'flex';
+    const input = document.getElementById('cheatCodeInput');
+    if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 50);
+    }
+}
+function closeCheatModal() {
+    const modal = document.getElementById('cheatModal');
+    if (modal) modal.style.display = 'none';
+}
+async function confirmCheatCode() {
+    if (!me) return showToast('请先登录');
+    const code = (document.getElementById('cheatCodeInput').value || '').trim().toUpperCase();
+    if (!code) return alert('请输入特殊码');
+
+    const fd = new FormData();
+    fd.append('code', code);
+
+    try {
+        const res = await fetch('/redeem_member_code', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            showToast('权限已更新');
+            closeCheatModal();
+            await fetchPointsAndRender(false);
+            await loadMessages();
+        } else {
+            alert('❌ ' + (data.message || '特殊码无效'));
+        }
+    } catch (e) {
+        alert('❌ 请求失败，请稍后再试');
+    }
+}
+
+/* 按你的要求：上传入口无会员直接提示 */
+document.getElementById('vipUploadBtn').addEventListener('click', async () => {
+    if (emergencyBlocked()) return;
+
+    if (me) {
+        await fetchPointsAndRender(false);
+        if (pointsState.is_member) {
+            document.getElementById('imageInput').click();
+            return;
+        }
+        showMemberLocked();
+        return;
     }
 
-    async function openCheatModal(){
-      if(!me){showToast('请先登录');return;}
-      document.getElementById('cheatModal').style.display='flex';
+    showMemberLocked();
+});
+
+async function refreshMe() {
+    if (emergencyBlocked()) return;
+    const res = await fetch('/me');
+    const data = await res.json();
+    me = data.logged_in ? data.username : null;
+    const notLogin = document.getElementById('authNotLogin');
+    const logged = document.getElementById('authLogged');
+    const currentUser = document.getElementById('currentUser');
+    if (me) {
+        notLogin.style.display = 'none';
+        logged.style.display = 'inline-flex';
+        currentUser.innerText = me;
+    } else {
+        logged.style.display = 'none';
+        notLogin.style.display = 'inline-flex';
+    }
+}
+async function doRegister() {
+    if (emergencyBlocked()) return;
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    if (!username || !password) return alert('请输入用户名和密码');
+    const fd = new FormData();
+    fd.append('username', username);
+    fd.append('password', password);
+    const res = await fetch('/register', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.status === 'ok') showToast('注册成功，请登录');
+    else alert('❌ ' + (data.message || '注册失败'));
+}
+async function doLogin() {
+    if (emergencyBlocked()) return;
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    if (!username || !password) return alert('请输入用户名和密码');
+    const fd = new FormData();
+    fd.append('username', username);
+    fd.append('password', password);
+    const res = await fetch('/login', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.status === 'ok') {
+        showToast('登录成功');
+        await refreshMe();
+        await dailyCheckInAndPopup();
+        await fetchPointsAndRender(false);
+        await loadMessages();
+    } else alert('❌ ' + (data.message || '登录失败'));
+}
+async function doLogout() {
+    if (emergencyBlocked()) return;
+    const res = await fetch('/logout', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+        showToast('已退出');
+        await refreshMe();
+        await loadMessages();
+    }
+}
+async function doChangeUsername() {
+    if (emergencyBlocked()) return;
+    const newName = prompt('请输入新用户名（2-30字）：');
+    if (!newName) return;
+    const fd = new FormData();
+    fd.append('new_username', newName.trim());
+    const res = await fetch('/change_username', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.status === 'ok') {
+        showToast('用户名修改成功');
+        await refreshMe();
+        await fetchPointsAndRender(false);
+        await loadMessages();
+    } else alert('❌ ' + (data.message || '修改失败'));
+}
+async function doDeleteAccount() {
+    if (emergencyBlocked()) return;
+    const ok = confirm('确认注销账号？此操作不可恢复。');
+    if (!ok) return;
+    const res = await fetch('/delete_account', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+        showToast('账号已注销');
+        await refreshMe();
+        await loadMessages();
+    } else alert('❌ ' + (data.message || '注销失败'));
+}
+
+document.getElementById('mainForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (emergencyBlocked()) return;
+
+    const imageInput = document.getElementById('imageInput');
+    const hasImage = imageInput && imageInput.files && imageInput.files.length > 0;
+
+    // 按你的要求：有图但无会员，直接提示，不弹会员码
+    if (hasImage) {
+        if (me) {
+            await fetchPointsAndRender(false);
+            if (!pointsState.is_member) {
+                showMemberLocked();
+                return;
+            }
+        } else {
+            showMemberLocked();
+            return;
+        }
     }
 
-    async function doLogin(){
-      const u=document.getElementById('loginUsername').value.trim();
-      const p=document.getElementById('loginPassword').value.trim();
-      if(!u||!p)return alert('请输入用户名和密码');
-      const fd=new FormData();fd.append('username',u);fd.append('password',p);
-      const res=await fetch('/login',{method:'POST',body:fd});const data=await res.json();
-      if(data.status==='ok'){showToast('登录成功');await refreshMe();await loadMessages();}
-      else alert(data.message||'登录失败');
-    }
-    async function doRegister(){const u=document.getElementById('loginUsername').value.trim();const p=document.getElementById('loginPassword').value.trim();if(!u||!p)return alert('请输入用户名和密码');const fd=new FormData();fd.append('username',u);fd.append('password',p);const res=await fetch('/register',{method:'POST',body:fd});const data=await res.json();showToast(data.status==='ok'?'注册成功，请登录':'注册失败');}
-    async function doLogout(){const res=await fetch('/logout',{method:'POST'});const data=await res.json();if(data.status==='ok'){showToast('已退出');await refreshMe();await loadMessages();}}
-    async function doDeleteAccount(){if(!confirm('确认注销账号？'))return;const res=await fetch('/delete_account',{method:'POST'});const data=await res.json();showToast(data.status==='ok'?'账号已注销':'注销失败');await refreshMe();await loadMessages();}
+    const fd = new FormData(this);
+    const submitBtn = this.querySelector('.main-submit-btn');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '发送中...';
+    submitBtn.disabled = true;
 
-    async function loadMessages(){
-      const c=document.getElementById('listContainer');
-      const res=await fetch('/messages');const data=await res.json();
-      if(data.status!=='ok'){c.innerHTML='<div>加载失败</div>';return;}
-      const list=data.messages||[];if(!list.length){c.innerHTML='<div class="no-messages">暂无留言</div>';return;}
-      c.innerHTML=list.map(m=>{
-        const premiumCls=Number(m.is_premium)?'premium-bg':'';const badge=Number(m.is_premium)?'<span class="plus-badge"><span class="vip-crown">👑</span>会员</span>':'';
-        return `<div class="message ${premiumCls}">
-          <div class="message-head"><div class="date">#${m.id} · ${esc(m.username||'匿名')} ${badge} · ${esc(m.date||'')}</div></div>
-          <div class="content">${esc(m.content||'')}</div>
-        </div>`;
-      }).join('');
+    try {
+        const res = await fetch('/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+
+        if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
+        if (data.status === 'ok') {
+            this.reset();
+            document.getElementById('memberCodeHidden').value = '';
+            document.getElementById('memberCodeInput').value = '';
+            document.getElementById('imageFileName').innerText = '未选择图片';
+            showToast(hasImage ? '发送成功！已发布会员图片帖' : '发送成功！系统已为您生成随机昵称');
+            await fetchPointsAndRender(false);
+            await loadMessages();
+        } else alert('❌ ' + (data.message || '发送失败'));
+    } catch (e) {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        alert('❌ 发送失败，请稍后重试');
+    }
+});
+
+async function toggleLike(messageId, btnEl) {
+    if (emergencyBlocked()) return;
+    const fd = new FormData();
+    fd.append('message_id', String(messageId));
+    const res = await fetch('/toggle_like', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (res.status === 401) return alert('❌ 请先登录后再点赞');
+    if (data.status !== 'ok') return alert('❌ ' + (data.message || '点赞失败'));
+    btnEl.classList.toggle('liked', !!data.liked);
+    const c = btnEl.querySelector('.like-count');
+    if (c) c.innerText = Number(data.like_count || 0);
+}
+
+async function submitReply(messageId) {
+    if (emergencyBlocked()) return;
+    const input = document.getElementById('reply_input_' + messageId);
+    const content = input.value.trim();
+    if (!content) return alert('回复内容不能为空');
+
+    const fd = new FormData();
+    fd.append('message_id', String(messageId));
+    fd.append('reply_content', content);
+
+    const replyBtn = input.nextElementSibling;
+    const originalText = replyBtn.textContent;
+    replyBtn.textContent = '回复中...';
+    replyBtn.disabled = true;
+
+    try {
+        const res = await fetch('/reply', { method: 'POST', body: fd });
+        const data = await res.json();
+        replyBtn.textContent = originalText;
+        replyBtn.disabled = false;
+        if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
+        if (data.status === 'ok') {
+            input.value = '';
+            showToast('回复成功！');
+            await fetchPointsAndRender(false);
+            await loadMessages();
+        } else alert('❌ ' + (data.message || '回复失败'));
+    } catch (e) {
+        replyBtn.textContent = originalText;
+        replyBtn.disabled = false;
+        alert('❌ 回复失败，请稍后重试');
+    }
+}
+
+async function loadMessages() {
+    if (emergencyBlocked()) return;
+    const container = document.getElementById('listContainer');
+    const res = await fetch('/messages');
+    const data = await res.json();
+
+    if (data.status !== 'ok') {
+        container.innerHTML = `<div class="error-message"><h3>加载失败</h3><p>请稍后重试</p></div>`;
+        return;
     }
 
-    function initTheme(){
-      const t=localStorage.getItem('theme')||'light';
-      document.documentElement.setAttribute('data-theme',t);
-      document.getElementById('themeToggle').innerText=t==='dark'?'🎨 原本主题':'🌙 暗色主题';
+    const list = data.messages || [];
+    if (!list.length) {
+        container.innerHTML = `<div class="no-messages">还没有留言，快来发布第一条吧～</div>`;
+        return;
     }
-    document.getElementById('themeToggle').addEventListener('click',()=>{
-      const cur=document.documentElement.getAttribute('data-theme');
-      const next=cur==='dark'?'light':'dark';
-      document.documentElement.setAttribute('data-theme',next);localStorage.setItem('theme',next);
-      document.getElementById('themeToggle').innerText=next==='dark'?'🎨 原本主题':'🌙 暗色主题';
+
+    container.innerHTML = list.map(m => {
+        const premiumCls = Number(m.is_premium) ? 'premium-bg' : '';
+        const premiumBadge = Number(m.is_premium)
+            ? '<span class="plus-badge"><span class="vip-crown">👑</span>会员</span>'
+            : '';
+
+        const contentHtml = m.content ? `<div class="content">${esc(m.content)}</div>` : '';
+        const imageHtml = m.image_path ? `<div class="content"><img src="${esc(m.image_path)}" alt="img"></div>` : '';
+
+        const likeCount = Number(m.like_count || 0);
+        const likedCls = m.liked_by_me ? 'liked' : '';
+
+        const replies = (m.replies || []).map(r => `
+            <div class="reply ${premiumCls}">
+                <div class="reply-content"><b>${esc(r.username || '匿名')}：</b>${esc(r.content || '')}</div>
+                <div class="reply-date">${esc(r.date || '')}</div>
+            </div>
+        `).join('');
+
+        return `
+            <div class="message ${premiumCls}">
+                <div class="message-head">
+                    <div class="message-head-meta">
+                        <div class="date">#${m.id} · ${esc(m.username || '匿名')} ${premiumBadge} · ${esc(m.date || '')}</div>
+                    </div>
+                </div>
+
+                ${contentHtml}
+                ${imageHtml}
+
+                <div class="message-actions">
+                    <button class="action-dev-btn" type="button" onclick="showComingSoon('置顶功能')">📌 置顶</button>
+                    <button class="action-dev-btn" type="button" onclick="showComingSoon('撤回功能')">↩ 撤回</button>
+                    <button class="like-btn ${likedCls}" type="button" onclick="toggleLike(${m.id}, this)">
+                        ❤️ <span class="like-count">${likeCount}</span>
+                    </button>
+                </div>
+
+                <div class="reply-box">${replies || '<div style="color:#777;">暂无回复</div>'}</div>
+
+                <div class="reply-form">
+                    <input id="reply_input_${m.id}" type="text" placeholder="写下回复...">
+                    <button class="reply-submit-btn" type="button" onclick="submitReply(${m.id})">回复</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function initTheme() {
+    const saved = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    syncThemeBtnText(saved);
+}
+function syncThemeBtnText(theme) {
+    const btn = document.getElementById('themeToggle');
+    btn.innerText = theme === 'dark' ? '🎨 原本主题' : '🌙 暗色主题';
+}
+async function toggleTheme() {
+    if (emergencyBlocked()) return;
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    syncThemeBtnText(next);
+
+    if (me) {
+        try {
+            const res = await fetch('/theme_reward', { method: 'POST' });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                updatePointsUI(data);
+                if (data.rewarded) showToast('今日切换模式奖励 +5 分');
+            }
+        } catch (_) {}
+    }
+}
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+const imageInput = document.getElementById('imageInput');
+if (imageInput) {
+    imageInput.addEventListener('change', function () {
+        const file = this.files && this.files[0];
+        const nameBox = document.getElementById('imageFileName');
+        if (nameBox) nameBox.innerText = file ? `已选择：${file.name}` : '未选择图片';
     });
+}
 
-    // 页面初始化：刷新用户与内容
-    (async function init(){
-      initTheme();
-      await refreshMe();
-      await loadMessages();
-      // 出示公告
-      const nm=document.getElementById('noticeModal');
-      if(nm) setTimeout(()=>nm.style.display='flex',600);
-    })();
-  </script>
+window.addEventListener('click', function(e) {
+    const memberModal = document.getElementById('memberModal');
+    const comingSoonModal = document.getElementById('comingSoonModal');
+    const pointsModal = document.getElementById('pointsModal');
+    const cheatModal = document.getElementById('cheatModal');
+    if (e.target === memberModal) closeMemberModal();
+    if (e.target === comingSoonModal) closeComingSoon();
+    if (e.target === pointsModal) closePointsModal();
+    if (e.target === cheatModal) closeCheatModal();
+});
+
+document.getElementById('memberCodeInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') confirmMemberCode();
+});
+const cheatInput = document.getElementById('cheatCodeInput');
+if (cheatInput) {
+    cheatInput.addEventListener('keydown', function(e){
+        if (e.key === 'Enter') confirmCheatCode();
+    });
+}
+
+initTheme();
+
+(async function init() {
+    if (isEmergencyMode()) return showEmergencyScreen();
+    await refreshMe();
+    await dailyCheckInAndPopup();
+    await fetchPointsAndRender(false);
+    await loadMessages();
+})();
+</script>
 </body>
 </html>
