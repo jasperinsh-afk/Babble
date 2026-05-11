@@ -27,7 +27,6 @@
   </style>
 </head>
 <body>
-
   <!-- 运营公告弹窗 -->
   <div id="noticeModal" class="notice-modal">
     <div class="notice-box">
@@ -64,8 +63,156 @@
     </div>
   </nav>
 
-  <!-- 主体和你现有的发帖、列表、modal 块保持不变 -->
-  <!--  ...（从 authPanel 到 listContainer 都是原样）... -->
+  <div id="emergencyOverlay" class="emergency-overlay">
+    <div class="emergency-panel">
+      <div class="emergency-tag">EMERGENCY SCREEN / 预留突发情况页</div>
+      <h1 class="emergency-title">检测到突发情况</h1>
+      <div class="emergency-divider"></div>
+      <div class="emergency-lines">
+        <div class="emergency-line">服务已终止</div>
+        <div class="emergency-line">我们已介入调查</div>
+        <div class="emergency-line">请稍安勿躁</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="comingSoonModal" class="coming-soon-modal">
+    <div class="coming-soon-card">
+      <button class="coming-soon-close" type="button" onclick="closeComingSoon()">×</button>
+      <div class="coming-soon-kicker">BABBLE FEATURE CENTER</div>
+      <h3 id="comingSoonTitle">功能开发中</h3>
+      <p id="comingSoonText">功能开发中，敬请期待</p>
+      <button class="coming-soon-ok" type="button" onclick="closeComingSoon()">我知道了</button>
+    </div>
+  </div>
+
+  <div id="pointsModal" class="points-modal">
+    <div class="points-card">
+      <h3>今日成长进度</h3>
+      <div class="points-meta" id="pointsMeta">正在加载积分信息...</div>
+      <div class="points-progress"><span id="pointsProgressBar"></span></div>
+      <div class="points-line" id="pointsLine1">积分：0 / 100</div>
+      <div class="points-line" id="pointsLine2">距离会员解锁还差：100 分</div>
+      <div class="points-actions">
+        <button class="points-btn" type="button" onclick="closePointsModal()">我知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="wuyiModal" class="points-modal">
+    <div class="points-card">
+      <h3>五一活动进度</h3>
+      <div class="points-meta" id="wuyiMeta">正在加载活动进度...</div>
+      <div class="points-line" id="wuyiLine1">今日发帖：0 / 2</div>
+      <div class="points-progress"><span id="wuyiPostBar"></span></div>
+      <div class="points-line" id="wuyiLine2">活动邀请：0 / 3</div>
+      <div class="points-progress"><span id="wuyiInviteBar"></span></div>
+      <div class="points-line" id="wuyiLine3">距离发帖目标还差：2 帖</div>
+      <div class="points-line" id="wuyiLine4">距离邀请目标还差：3 人</div>
+      <div class="points-actions">
+        <button class="points-btn" type="button" onclick="closeWuyiModal()">我知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="memberModal" class="member-modal">
+    <div class="modal-content">
+      <h3>会员验证</h3>
+      <p>输入会员码后可使用会员功能</p>
+      <input type="text" id="memberCodeInput" placeholder="请输入会员码">
+      <div class="modal-buttons">
+        <button class="modal-btn confirm" type="button" onclick="confirmMemberCode()">确认</button>
+        <button class="modal-btn cancel" type="button" onclick="closeMemberModal()">取消</button>
+      </div>
+      <div class="hint">提示：会员码自动转大写</div>
+    </div>
+  </div>
+
+  <div id="cheatModal" class="member-modal" style="display:none;">
+    <div class="modal-content">
+      <h3>输入特殊码</h3>
+      <p>用于账号权限校验</p>
+      <input type="password" id="cheatCodeInput" placeholder="请输入特殊码">
+      <div class="modal-buttons">
+        <button class="modal-btn confirm" type="button" onclick="confirmCheatCode()">确认</button>
+        <button class="modal-btn cancel" type="button" onclick="closeCheatModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="top-nav">
+    <a href="/message" class="nav-brand">
+      <span class="nav-brand-main">匿语阁</span>
+      <span class="nav-brand-sub">BABBLE</span>
+    </a>
+    <div class="nav-center">
+      <button class="nav-link guild-nav-link" type="button" onclick="showComingSoon('匿语荟 · 交流新方式')">
+        ✦ 匿语荟 <span>交流新方式</span>
+      </button>
+    </div>
+    <div class="nav-actions">
+      <button class="points-entry-btn" type="button" onclick="openPointsModalByEntry()">👑 成长进度</button>
+      <button class="cheat-entry-btn" type="button" onclick="openCheatModal()">⚙ 特殊码</button>
+      <button id="themeToggle" class="theme-toggle" type="button">🌙 暗色主题</button>
+    </div>
+  </nav>
+
+  <div class="wuyi-banner" onclick="openWuyiProgressModal()">
+    限时活动 · 五一挑战
+    <div class="wuyi-sub">2026.5.1-2026.5.5：每日发2帖，或活动期间累计邀请3位新用户，即可解锁会员</div>
+  </div>
+
+  <div id="toast" class="success-toast">
+    <span id="toastText">发送成功</span>
+    <button class="close-btn" type="button" onclick="hideToast()">×</button>
+  </div>
+
+  <div class="main" id="mainPage">
+    <div id="authPanel">
+      <div id="authNotLogin" style="display:none;">
+        <input id="loginUsername" type="text" placeholder="用户名">
+        <input id="loginPassword" type="password" placeholder="密码">
+        <input id="loginInviter" type="text" placeholder="邀请人用户名（可选）">
+        <button class="submit" type="button" onclick="doRegister()">注册</button>
+        <button class="submit" type="button" onclick="doLogin()">登录</button>
+      </div>
+      <div id="authLogged" style="display:none;">
+        当前账号：
+        <span class="inline-user-info"><span id="currentUser" style="font-weight:bold;"></span></span>
+        <button class="submit" type="button" onclick="doChangeUsername()">修改用户名</button>
+        <button class="submit" type="button" onclick="doDeleteAccount()">注销账号</button>
+        <button class="submit" type="button" onclick="doLogout()">退出</button>
+      </div>
+    </div>
+
+    <div id="pointsTopbar" class="points-topbar" style="display:none;">
+      <span id="pointsTopbarText">积分：0 / 100</span>
+      <span id="pointsTopbarBadge"></span>
+    </div>
+
+    <div class="anonymous-info">💬 无需登录即可匿名发帖</div>
+
+    <form id="mainForm" enctype="multipart/form-data">
+      <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
+      <div class="upload-wrapper">
+        <button id="vipUploadBtn" class="image-upload-btn" type="button">
+          <span class="vip-crown">👑</span>上传图片
+        </button>
+        <input id="imageInput" type="file" name="image" accept="image/*">
+        <div id="imageFileName" class="image-file-name">未选择图片</div>
+      </div>
+      <input type="hidden" name="member_code" id="memberCodeHidden" value="">
+      <div class="button-group">
+        <button class="submit main-submit-btn" type="submit">匿名发帖</button>
+        <button class="submit" type="button" onclick="openMemberModal()">
+          <span class="vip-crown">👑</span>炫彩背景
+        </button>
+      </div>
+    </form>
+
+    <div id="listContainer"></div>
+  </div>
+
 
   <script>
     // 页面加载时显示公告弹窗
