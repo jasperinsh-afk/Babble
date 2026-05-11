@@ -546,7 +546,7 @@ function updatePointsUI(state) {
     const topbar = document.getElementById('pointsTopbar');
     const topText = document.getElementById('pointsTopbarText');
     const topBadge = document.getElementById('pointsTopbarBadge');
-    if (topbar && me) topbar.style.display = 'none';
+    if (topbar && me) topbar.style.display = 'flex';
     if (topText) topText.innerText = `积分：${p} / 100`;
     if (topBadge) {
         topBadge.innerHTML = isMember
