@@ -519,8 +519,16 @@ function closePointsModal() {
 }
 async function openPointsModalByEntry() {
     if (emergencyBlocked()) return;
-    showToast('成长进度入口暂时隐藏');
+    if (!me) { // 未登录提示
+        showToast('请先登录后查看成长进度');
+        return;
+    }
+    await fetchPointsAndRender(true);   // 拉取积分信息
+    const modal = document.getElementById('pointsModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
+
 function updatePointsUI(state) {
     pointsState = Object.assign(pointsState, state || {});
     const p = Number(pointsState.points || 0);
