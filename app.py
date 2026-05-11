@@ -8,33 +8,26 @@ import pymysql
 from flask import Flask, render_template, request, jsonify, session
 from werkzeug.utils import secure_filename
 
-
+# ========= 初始化 =========
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "replace-with-your-secret-key")
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 上传文件限制 5MB
 
-
-# ========= 路径配置 =========
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "images")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 
-# ========= 数据库配置解析 =========
+# ========= MySQL 配置解析 =========
 def parse_mysql_uri(uri):
     if not uri:
         return {}
-
     parsed = urlparse(uri)
     scheme = (parsed.scheme or "").lower()
-
     if not scheme.startswith("mysql"):
         return {}
-
     database = parsed.path.lstrip("/") if parsed.path else None
-
     return {
         "host": parsed.hostname,
         "port": parsed.port or 3306,
@@ -100,19 +93,12 @@ MYSQL_SOURCE = MYSQL_CONFIG.get("source")
 # ========= 工具函数 =========
 def validate_mysql_env():
     problems = []
-
     if not MYSQL_HOST:
-        problems.append("缺少 MYSQLHOST / MYSQL_HOST，且没有可解析的 SQLALCHEMY_DATABASE_URI / DATABASE_URL / MYSQL_URL")
+        problems.append("缺少 MYSQLHOST / MYSQL_HOST")
     if not MYSQL_USER:
-        problems.append("缺少 MYSQLUSER / MYSQL_USER，且连接串里没有用户名")
+        problems.append("缺少 MYSQLUSER / MYSQL_USER")
     if not MYSQL_DATABASE:
-        problems.append("缺少 MYSQLDATABASE / MYSQL_DATABASE，且连接串里没有数据库名")
-
-    if MYSQL_HOST:
-        normalized_host = MYSQL_HOST.strip().lower()
-        if normalized_host in {"localhost", "127.0.0.1", "::1", "0.0.0.0"}:
-            problems.append(f"检测到非法数据库主机 {MYSQL_HOST}，Railway MySQL 不应使用 localhost")
-
+        problems.append("缺少 MYSQLDATABASE / MYSQL_DATABASE")
     if problems:
         raise RuntimeError(" | ".join(problems))
 
@@ -127,10 +113,7 @@ def get_conn():
         database=MYSQL_DATABASE,
         charset="utf8mb4",
         cursorclass=pymysql.cursors.DictCursor,
-        autocommit=False,
-        connect_timeout=10,
-        read_timeout=10,
-        write_timeout=10
+        autocommit=False
     )
 
 
@@ -140,104 +123,6 @@ def now_str():
 
 def allowed_image_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
-
-
-def random_anonymous_name():
-    return f"匿名用户{int(time.time() * 1000) % 1000000}"
-
-
-def to_static_url(abs_path):
-    rel = os.path.relpath(abs_path, BASE_DIR).replace("\\", "/")
-    if not rel.startswith("/"):
-        rel = "/" + rel
-    return rel
-
-
-def client_ip():
-    xff = request.headers.get("X-Forwarded-For", "")
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.remote_addr or ""
-
-
-def table_exists_with_cursor(cursor, table_name):
-    cursor.execute("""
-        SELECT COUNT(*) AS cnt
-        FROM INFORMATION_SCHEMA.TABLES
-        WHERE TABLE_SCHEMA = %s
-          AND TABLE_NAME = %s
-    """, (MYSQL_DATABASE, table_name))
-    row = cursor.fetchone()
-    return bool(row and row["cnt"] > 0)
-
-
-def table_exists(table_name):
-    conn = get_conn()
-    try:
-        with conn.cursor() as c:
-            return table_exists_with_cursor(c, table_name)
-    finally:
-        conn.close()
-
-
-def column_exists(cursor, table_name, column_name):
-    cursor.execute("""
-        SELECT COUNT(*) AS cnt
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = %s
-          AND TABLE_NAME = %s
-          AND COLUMN_NAME = %s
-    """, (MYSQL_DATABASE, table_name, column_name))
-    row = cursor.fetchone()
-    return bool(row and row["cnt"] > 0)
-
-
-def detect_table_mode():
-    conn = get_conn()
-    try:
-        with conn.cursor() as c:
-            has_old = (
-                table_exists_with_cursor(c, "message")
-                and table_exists_with_cursor(c, "reply")
-                and table_exists_with_cursor(c, "user")
-            )
-            has_new = (
-                table_exists_with_cursor(c, "messages")
-                and table_exists_with_cursor(c, "replies")
-                and table_exists_with_cursor(c, "users")
-            )
-
-            if has_old:
-                return "old"
-            if has_new:
-                return "new"
-            return "old"
-    finally:
-        conn.close()
-
-
-def current_tables():
-    mode = detect_table_mode()
-    if mode == "old":
-        return {"mode": "old", "message_table": "message", "reply_table": "reply", "user_table": "user"}
-    return {"mode": "new", "message_table": "messages", "reply_table": "replies", "user_table": "users"}
-
-
-def get_current_user():
-    username = session.get("username")
-    if not username:
-        return None
-
-    tables = current_tables()
-    user_table = tables["user_table"]
-
-    conn = get_conn()
-    try:
-        with conn.cursor() as c:
-            c.execute(f"SELECT * FROM `{user_table}` WHERE username = %s", (username,))
-            return c.fetchone()
-    finally:
-        conn.close()
 
 
 # ========= 页面路由 =========
@@ -252,69 +137,113 @@ def message_page():
 def redeem_member_code():
     try:
         code = (request.form.get("code") or "").strip()
-        VALID_SPECIAL_CODE = "114PZ514"  # ✅ 你的特殊码
-
+        VALID_SPECIAL_CODE = "114PZ514"
         if code == VALID_SPECIAL_CODE:
             session["is_member"] = True
+            session["points"] = 100
             return jsonify({"status": "ok", "is_member": True, "upgraded": True})
-        else:
-            return jsonify({"status": "fail", "message": "无效的特殊码"})
+        return jsonify({"status": "fail", "message": "无效的特殊码"})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"status": "error", "message": "验证异常", "detail": repr(e)}), 500
 
 
-# ========= 登录态 =========
+# ========= 登录态接口 =========
 @app.route("/me")
 def me():
     try:
         username = session.get("username")
         if not username:
             return jsonify({"logged_in": False, "username": None})
-
-        tables = current_tables()
-        user_table = tables["user_table"]
-
-        conn = get_conn()
-        try:
-            with conn.cursor() as c:
-                c.execute(f"SELECT id, username FROM `{user_table}` WHERE username = %s", (username,))
-                user = c.fetchone()
-                if not user:
-                    session.clear()
-                    return jsonify({"logged_in": False, "username": None})
-        finally:
-            conn.close()
-
-        return jsonify({"logged_in": True, "username": user["username"], "mode": tables["mode"]})
-
+        return jsonify({"logged_in": True, "username": username})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"logged_in": False, "username": None, "error": repr(e)}), 500
 
 
-@app.route("/one_login")
-def niyu_one_login():
-    if not session.get("is_member"):
-        return "请先输入开发码 114PZ514 验证通过后进入匿语 ONE "
-    return render_template("one_login.html")
+# ========= 新增：会员积分状态查询 =========
+@app.route("/points_status")
+def points_status():
+    is_member = session.get("is_member", False)
+    points = session.get("points", 0)
+    return jsonify({
+        "status": "ok",
+        "is_member": bool(is_member),
+        "points": int(points),
+        "today_signed": False,
+        "today_theme_rewarded": False
+    })
 
-@app.route("/one")
-def niyu_one_home():
-    if not session.get("is_member"):
-        return "请先输入开发码 114PZ514 验证通过后进入匿语 ONE "
-    return render_template("one_home.html")
+
+# ========= 新增：留言列表接口 =========
+@app.route("/messages")
+def messages():
+    demo_list = [
+        {
+            "id": 1,
+            "username": "张三",
+            "content": "第一条留言，测试一下。",
+            "date": now_str(),
+            "is_premium": session.get("is_member", False)
+        },
+        {
+            "id": 2,
+            "username": "匿名",
+            "content": "第二条留言。",
+            "date": now_str(),
+            "is_premium": False
+        }
+    ]
+    return jsonify({"status": "ok", "messages": demo_list})
 
 
+# ========= 登录 / 登出 / 注册示例 =========
+@app.route("/login", methods=["POST"])
+def login():
+    username = request.form.get("username")
+    password = request.form.get("password")
+    if username and password:
+        session["username"] = username
+        return jsonify({"status": "ok", "message": "登录成功", "username": username})
+    return jsonify({"status": "fail", "message": "缺少用户名或密码"}), 400
 
-# ========= 其他已有路由（注册、登录、发帖、回复、点赞等）保持不变 =========
-# 你原来的代码从这里开始一直到底部保持原样即可
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return jsonify({"status": "ok", "message": "已退出登录"})
+
+
+@app.route("/register", methods=["POST"])
+def register():
+    username = request.form.get("username")
+    password = request.form.get("password")
+    if not username or not password:
+        return jsonify({"status": "fail", "message": "缺少用户名或密码"}), 400
+    return jsonify({"status": "ok", "message": "注册成功(示例)", "username": username})
+
+
+# ========= 图片上传示例 =========
+@app.route("/upload_image", methods=["POST"])
+def upload_image():
+    if "image" not in request.files:
+        return jsonify({"status": "fail", "message": "未选择文件"}), 400
+    file = request.files["image"]
+    if file.filename == "":
+        return jsonify({"status": "fail", "message": "空文件名"}), 400
+    if allowed_image_file(file.filename):
+        filename = secure_filename(file.filename)
+        save_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(save_path)
+        rel_path = os.path.relpath(save_path, BASE_DIR).replace("\\", "/")
+        return jsonify({"status": "ok", "path": "/" + rel_path})
+    return jsonify({"status": "fail", "message": "不支持的文件类型"}), 400
 
 
 # ========= 错误处理 =========
 @app.errorhandler(413)
 def too_large(e):
-    return jsonify({"status": "error", "message": "上传文件过大，最大支持 5MB"}), 413
+    return jsonify({"status": "error", "message": "上传文件过大"}), 413
 
 
 @app.errorhandler(500)
@@ -323,7 +252,7 @@ def internal_error(e):
     return jsonify({"status": "error", "message": "服务器内部错误", "detail": repr(e)}), 500
 
 
-# ========= 启动初始化 =========
+# ========= 启动日志 =========
 print("====================================")
 print("BABBLE Flask app starting...")
 print("DB_TYPE: MySQL")
@@ -339,12 +268,10 @@ print("====================================")
 try:
     validate_mysql_env()
     print("DB INIT OK")
-    print("DETECTED_TABLE_MODE:", detect_table_mode())
 except Exception:
     print("========== DB INIT ERROR ==========")
     traceback.print_exc()
     print("===================================")
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
