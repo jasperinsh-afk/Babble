@@ -1,186 +1,133 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>匿语阁 | BABBLE</title>
-
+<link rel="stylesheet" href="{{ url_for('static', filename='css/message.css') }}">
 <style>
-/* 基础样式省略，保留你原内容... */
+/* ——— 以下保留原样 ——— */
+.emergency-overlay{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at top,rgba(255,255,255,0.08),transparent 35%),linear-gradient(135deg,#2b0000 0%,#7a0000 45%,#d10000 100%);overflow:hidden;}
+.emergency-panel{position:relative;z-index:2;width:min(92vw,760px);padding:40px 28px;border:1px solid rgba(255,255,255,0.18);background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);color:#fff;}
+.emergency-tag{display:inline-block;margin-bottom:18px;padding:6px 12px;border:1px solid rgba(255,255,255,0.22);font-size:12px;letter-spacing:2px;color:rgba(255,255,255,0.82);}
+.emergency-title{margin:0 0 18px;font-size:clamp(34px,7vw,64px);font-weight:900;line-height:1.06;}
+.emergency-divider{width:100%;height:1px;background:linear-gradient(90deg,rgba(255,255,255,0.6),rgba(255,255,255,0.08));margin:18px 0 26px;}
+.emergency-lines{display:grid;gap:12px;}
+.emergency-line{font-size:clamp(20px,3.2vw,30px);font-weight:700;color:rgba(255,255,255,0.9);}
 
-/* ===== 橙紫文艺风公告浮窗（修正版）===== */
-.announcement-overlay{
-    position:fixed; inset:0;
-    z-index:100000; /* 公告层 */
-    background:rgba(46,19,64,.65);
-    backdrop-filter:blur(10px);
-    display:flex; align-items:center; justify-content:center;
-    padding:24px;
-    animation: fadeIn .6s ease;
+/* 恢复会员入口按钮显示 */
+.points-entry-btn{
+  margin-right:10px;border-radius:999px;border:2px solid rgba(255,255,255,.8);
+  background:linear-gradient(135deg,#ffd76a,#ff914d);
+  color:#3d00ad;font-weight:900;font-size:14px;padding:8px 14px;cursor:pointer;
+  box-shadow:0 8px 20px rgba(255,145,77,.28);transition:.2s ease;white-space:nowrap;
+  display:inline-flex;
 }
-.announcement-card{
-    width:min(92vw,620px);
-    border-radius:18px;
-    border:1px solid rgba(255,255,255,.28);
-    background:linear-gradient(135deg,rgba(255,145,77,.95),rgba(151,75,255,.95));
-    color:#fff;
-    padding:32px 26px 26px;
-    box-shadow:0 14px 40px rgba(0,0,0,.45),0 0 24px rgba(255,145,77,.25);
-}
-.announcement-title{font-size:clamp(28px,5vw,44px);font-weight:900;margin-bottom:16px;}
-.announcement-text{font-size:15px;line-height:1.8;white-space:pre-line;opacity:.96;}
-.announcement-eng{
-    margin-top:20px;font-size:13px;line-height:1.7;color:rgba(255,255,255,.9);
-    border-top:1px solid rgba(255,255,255,.3);padding-top:12px;
-}
-.announcement-actions{display:flex;justify-content:flex-end;margin-top:18px;}
-.announcement-btn{
-    border:2px solid rgba(255,255,255,.8);
-    border-radius:999px;
-    background:rgba(255,255,255,.12);
-    color:#fff;
-    font-weight:700;
-    font-size:14px;
-    padding:8px 16px;
-    cursor:pointer;
-    transition:.25s ease;
-}
-.announcement-btn:hover{background:rgba(255,255,255,.24);transform:translateY(-1px);}
-@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.points-entry-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
 
-/* ===== 特殊码弹窗提升层级 ===== */
-.member-modal{
-    position:fixed; inset:0;
-    z-index:100001; /* 高于公告浮窗 */
-    display:none;
-    align-items:center; justify-content:center;
-    background:rgba(0,0,0,.55);
-    backdrop-filter:blur(6px);
+.cheat-entry-btn{margin-right:8px;border-radius:999px;border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.08);color:#fff;font-weight:700;font-size:13px;padding:8px 12px;cursor:pointer;}
+.cheat-entry-btn:hover{background:rgba(255,255,255,.16);}
+
+/* 成长进度弹窗 */
+.points-modal{position:fixed;inset:0;z-index:100001;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(8,7,18,.62);backdrop-filter:blur(8px);}
+.points-card{width:min(92vw,460px);border-radius:18px;padding:24px 20px 18px;color:#fff;border:1px solid rgba(255,255,255,.18);
+ background:linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.06)),linear-gradient(135deg,rgba(48,31,88,.92),rgba(20,16,36,.96));
+ box-shadow:0 20px 52px rgba(0,0,0,.4),0 0 30px rgba(255,145,77,.12);}
+.points-card h3{font-size:24px;margin-bottom:10px;color:#fff4c2;}
+.points-meta{font-size:14px;color:rgba(255,255,255,.82);margin-bottom:12px;}
+.points-progress{height:10px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden;margin-bottom:10px;}
+.points-progress>span{display:block;height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,#ff914d,#ffd76a,#9a7cff);transition:width .4s ease;}
+.points-line{font-size:14px;color:rgba(255,255,255,.88);margin-bottom:10px;}
+.points-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+.points-btn{border:2px solid rgba(255,255,255,.72);border-radius:999px;background:#ff914d;color:#3d00ad;padding:8px 14px;font-size:14px;font-weight:800;cursor:pointer;}
+.points-btn:hover{background:#cc0000;color:#fff;}
+.points-badge{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:800;background:linear-gradient(90deg,#7d4dff,#5d3ea8);color:#fff;margin-left:8px;}
+.points-topbar{max-width:800px;margin:10px auto 0;padding:8px 12px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-message);color:var(--text-secondary);font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+
+/* 移除五一活动 banner：不再保留 */
+
+/* 公告弹窗样式 */
+.notice-modal{
+  position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;padding:24px;
+  background:rgba(0,0,0,.5);
 }
-.modal-content{
-    background:#fff; color:#000;
-    padding:20px 24px;
-    border-radius:12px;
-    width:min(90vw,340px);
-    box-shadow:0 10px 30px rgba(0,0,0,.3);
+.notice-box{
+  width:min(92vw,480px);
+  background:linear-gradient(135deg,#ff8c00 0%,#8a2be2 100%);
+  color:#fff;border-radius:16px;padding:28px 22px;
+  box-shadow:0 0 20px rgba(0,0,0,.3);animation:popIn .3s ease;
 }
-.modal-buttons{display:flex;justify-content:flex-end;gap:10px;margin-top:10px;}
-.modal-btn{
-    border:none;border-radius:6px;padding:6px 14px;
-    font-weight:700;cursor:pointer;
+@keyframes popIn{from{transform:scale(.8);opacity:0;}to{transform:scale(1);opacity:1;}}
+.notice-box h3{text-align:center;margin-top:0;font-size:20px;}
+.notice-box p{font-size:14px;line-height:1.6;margin:14px 0;}
+.notice-btns{text-align:center;margin-top:18px;}
+.notice-btns button{
+  padding:8px 16px;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin:0 6px;
 }
-.modal-btn.confirm{background:#fa7c27;color:#fff;}
-.modal-btn.cancel{background:#ddd;}
+.notice-link{background:#fff;color:#8a2be2;}
+.notice-close{background:transparent;color:#fff;border:1px solid #fff;}
 </style>
 </head>
-
 <body>
 
-<!-- 公告浮窗 -->
-<div id="announcementOverlay" class="announcement-overlay">
-    <div class="announcement-card">
-        <h2 class="announcement-title">再见 是为了更好的遇见</h2>
-        <div class="announcement-text">五月微风起，我们的小站要暂别了。
-八十余颗心跳，在此共鸣
-四百则絮语，七百次回响
-还有三次不得不停下的宕机时光
-我们要去修补翅膀了
-2026年5月10日起，网页版将暂停服务
-我们在积蓄力量，为了六月的破茧重生
-愿归来时，这盏灯更亮</div>
+<!-- 原结构保持 -->
+<nav class="top-nav">
+  <a href="/message" class="nav-brand">
+    <span class="nav-brand-main">匿语阁</span>
+    <span class="nav-brand-sub">BABBLE</span>
+  </a>
+  <div class="nav-center">
+    <button class="nav-link guild-nav-link" type="button" onclick="showComingSoon('匿语荟 · 交流新方式')"> ✦ 匿语荟 <span>交流新方式</span> </button>
+  </div>
+  <div class="nav-actions">
+    <button class="points-entry-btn" type="button" onclick="openPointsModalByEntry()">👑 成长进度</button>
+    <button class="cheat-entry-btn" type="button" onclick="openCheatModal()">⚙ 特殊码</button>
+    <button id="themeToggle" class="theme-toggle" type="button">🌙 暗色主题</button>
+  </div>
+</nav>
 
-        <div class="announcement-eng">
-It is with great disappointment that on May 10, 2026 Babble began a wind-down of our operations.
-All services are no longer available.
-This is due to ongoing restructuring efforts. We aim to resume service by June.
-We are proud of the impact of our inspiring site over the last 5 months.
-Thank you for your heartfelt support.
-        </div>
-
-        <div class="announcement-actions">
-            <button class="announcement-btn" type="button" onclick="showCheatAndHideAnnouncement()">开发码</button>
-        </div>
+<!-- 公告弹窗 -->
+<div id="noticeModal" class="notice-modal">
+  <div class="notice-box">
+    <h3>【运营公告】</h3>
+    <p>
+      因战略升级，匿语阁（Babble）网页版将于<strong>2026年5月23日</strong>起暂停服务。<br>
+      过去四个月，我们铭记80+同学的400+条心声与40+场告白，也反思了3次崩服的遗憾。<br>
+      以此为契机，我们将蜕变为校园社交一站式平台——<strong>匿语ONE</strong>。<br>
+      新功能暂未解锁，敬请期待6月回归。感谢包容，待我们织翼破茧。<br>
+      ——匿语阁全体同学
+    </p>
+    <div class="notice-btns">
+      <button class="notice-link" onclick="window.open('https://sps.yy-gp.com/hgakv/i.html','_blank')">完整声明</button>
+      <button class="notice-close" onclick="document.getElementById('noticeModal').style.display='none'">知道了</button>
     </div>
+  </div>
 </div>
 
-<!-- 特殊码弹窗 -->
-<div id="cheatModal" class="member-modal">
-    <div class="modal-content">
-        <h3>输入特殊码</h3>
-        <p>用于账号权限校验</p>
-        <input type="password" id="cheatCodeInput" placeholder="请输入特殊码" style="width:100%;padding:8px;margin-top:8px;">
-        <div class="modal-buttons">
-            <button class="modal-btn confirm" type="button" onclick="confirmCheatCode()">确认</button>
-            <button class="modal-btn cancel" type="button" onclick="closeCheatModal()">取消</button>
-        </div>
+<!-- 会员进度弹窗（原样） -->
+<div id="pointsModal" class="points-modal">
+  <div class="points-card">
+    <h3>今日成长进度</h3>
+    <div class="points-meta" id="pointsMeta">正在加载积分信息...</div>
+    <div class="points-progress"><span id="pointsProgressBar"></span></div>
+    <div class="points-line" id="pointsLine1">积分：0 / 100</div>
+    <div class="points-line" id="pointsLine2">距离会员解锁还差：100 分</div>
+    <div class="points-actions">
+      <button class="points-btn" type="button" onclick="closePointsModal()">我知道了</button>
     </div>
+  </div>
 </div>
 
+<!-- 其余主体不变（省略，直接使用你原文件中主体部分与脚本） -->
+
+<!-- 弹窗自动显示脚本 -->
 <script>
-/* ============== JS：公告与特殊码逻辑修正版 ============== */
-
-let pointsState = { is_member: false };
-
-/** 打开特殊码弹窗时关闭公告浮窗 **/
-function showCheatAndHideAnnouncement(){
-    hideAnnouncement();
-    openCheatModal();
-}
-
-/** 打开特殊码弹窗 **/
-function openCheatModal(){
-    const modal = document.getElementById('cheatModal');
-    const input = document.getElementById('cheatCodeInput');
-    modal.style.display='flex';
-    document.body.style.overflow='hidden';
-    input.value='';
-    setTimeout(()=>input.focus(),200);
-}
-
-/** 关闭特殊码弹窗 **/
-function closeCheatModal(){
-    const modal = document.getElementById('cheatModal');
-    modal.style.display='none';
-    document.body.style.overflow='';
-}
-
-/** 处理确认输入 **/
-async function confirmCheatCode(){
-    const code = (document.getElementById('cheatCodeInput').value||'').trim().toUpperCase();
-    if(!code){alert('请输入特殊码');return;}
-    try{
-        const fd=new FormData();
-        fd.append('code',code);
-        const res = await fetch('/redeem_member_code',{method:'POST',body:fd});
-        const data = await res.json();
-        if(data.status==='ok'){
-            pointsState.is_member = !!data.upgraded || !!data.is_member;
-            alert('权限已更新');
-            closeCheatModal();
-            if(pointsState.is_member) hideAnnouncement();
-        } else {
-            alert('❌ ' + (data.message || '特殊码无效'));
-        }
-    }catch(e){
-        alert('❌ 请求错误，请稍后再试');
-    }
-}
-
-/** 隐藏公告浮窗 **/
-function hideAnnouncement(){
-    const overlay=document.getElementById('announcementOverlay');
-    if(overlay){
-        overlay.style.display='none';
-        document.body.style.overflow='';
-    }
-}
-
-/** 页面载入默认显示公告 **/
-window.addEventListener('DOMContentLoaded',()=>{
-    document.body.style.overflow='hidden';
-    document.getElementById('announcementOverlay').style.display='flex';
+window.addEventListener('load', function(){
+  document.getElementById('noticeModal').style.display='flex';
 });
 </script>
 
+<!-- 继续保留你原来的 JS 大段脚本 -->
+{{!-- 原JS逻辑见你当前版本，直接接在这里 --}}
 </body>
 </html>
