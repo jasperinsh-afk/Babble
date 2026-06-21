@@ -14,34 +14,21 @@
     </div>
 
     <nav class="top-nav">
-        <a href="/message" class="nav-brand">
-            <span class="nav-brand-main">叭啦</span>
-            <span class="nav-brand-beta">BETA</span>
-        </a>
+        <div class="nav-left">
+            <a href="/message" class="nav-brand">
+                <span class="nav-brand-main">叭啦</span>
+                <span class="nav-brand-sep">|</span>
+                <span class="nav-brand-sub">留言板</span>
+                <span class="nav-brand-beta">BETA</span>
+            </a>
+        </div>
 
-        <div class="nav-actions">
+        <div class="nav-right">
             <button id="refreshBtn" class="refresh-btn" type="button" onclick="loadMessages()">↻ 刷新</button>
         </div>
     </nav>
 
     <div class="main" id="mainPage">
-        <div id="authPanel">
-            <div id="authNotLogin" style="display:none;">
-                <input id="loginUsername" type="text" placeholder="用户名">
-                <input id="loginPassword" type="password" placeholder="密码">
-                <button class="submit" type="button" onclick="doRegister()">注册</button>
-                <button class="submit" type="button" onclick="doLogin()">登录</button>
-            </div>
-
-            <div id="authLogged" style="display:none;">
-                当前账号：
-                <span class="inline-user-info"><span id="currentUser" style="font-weight:bold;"></span></span>
-                <button class="submit" type="button" onclick="doChangeUsername()">修改用户名</button>
-                <button class="submit" type="button" onclick="doDeleteAccount()">注销账号</button>
-                <button class="submit" type="button" onclick="doLogout()">退出</button>
-            </div>
-        </div>
-
         <div class="anonymous-info">💬 无需登录即可匿名发帖</div>
 
         <form id="mainForm">
@@ -55,8 +42,6 @@
     </div>
 
 <script>
-let me = null;
-
 function showToast(msg) {
     const t = document.getElementById('toast');
     document.getElementById('toastText').innerText = msg || '操作成功';
@@ -69,88 +54,6 @@ function esc(s='') {
     return String(s).replace(/[&<>"']/g, c => (
         {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
     ));
-}
-
-async function refreshMe() {
-    const res = await fetch('/me');
-    const data = await res.json();
-    me = data.logged_in ? data.username : null;
-    const notLogin = document.getElementById('authNotLogin');
-    const logged = document.getElementById('authLogged');
-    const currentUser = document.getElementById('currentUser');
-    if (me) {
-        notLogin.style.display = 'none';
-        logged.style.display = 'inline-flex';
-        currentUser.innerText = me;
-    } else {
-        logged.style.display = 'none';
-        notLogin.style.display = 'inline-flex';
-    }
-}
-
-async function doRegister() {
-    const username = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value.trim();
-    if (!username || !password) return alert('请输入用户名和密码');
-    const fd = new FormData();
-    fd.append('username', username);
-    fd.append('password', password);
-    const res = await fetch('/register', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.status === 'ok') showToast('注册成功，请登录');
-    else alert('❌ ' + (data.message || '注册失败'));
-}
-
-async function doLogin() {
-    const username = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value.trim();
-    if (!username || !password) return alert('请输入用户名和密码');
-    const fd = new FormData();
-    fd.append('username', username);
-    fd.append('password', password);
-    const res = await fetch('/login', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.status === 'ok') {
-        showToast('登录成功');
-        await refreshMe();
-        await loadMessages();
-    } else alert('❌ ' + (data.message || '登录失败'));
-}
-
-async function doLogout() {
-    const res = await fetch('/logout', { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'ok') {
-        showToast('已退出');
-        await refreshMe();
-        await loadMessages();
-    }
-}
-
-async function doChangeUsername() {
-    const newName = prompt('请输入新用户名（2-30字）：');
-    if (!newName) return;
-    const fd = new FormData();
-    fd.append('new_username', newName.trim());
-    const res = await fetch('/change_username', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.status === 'ok') {
-        showToast('用户名修改成功');
-        await refreshMe();
-        await loadMessages();
-    } else alert('❌ ' + (data.message || '修改失败'));
-}
-
-async function doDeleteAccount() {
-    const ok = confirm('确认注销账号？此操作不可恢复。');
-    if (!ok) return;
-    const res = await fetch('/delete_account', { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'ok') {
-        showToast('账号已注销');
-        await refreshMe();
-        await loadMessages();
-    } else alert('❌ ' + (data.message || '注销失败'));
 }
 
 document.getElementById('mainForm').addEventListener('submit', async function(e) {
@@ -249,7 +152,7 @@ async function loadMessages() {
 
         const replies = (m.replies || []).map(r => `
             <div class="reply">
-                <div class="reply-content"><b>${esc(r.username || '匿名')}：</b>${esc(r.content || '')}</div>
+                <div class="reply-content"><span class="reply-author">${esc(r.username || '匿名')}</span><span class="reply-colon">：</span>${esc(r.content || '')}</div>
                 <div class="reply-date">${esc(r.date || '')}</div>
             </div>
         `).join('');
@@ -257,9 +160,9 @@ async function loadMessages() {
         return `
             <div class="message">
                 <div class="message-head">
-                    <div class="message-head-meta">
-                        <div class="date">#${m.id} · ${esc(m.username || '匿名')} · ${esc(m.date || '')}</div>
-                    </div>
+                    <div class="message-id">#${m.id}</div>
+                    <div class="message-author">${esc(m.username || '匿名')}</div>
+                    <div class="message-date">${esc(m.date || '')}</div>
                 </div>
 
                 ${contentHtml}
@@ -267,23 +170,38 @@ async function loadMessages() {
 
                 <div class="message-actions">
                     <button class="like-btn ${likedCls}" type="button" onclick="toggleLike(${m.id}, this)">
-                        ❤️ <span class="like-count">${likeCount}</span>
+                        <span class="like-icon">❤️</span>
+                        <span class="like-count">${likeCount}</span>
                     </button>
                 </div>
 
-                <div class="reply-box">${replies || '<div style="color:#777;">暂无回复</div>'}</div>
+                <div class="reply-section">
+                    <div class="reply-box">
+                        ${replies || '<div class="no-reply">暂无回复</div>'}
+                    </div>
 
-                <div class="reply-form">
-                    <input id="reply_input_${m.id}" type="text" placeholder="写下回复...">
-                    <button class="reply-submit-btn" type="button" onclick="submitReply(${m.id})">回复</button>
+                    <div class="reply-form">
+                        <input id="reply_input_${m.id}" type="text" placeholder="写下回复..." autocomplete="off">
+                        <button class="reply-submit-btn" type="button" onclick="submitReply(${m.id})">回复</button>
+                    </div>
                 </div>
             </div>
         `;
     }).join('');
+
+    // 为所有回复输入框添加回车提交功能
+    document.querySelectorAll('.reply-form input').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                const submitBtn = this.nextElementSibling;
+                if (submitBtn) submitBtn.click();
+            }
+        });
+    });
 }
 
 (async function init() {
-    await refreshMe();
     await loadMessages();
 })();
 </script>
