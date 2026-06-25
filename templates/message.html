@@ -101,6 +101,7 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
         if (res.status === 429) return alert('⏱ ' + (data.message || '发送太频繁'));
         if (data.status === 'ok') {
             this.reset();
+            document.getElementById('imagePreview').style.display = 'none';
             showToast('发送成功！系统已为您生成随机昵称');
             await loadMessages();
         } else alert('❌ ' + (data.message || '发送失败'));
@@ -109,6 +110,28 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
         submitBtn.disabled = false;
         alert('❌ 发送失败，请稍后重试');
     }
+});
+
+// 图片选择预览
+const imageInput = document.getElementById('imageInput');
+const imagePreview = document.getElementById('imagePreview');
+imageInput.addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+        alert('❌ 请选择图片文件');
+        this.value = '';
+        imagePreview.style.display = 'none';
+        return;
+    }
+    const url = URL.createObjectURL(file);
+    imagePreview.innerHTML = `<img src="${url}" style="width:100%; display:block; border-radius:14px;">`;
+    imagePreview.style.display = 'block';
+});
+
+// 点击“发图片”文字自动触发选择图片
+document.getElementById('imageUploadLabel').addEventListener('click', () => {
+    imageInput.click();
 });
 
 async function toggleLike(messageId, btnEl) {
