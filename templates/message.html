@@ -32,10 +32,37 @@
 
     <div class="main" id="mainPage">
 
-        <form id="mainForm">
-            <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
+        <form id="mainForm" enctype="multipart/form-data">
+            <textarea class="todo" name="content" placeholder="写点什么...（可选）"></textarea>
+        
+            <!-- 图片上传 + 预览 -->
+            <div style="margin:8px 0; text-align:left;">
+                <label id="imageUploadLabel" style="
+                    display:inline-flex; align-items:center; gap:6px;
+                    padding:6px 14px; border-radius:999px;
+                    background:rgba(93,62,168,0.08); color:#5d3ea8;
+                    font-size:14px; font-weight:600; cursor:pointer;
+                    border:1px solid rgba(93,62,168,0.2);
+                ">
+                    <span>🖼️ 发图片</span>
+                </label>
+                <input
+                    id="imageInput"
+                    name="image"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                    style="display:none;"
+                >
+            </div>
+        
+            <!-- 图片预览 -->
+            <div id="imagePreview" style="
+                margin:8px 0; max-width:280px; display:none;
+                border-radius:14px; overflow:hidden;
+            "></div>
+        
             <div class="button-group">
-                <button class="submit main-submit-btn" type="submit">发文字</button>
+                <button class="submit main-submit-btn" type="submit">匿名发帖</button>
             </div>
         </form>
 
