@@ -139,7 +139,25 @@ body {
     background: rgba(93, 62, 168, 0.14);
     transform: translateY(-1px);
 }
-
+/* 去投票按钮 */
+.vote-btn {
+  background: linear-gradient(135deg, #A878FF, #FF9933);
+  color: #fff;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 3px 10px rgba(168, 120, 255, 0.2);
+}
+.vote-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(168, 120, 255, 0.28);
+  filter: brightness(1.05);
+}
 /* ========= Toast提示 ========= */
 .success-toast {
     position: fixed;
