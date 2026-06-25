@@ -24,18 +24,17 @@
         </div>
 
         <div class="nav-right">
-          <!-- 新增：去投票按钮 -->
-          <button class="vote-btn" onclick="window.open('https://ibabble.online','_blank')">去投票</button>
-          <button id="refreshBtn" class="refresh-btn" type="button" onclick="loadMessages()">↻ 刷新</button>
+            <button class="vote-btn" onclick="window.open('https://ibabble.online','_blank')">去投票</button>
+            <button id="refreshBtn" class="refresh-btn" type="button" onclick="loadMessages()">↻ 刷新</button>
         </div>
     </nav>
 
     <div class="main" id="mainPage">
+        <div class="anonymous-info">💬 无需登录即可匿名发帖 / 发图片</div>
 
         <form id="mainForm" enctype="multipart/form-data">
             <textarea class="todo" name="content" placeholder="写点什么...（可选）"></textarea>
-        
-            <!-- 图片上传 + 预览 -->
+
             <div style="margin:8px 0; text-align:left;">
                 <label id="imageUploadLabel" style="
                     display:inline-flex; align-items:center; gap:6px;
@@ -54,13 +53,12 @@
                     style="display:none;"
                 >
             </div>
-        
-            <!-- 图片预览 -->
+
             <div id="imagePreview" style="
                 margin:8px 0; max-width:280px; display:none;
                 border-radius:14px; overflow:hidden;
             "></div>
-        
+
             <div class="button-group">
                 <button class="submit main-submit-btn" type="submit">匿名发帖</button>
             </div>
@@ -84,6 +82,7 @@ function esc(s='') {
     ));
 }
 
+// 提交发帖
 document.getElementById('mainForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const fd = new FormData(this);
@@ -102,7 +101,7 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
         if (data.status === 'ok') {
             this.reset();
             document.getElementById('imagePreview').style.display = 'none';
-            showToast('发送成功！系统已为您生成随机昵称');
+            showToast('发送成功！');
             await loadMessages();
         } else alert('❌ ' + (data.message || '发送失败'));
     } catch (e) {
@@ -112,7 +111,7 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
     }
 });
 
-// 图片选择预览
+// 图片预览
 const imageInput = document.getElementById('imageInput');
 const imagePreview = document.getElementById('imagePreview');
 imageInput.addEventListener('change', function() {
@@ -124,28 +123,34 @@ imageInput.addEventListener('change', function() {
         imagePreview.style.display = 'none';
         return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+        alert('❌ 图片最大支持 5MB');
+        this.value = '';
+        imagePreview.style.display = 'none';
+        return;
+    }
     const url = URL.createObjectURL(file);
     imagePreview.innerHTML = `<img src="${url}" style="width:100%; display:block; border-radius:14px;">`;
     imagePreview.style.display = 'block';
 });
 
-// 点击“发图片”文字自动触发选择图片
 document.getElementById('imageUploadLabel').addEventListener('click', () => {
     imageInput.click();
 });
 
+// 点赞
 async function toggleLike(messageId, btnEl) {
     const fd = new FormData();
     fd.append('message_id', String(messageId));
     const res = await fetch('/toggle_like', { method: 'POST', body: fd });
     const data = await res.json();
-    if (res.status === 401) return alert('❌ 请先登录后再点赞');
     if (data.status !== 'ok') return alert('❌ ' + (data.message || '点赞失败'));
     btnEl.classList.toggle('liked', !!data.liked);
     const c = btnEl.querySelector('.like-count');
     if (c) c.innerText = Number(data.like_count || 0);
 }
 
+// 回复
 async function submitReply(messageId) {
     const input = document.getElementById('reply_input_' + messageId);
     const content = input.value.trim();
@@ -178,6 +183,7 @@ async function submitReply(messageId) {
     }
 }
 
+// 加载留言
 async function loadMessages() {
     const container = document.getElementById('listContainer');
     const res = await fetch('/messages');
@@ -197,13 +203,12 @@ async function loadMessages() {
     container.innerHTML = list.map(m => {
         const contentHtml = m.content ? `<div class="content">${esc(m.content)}</div>` : '';
         const imageHtml = m.image_path ? `<div class="content"><img src="${esc(m.image_path)}" alt="img"></div>` : '';
-
         const likeCount = Number(m.like_count || 0);
         const likedCls = m.liked_by_me ? 'liked' : '';
 
         const replies = (m.replies || []).map(r => `
             <div class="reply">
-                <div class="reply-content"><span class="reply-author">${esc(r.username || '匿名')}</span><span class="reply-colon">：</span>${esc(r.content || '')}</div>
+                <div class="reply-content"><span class="reply-author">${esc(r.username || '匿名')}</span>：${esc(r.content || '')}</div>
                 <div class="reply-date">${esc(r.date || '')}</div>
             </div>
         `).join('');
@@ -220,7 +225,7 @@ async function loadMessages() {
                 ${imageHtml}
 
                 <div class="message-actions">
-                    <button class="like-btn ${likedCls}" type="button" onclick="toggleLike(${m.id}, this)">
+                    <button class="like-btn ${likedCls}" onclick="toggleLike(${m.id}, this)">
                         <span class="like-icon">❤️</span>
                         <span class="like-count">${likeCount}</span>
                     </button>
@@ -230,23 +235,20 @@ async function loadMessages() {
                     <div class="reply-box">
                         ${replies || '<div class="no-reply">暂无回复</div>'}
                     </div>
-
                     <div class="reply-form">
                         <input id="reply_input_${m.id}" type="text" placeholder="写下回复..." autocomplete="off">
-                        <button class="reply-submit-btn" type="button" onclick="submitReply(${m.id})">回复</button>
+                        <button class="reply-submit-btn" onclick="submitReply(${m.id})">回复</button>
                     </div>
                 </div>
             </div>
         `;
     }).join('');
 
-    // 为所有回复输入框添加回车提交功能
     document.querySelectorAll('.reply-form input').forEach(input => {
         input.addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                const submitBtn = this.nextElementSibling;
-                if (submitBtn) submitBtn.click();
+                this.nextElementSibling?.click();
             }
         });
     });
