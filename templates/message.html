@@ -24,17 +24,18 @@
         </div>
 
         <div class="nav-right">
-            <button id="refreshBtn" class="refresh-btn" type="button" onclick="loadMessages()">↻ 刷新</button>
+          <!-- 新增：去投票按钮 -->
+          <button class="vote-btn" onclick="window.open('https://ibabble.online','_blank')">去投票</button>
+          <button id="refreshBtn" class="refresh-btn" type="button" onclick="loadMessages()">↻ 刷新</button>
         </div>
     </nav>
 
     <div class="main" id="mainPage">
-        <div class="anonymous-info">💬 无需登录即可匿名发帖</div>
 
         <form id="mainForm">
             <textarea class="todo" name="content" placeholder="写点什么..." required></textarea>
             <div class="button-group">
-                <button class="submit main-submit-btn" type="submit">匿名发帖</button>
+                <button class="submit main-submit-btn" type="submit">发文字</button>
             </div>
         </form>
 
